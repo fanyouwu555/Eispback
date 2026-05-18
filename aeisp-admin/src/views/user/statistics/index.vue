@@ -53,13 +53,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import { getStatistics, getTrend } from '@/api/user'
 
 const stats = ref({})
 const newUserChart = ref(null)
 const activeChart = ref(null)
+const chartInstances = ref([])
 
 async function initCharts() {
   const trendRes = await getTrend({ type: 'daily', days: 30 })
@@ -75,6 +76,7 @@ async function initCharts() {
     yAxis: { type: 'value' },
     series: [{ data: newUsers, type: 'line', smooth: true, areaStyle: {} }]
   })
+  chartInstances.value.push(chart1)
 
   const chart2 = echarts.init(activeChart.value)
   chart2.setOption({
@@ -84,12 +86,17 @@ async function initCharts() {
     yAxis: { type: 'value' },
     series: [{ data: activeUsers, type: 'line', smooth: true, areaStyle: { color: '#91cc75' } }]
   })
+  chartInstances.value.push(chart2)
 }
 
 onMounted(async () => {
   const res = await getStatistics()
   stats.value = res || {}
   initCharts()
+})
+
+onUnmounted(() => {
+  chartInstances.value.forEach(chart => chart.dispose())
 })
 </script>
 

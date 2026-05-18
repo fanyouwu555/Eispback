@@ -81,7 +81,7 @@ service.interceptors.response.use(
             return service(config)
           }
         } catch {
-          // refresh failed
+          ElMessage.error('登录已过期，请重新登录')
         }
         removeToken()
         removeRefreshToken()

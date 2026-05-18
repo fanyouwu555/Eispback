@@ -21,7 +21,7 @@ const props = defineProps({
 const emit = defineEmits(['pagination'])
 
 function handleSizeChange(val) {
-  emit('pagination', { page: props.pageNum, limit: val })
+  emit('pagination', { page: 1, limit: val })
 }
 function handleCurrentChange(val) {
   emit('pagination', { page: val, limit: props.pageSize })
