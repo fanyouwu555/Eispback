@@ -1,0 +1,27 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+    "java.format.settings.profile": "GoogleStyle",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "files.exclude": {
+        "**/target": true,
+        "**/.git": true,
+        "**/.DS_Store": true
+    },
+    "java.import.exclusions": [
+        "**/node_modules/**",
+        "**/.git/**",
+        "**/target/**"
+    ],
+    "spring-boot.ls.problem.version-validation": "ERROR",
+    "boot-java.rewrite.reconcile": true,
+    "maven.pomfile.autoUpdateEffectivePOM": true,
+    "maven.terminal.useJavaHome": true,
+    "java.debug.settings.hotCodeReplace": "auto",
+    "maven.executable.path": "D:\\apache-maven-3.9.6\\bin\\mvn.cmd",
+    "java.configuration.maven.userSettings": "D:\\apache-maven-3.9.6\\conf\\settings.xml",
+    "maven.view": "hierarchical"
+}

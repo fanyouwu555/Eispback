@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug AEISP Server (aeisp-boot)",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.aeisp.boot.AeispServerApplication",
+            "projectName": "aeisp-boot",
+            "args": "",
+            "env": {
+                "SPRING_PROFILES_ACTIVE": "dev"
+            },
+            "preLaunchTask": "Maven Build (Skip Tests)"
+        },
+        {
+            "type": "java",
+            "name": "Debug AEISP Server (Hot Code Replace)",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.aeisp.boot.AeispServerApplication",
+            "projectName": "aeisp-boot",
+            "args": "",
+            "env": {
+                "SPRING_PROFILES_ACTIVE": "dev"
+            }
+        },
+        {
+            "type": "java",
+            "name": "Attach to Remote (Port 5005)",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 5005
+        }
+    ]
+}
