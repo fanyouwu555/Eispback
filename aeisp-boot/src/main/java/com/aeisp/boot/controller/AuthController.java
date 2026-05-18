@@ -1,0 +1,244 @@
+package com.aeisp.boot.controller;
+
+import com.aeisp.boot.request.LoginRequest;
+import com.aeisp.boot.security.CustomUserDetails;
+import com.aeisp.boot.vo.LoginResponse;
+import com.aeisp.boot.vo.UserInfoVO;
+import com.aeisp.common.Result;
+import com.aeisp.common.constant.CommonConstants;
+import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.util.JwtUtil;
+import com.aeisp.common.util.TokenBlacklistUtil;
+import com.aeisp.system.entity.SysOperationLog;
+import com.aeisp.system.service.SysOperationLogService;
+import com.aeisp.user.entity.UsrLoginLog;
+import com.aeisp.user.service.UsrLoginLogService;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * 认证相关 Controller。
+ *
+ * <p>提供统一的登录、Token 刷新接口，支持管理员（sys_user）和普通用户（usr_user）两套账号体系。
+ * 路径前缀 {@code /api/v1/auth}。</p>
+ *
+ * @author AEISP Team
+ */
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
+    private final UsrLoginLogService usrLoginLogService;
+    private final SysOperationLogService sysOperationLogService;
+    private final TokenBlacklistUtil tokenBlacklistUtil;
+
+    /**
+     * 用户登录。
+     *
+     * <p>支持管理员和普通用户登录，认证成功后返回 Access Token 和 Refresh Token。
+     * 同时记录登录日志。</p>
+     *
+     * @param request     登录请求
+     * @param httpRequest HTTP 请求（用于获取 IP 和设备信息）
+     * @return 登录结果
+     */
+    @PostMapping("/login")
+    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                       HttpServletRequest httpRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(), request.getPassword()));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            List<String> roles = userDetails.getRoles();
+
+            String accessToken = jwtUtil.generateToken(
+                    String.valueOf(userDetails.getUserId()),
+                    userDetails.getUsername(),
+                    roles);
+            String refreshToken = jwtUtil.generateRefreshToken(
+                    String.valueOf(userDetails.getUserId()));
+
+            // 记录登录日志
+            recordLoginLog(userDetails, httpRequest, true, null);
+
+            LoginResponse response = LoginResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .tokenType("Bearer")
+                    .expiresIn(jwtUtil.getAccessExpiration() / 1000)
+                    .userInfo(UserInfoVO.builder()
+                            .id(userDetails.getUserId())
+                            .username(userDetails.getUsername())
+                            .userType(userDetails.getUserType())
+                            .roles(roles)
+                            .build())
+                    .build();
+
+            return Result.success(response, "登录成功");
+        } catch (BadCredentialsException e) {
+            log.warn("登录失败，用户名或密码错误: {}", request.getUsername());
+            return Result.error(ResultCode.UNAUTHORIZED, "用户名或密码错误");
+        } catch (DisabledException e) {
+            log.warn("登录失败，账号已禁用: {}", request.getUsername());
+            return Result.error(ResultCode.UNAUTHORIZED, "账号已禁用");
+        } catch (Exception e) {
+            log.error("登录异常: {}", e.getMessage(), e);
+            return Result.error(ResultCode.INTERNAL_ERROR, "登录失败，请稍后重试");
+        }
+    }
+
+    /**
+     * 刷新 Access Token。
+     *
+     * <p>使用 Refresh Token 换取新的 Access Token，刷新前校验黑名单。</p>
+     *
+     * @param refreshToken Refresh Token
+     * @return 新的 Token 信息
+     */
+    @PostMapping("/refresh")
+    public Result<LoginResponse> refresh(@RequestHeader("X-Refresh-Token") String refreshToken) {
+        try {
+            // 检查 Refresh Token 是否已被拉黑
+            if (tokenBlacklistUtil.isBlacklisted(refreshToken)) {
+                return Result.error(ResultCode.UNAUTHORIZED, "Refresh Token 已失效");
+            }
+            Claims claims = jwtUtil.parseToken(refreshToken);
+            String type = claims.get("type", String.class);
+            if (!"refresh".equals(type)) {
+                return Result.error(ResultCode.UNAUTHORIZED, "无效的 Refresh Token");
+            }
+            String userId = claims.get("userId", String.class);
+            // 这里简化处理，实际可再查一次用户详情
+            String accessToken = jwtUtil.generateToken(userId, "", List.of());
+            String newRefreshToken = jwtUtil.generateRefreshToken(userId);
+
+            LoginResponse response = LoginResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(newRefreshToken)
+                    .tokenType("Bearer")
+                    .expiresIn(jwtUtil.getAccessExpiration() / 1000)
+                    .build();
+
+            return Result.success(response, "刷新成功");
+        } catch (Exception e) {
+            log.warn("刷新 Token 失败: {}", e.getMessage());
+            return Result.error(ResultCode.UNAUTHORIZED, "Refresh Token 已过期或无效");
+        }
+    }
+
+    /**
+     * 用户登出。
+     *
+     * <p>将当前 Access Token 加入黑名单，使其立即失效。</p>
+     *
+     * @param authorization Authorization 请求头
+     * @return 登出结果
+     */
+    @PostMapping("/logout")
+    public Result<Void> logout(@RequestHeader("Authorization") String authorization) {
+        String token = resolveBearerToken(authorization);
+        if (token != null) {
+            try {
+                Claims claims = jwtUtil.parseToken(token);
+                Date expiration = claims.getExpiration();
+                tokenBlacklistUtil.addToBlacklist(token, expiration);
+            } catch (Exception e) {
+                log.warn("登出时解析 Token 失败: {}", e.getMessage());
+            }
+        }
+        SecurityContextHolder.clearContext();
+        return Result.success(null, "登出成功");
+    }
+
+    private String resolveBearerToken(String authorization) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return authorization.substring(7);
+        }
+        return null;
+    }
+
+    /**
+     * 记录登录日志。
+     *
+     * @param userDetails 用户信息
+     * @param request     HTTP 请求
+     * @param success     是否成功
+     * @param errorMsg    错误信息
+     */
+    private void recordLoginLog(CustomUserDetails userDetails,
+                                HttpServletRequest request,
+                                boolean success,
+                                String errorMsg) {
+        String ip = getClientIp(request);
+        String device = request.getHeader("User-Agent");
+        if ("user".equals(userDetails.getUserType())) {
+            UsrLoginLog log = new UsrLoginLog();
+            log.setUserId(userDetails.getUserId());
+            log.setUsername(userDetails.getUsername());
+            log.setLoginTime(LocalDateTime.now());
+            log.setIp(ip);
+            log.setDevice(device);
+            log.setResult(success ? CommonConstants.STATUS_ENABLED : CommonConstants.STATUS_DISABLED);
+            log.setErrorMsg(errorMsg);
+            usrLoginLogService.saveLog(log);
+        } else {
+            SysOperationLog log = new SysOperationLog();
+            log.setUserId(userDetails.getUserId());
+            log.setUsername(userDetails.getUsername());
+            log.setModule("认证管理");
+            log.setOperation("登录");
+            log.setRequestMethod(request.getMethod());
+            log.setRequestUrl(request.getRequestURI());
+            log.setStatus(success ? CommonConstants.STATUS_ENABLED : CommonConstants.STATUS_DISABLED);
+            log.setErrorMsg(errorMsg);
+            log.setIp(ip);
+            log.setDuration(0L);
+            log.setCreatedAt(LocalDateTime.now());
+            sysOperationLogService.saveLog(log);
+        }
+    }
+
+    /**
+     * 获取客户端真实 IP。
+     *
+     * @param request HTTP 请求
+     * @return 客户端 IP
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
+    }
+}

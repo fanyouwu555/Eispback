@@ -1,0 +1,38 @@
+package com.aeisp.system.controller;
+
+import com.aeisp.common.PageResult;
+import com.aeisp.common.Result;
+import com.aeisp.system.dto.LogQueryRequest;
+import com.aeisp.system.service.SysOperationLogService;
+import com.aeisp.system.vo.SysOperationLogVO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 操作日志管理控制器。
+ *
+ * <p>提供操作日志的分页查询接口，路径前缀 {@code /api/v1/system/logs}。</p>
+ *
+ * @author AEISP Team
+ */
+@RestController
+@RequestMapping("/api/v1/system/logs")
+@RequiredArgsConstructor
+public class SysOperationLogController {
+
+    private final SysOperationLogService sysOperationLogService;
+
+    /**
+     * 分页查询操作日志列表。
+     *
+     * @param request 查询条件
+     * @return 分页结果
+     */
+    @GetMapping
+    public Result<PageResult<SysOperationLogVO>> listLogs(LogQueryRequest request) {
+        PageResult<SysOperationLogVO> result = sysOperationLogService.listLogs(request);
+        return Result.success(result);
+    }
+}

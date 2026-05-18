@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aeisp.message.mapper.MsgNotificationMapper">
+
+    <resultMap id="BaseResultMap" type="com.aeisp.message.entity.MsgNotification">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="msg_type" property="msgType"/>
+        <result column="push_scope" property="pushScope"/>
+        <result column="push_target" property="pushTarget"/>
+        <result column="push_type" property="pushType"/>
+        <result column="push_time" property="pushTime"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="status" property="status"/>
+        <result column="is_top" property="isTop"/>
+        <result column="read_count" property="readCount"/>
+        <result column="total_count" property="totalCount"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, title, content, msg_type, push_scope, push_target, push_type, push_time, expire_time,
+        status, is_top, read_count, total_count, created_at, updated_at, created_by, updated_by, deleted
+    </sql>
+
+    <!-- 查询用户未读消息列表；status = 1 对应已推送状态 -->
+    <select id="selectUnreadByUserId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM msg_notification n
+        INNER JOIN msg_user_notification un ON n.id = un.notification_id
+        WHERE un.user_id = #{userId}
+          AND un.is_read = 0
+          AND n.deleted = 0
+          AND n.status = 1
+        ORDER BY n.is_top DESC, n.push_time DESC
+    </select>
+
+    <!-- 查询用户未读消息数量；status = 1 对应已推送状态 -->
+    <select id="selectUnreadCountByUserId" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM msg_notification n
+        INNER JOIN msg_user_notification un ON n.id = un.notification_id
+        WHERE un.user_id = #{userId}
+          AND un.is_read = 0
+          AND n.deleted = 0
+          AND n.status = 1
+    </select>
+
+    <!-- 查询已到推送时间的定时消息；push_type = 2 对应定时推送，status = 0 对应草稿状态 -->
+    <select id="selectScheduledNotificationsToPush" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM msg_notification
+        WHERE push_type = 2
+          AND status = 0
+          AND push_time &lt;= NOW()
+          AND deleted = 0
+        ORDER BY push_time ASC
+    </select>
+
+</mapper>

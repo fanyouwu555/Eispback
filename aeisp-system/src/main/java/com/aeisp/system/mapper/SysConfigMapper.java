@@ -1,0 +1,23 @@
+package com.aeisp.system.mapper;
+
+import com.aeisp.system.entity.SysConfig;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+/**
+ * 系统配置 Mapper 接口。
+ *
+ * @author AEISP Team
+ */
+public interface SysConfigMapper extends BaseMapper<SysConfig> {
+
+    /**
+     * 根据配置键查询配置值。
+     *
+     * @param configKey 配置键
+     * @return 配置实体，不存在则返回 {@code null}
+     */
+    @Select("SELECT * FROM sys_config WHERE config_key = #{configKey} AND deleted = 0 LIMIT 1")
+    SysConfig selectByConfigKey(@Param("configKey") String configKey);
+}

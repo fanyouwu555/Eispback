@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aeisp.message.mapper.MsgUserNotificationMapper">
+
+    <resultMap id="BaseResultMap" type="com.aeisp.message.entity.MsgUserNotification">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="notification_id" property="notificationId"/>
+        <result column="is_read" property="isRead"/>
+        <result column="read_time" property="readTime"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, notification_id, is_read, read_time, created_at
+    </sql>
+
+    <insert id="batchInsert">
+        INSERT INTO msg_user_notification
+        (user_id, notification_id, is_read, created_at)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.userId}, #{item.notificationId}, #{item.isRead}, #{item.createdAt})
+        </foreach>
+    </insert>
+
+    <update id="markAsRead">
+        UPDATE msg_user_notification
+        SET is_read = 1, read_time = NOW()
+        WHERE user_id = #{userId}
+          AND notification_id = #{notificationId}
+          AND is_read = 0
+    </update>
+
+    <update id="markAllAsRead">
+        UPDATE msg_user_notification
+        SET is_read = 1, read_time = NOW()
+        WHERE user_id = #{userId}
+          AND is_read = 0
+    </update>
+
+</mapper>
