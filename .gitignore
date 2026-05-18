@@ -1,0 +1,40 @@
+# Compiled class files
+*.class
+
+# Maven build output
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+out/
+
+# VSCode personal settings (keep workspace settings)
+.vscode/settings.json.local
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Node modules (if any frontend)
+node_modules/
+
+# Docker volumes data
+postgres_data/
+redis_data/
