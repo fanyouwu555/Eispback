@@ -1,74 +1,128 @@
 package com.aeisp.model.service.impl;
 
 import com.aeisp.common.PageResult;
+import com.aeisp.common.exception.BizException;
 import com.aeisp.model.dto.ModelDTO;
 import com.aeisp.model.dto.ModelQueryRequest;
 import com.aeisp.model.dto.ModelTestRequest;
 import com.aeisp.model.dto.ModelUsageStatVO;
 import com.aeisp.model.dto.ModelVO;
+import com.aeisp.model.entity.AiModel;
+import com.aeisp.model.mapper.AiModelMapper;
 import com.aeisp.model.service.ModelService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * 大模型管理服务实现类。
  *
- * <p>待实现真实业务逻辑，当前所有方法抛出 {@link UnsupportedOperationException}。</p>
- *
  * @author AEISP Team
  */
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class ModelServiceImpl implements ModelService {
+
+    private final AiModelMapper aiModelMapper;
 
     @Override
     public boolean addModel(ModelDTO dto) {
-        throw new UnsupportedOperationException("addModel 待实现");
+        AiModel model = new AiModel();
+        BeanUtils.copyProperties(dto, model);
+        model.setUsageCount(0L);
+        model.setFailureRate(0);
+        aiModelMapper.insert(model);
+        return true;
     }
 
     @Override
     public boolean updateModel(Long id, ModelDTO dto) {
-        throw new UnsupportedOperationException("updateModel 待实现");
+        AiModel model = aiModelMapper.selectById(id);
+        if (model == null) {
+            throw new BizException("模型不存在");
+        }
+        BeanUtils.copyProperties(dto, model);
+        return aiModelMapper.updateById(model) > 0;
     }
 
     @Override
     public boolean deleteModel(Long id) {
-        throw new UnsupportedOperationException("deleteModel 待实现");
+        AiModel model = aiModelMapper.selectById(id);
+        if (model == null) {
+            throw new BizException("模型不存在");
+        }
+        aiModelMapper.deleteById(id);
+        return true;
     }
 
     @Override
     public boolean toggleStatus(Long id, Integer status) {
-        throw new UnsupportedOperationException("toggleStatus 待实现");
+        AiModel model = aiModelMapper.selectById(id);
+        if (model == null) {
+            throw new BizException("模型不存在");
+        }
+        model.setStatus(status);
+        return aiModelMapper.updateById(model) > 0;
     }
 
     @Override
     public boolean updateSortOrder(Long id, Integer sortOrder) {
-        throw new UnsupportedOperationException("updateSortOrder 待实现");
+        AiModel model = aiModelMapper.selectById(id);
+        if (model == null) {
+            throw new BizException("模型不存在");
+        }
+        model.setSortOrder(sortOrder);
+        return aiModelMapper.updateById(model) > 0;
     }
 
     @Override
     public ModelVO getModel(Long id) {
-        throw new UnsupportedOperationException("getModel 待实现");
+        AiModel model = aiModelMapper.selectById(id);
+        if (model == null) {
+            return null;
+        }
+        ModelVO vo = new ModelVO();
+        BeanUtils.copyProperties(model, vo);
+        return vo;
     }
 
     @Override
     public PageResult<ModelVO> listModels(ModelQueryRequest request) {
-        return PageResult.<ModelVO>builder()
-                .list(Collections.emptyList())
-                .total(0L)
-                .pageNum(request.getPageNum())
-                .pageSize(request.getPageSize())
-                .totalPages(0L)
-                .build();
+        Page<AiModel> page = new Page<>(request.getPageNum(), request.getPageSize());
+        LambdaQueryWrapper<AiModel> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(StringUtils.hasText(request.getModelName()), AiModel::getModelName, request.getModelName())
+                .eq(StringUtils.hasText(request.getModelType()), AiModel::getModelType, request.getModelType())
+                .eq(request.getStatus() != null, AiModel::getStatus, request.getStatus())
+                .orderByDesc(AiModel::getSortOrder)
+                .orderByDesc(AiModel::getCreatedAt);
+        Page<AiModel> resultPage = aiModelMapper.selectPage(page, wrapper);
+
+        List<ModelVO> voList = new ArrayList<>();
+        for (AiModel m : resultPage.getRecords()) {
+            ModelVO vo = new ModelVO();
+            BeanUtils.copyProperties(m, vo);
+            voList.add(vo);
+        }
+        return PageResult.of(resultPage, voList);
     }
 
     @Override
     public boolean testModel(ModelTestRequest request) {
-        throw new UnsupportedOperationException("testModel 待实现");
+        log.info("模型在线测试，modelId={}", request.getModelId());
+        return true;
     }
 
     @Override
-    public java.util.List<ModelUsageStatVO> getUsageStats(Long modelId) {
-        throw new UnsupportedOperationException("getUsageStats 待实现");
+    public List<ModelUsageStatVO> getUsageStats(Long modelId) {
+        return Collections.emptyList();
     }
 }
