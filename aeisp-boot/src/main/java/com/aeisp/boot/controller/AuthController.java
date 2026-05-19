@@ -12,7 +12,9 @@ import com.aeisp.common.util.TokenBlacklistUtil;
 import com.aeisp.system.entity.SysOperationLog;
 import com.aeisp.system.service.SysOperationLogService;
 import com.aeisp.user.entity.UsrLoginLog;
+import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.service.UsrLoginLogService;
+import com.aeisp.user.service.UsrUserService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -49,6 +51,8 @@ public class AuthController {
     private final UsrLoginLogService usrLoginLogService;
     private final SysOperationLogService sysOperationLogService;
     private final TokenBlacklistUtil tokenBlacklistUtil;
+    private final com.aeisp.boot.security.CustomUserDetailsService customUserDetailsService;
+    private final UsrUserService usrUserService;
 
     /**
      * 用户登录。
@@ -71,6 +75,12 @@ public class AuthController {
 
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             List<String> roles = userDetails.getRoles();
+
+            // 前端用户：检查并自动解除过期锁定，清零失败次数
+            if ("user".equals(userDetails.getUserType())) {
+                usrUserService.checkAccountLock(userDetails.getUserId());
+                usrUserService.resetFailedAttempts(userDetails.getUserId());
+            }
 
             String accessToken = jwtUtil.generateToken(
                     String.valueOf(userDetails.getUserId()),
@@ -98,6 +108,8 @@ public class AuthController {
             return Result.success(response, "登录成功");
         } catch (BadCredentialsException e) {
             log.warn("登录失败，用户名或密码错误: {}", request.getUsername());
+            // 尝试查找用户并记录失败次数
+            handleFrontendLoginFailure(request.getUsername());
             return Result.error(ResultCode.UNAUTHORIZED, "用户名或密码错误");
         } catch (DisabledException e) {
             log.warn("登录失败，账号已禁用: {}", request.getUsername());
@@ -129,8 +141,8 @@ public class AuthController {
                 return Result.error(ResultCode.UNAUTHORIZED, "无效的 Refresh Token");
             }
             String userId = claims.get("userId", String.class);
-            // 这里简化处理，实际可再查一次用户详情
-            String accessToken = jwtUtil.generateToken(userId, "", List.of());
+            CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUserId(Long.parseLong(userId));
+            String accessToken = jwtUtil.generateToken(userId, userDetails.getUsername(), userDetails.getRoles());
             String newRefreshToken = jwtUtil.generateRefreshToken(userId);
 
             LoginResponse response = LoginResponse.builder()
@@ -138,6 +150,12 @@ public class AuthController {
                     .refreshToken(newRefreshToken)
                     .tokenType("Bearer")
                     .expiresIn(jwtUtil.getAccessExpiration() / 1000)
+                    .userInfo(UserInfoVO.builder()
+                            .id(userDetails.getUserId())
+                            .username(userDetails.getUsername())
+                            .userType(userDetails.getUserType())
+                            .roles(userDetails.getRoles())
+                            .build())
                     .build();
 
             return Result.success(response, "刷新成功");
@@ -169,6 +187,20 @@ public class AuthController {
         }
         SecurityContextHolder.clearContext();
         return Result.success(null, "登出成功");
+    }
+
+    /**
+     * 处理前端用户登录失败（记录失败次数）。
+     */
+    private void handleFrontendLoginFailure(String username) {
+        try {
+            UsrUser user = usrUserService.findByUsername(username);
+            if (user != null) {
+                usrUserService.handleLoginFailure(user.getId());
+            }
+        } catch (Exception ex) {
+            log.debug("记录登录失败次数时异常: {}", ex.getMessage());
+        }
     }
 
     private String resolveBearerToken(String authorization) {

@@ -94,4 +94,60 @@ public class CustomUserDetailsService implements UserDetailsService {
         log.warn("用户不存在: {}", username);
         throw new UsernameNotFoundException("用户不存在: " + username);
     }
+
+    /**
+     * 根据用户 ID 加载用户信息。
+     *
+     * @param userId 用户 ID
+     * @return CustomUserDetails
+     * @throws UsernameNotFoundException 用户不存在时抛出
+     */
+    public UserDetails loadUserByUserId(Long userId) throws UsernameNotFoundException {
+        SysUser sysUser = sysUserMapper.selectById(userId);
+        if (sysUser != null) {
+            List<String> roles = sysRoleMapper.selectRoleCodesByUserId(sysUser.getId());
+            List<Long> roleIds = sysUserRoleMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.system.entity.SysUserRole>()
+                            .eq(com.aeisp.system.entity.SysUserRole::getUserId, sysUser.getId())
+            ).stream().map(com.aeisp.system.entity.SysUserRole::getRoleId).toList();
+            List<String> permissions = roleIds.isEmpty()
+                    ? Collections.emptyList()
+                    : sysPermissionMapper.selectPermissionCodesByRoleIds(roleIds);
+            boolean enabled = CommonConstants.STATUS_ENABLED == sysUser.getStatus();
+            return new CustomUserDetails(
+                    sysUser.getId(),
+                    sysUser.getUsername(),
+                    sysUser.getPassword(),
+                    "admin",
+                    enabled,
+                    roles,
+                    permissions
+            );
+        }
+
+        UsrUser usrUser = usrUserMapper.selectById(userId);
+        if (usrUser != null) {
+            boolean enabled = CommonConstants.STATUS_ENABLED == usrUser.getStatus();
+            List<String> roles = sysRoleMapper.selectRoleCodesByFrontendUserId(usrUser.getId());
+            if (roles == null || roles.isEmpty()) {
+                roles = List.of(CommonConstants.DEFAULT_FRONTEND_ROLE_CODE);
+            }
+            List<Long> roleIds = usrUserRoleMapper.selectRoleIdsByUserId(usrUser.getId());
+            List<String> permissions = roleIds.isEmpty()
+                    ? Collections.emptyList()
+                    : sysPermissionMapper.selectPermissionCodesByRoleIds(roleIds);
+            return new CustomUserDetails(
+                    usrUser.getId(),
+                    usrUser.getUsername(),
+                    usrUser.getPassword(),
+                    "user",
+                    enabled,
+                    roles,
+                    permissions
+            );
+        }
+
+        log.warn("用户不存在，userId: {}", userId);
+        throw new UsernameNotFoundException("用户不存在: " + userId);
+    }
 }

@@ -43,6 +43,8 @@ class UsrUserServiceImplTest {
     private SysRoleMapper sysRoleMapper;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private UsrUserServiceImpl usrUserService;
@@ -215,8 +217,12 @@ class UsrUserServiceImplTest {
 
     @Test
     void testUpdateStatus() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_NORMAL);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
         when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
-        assertTrue(usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_DISABLED));
+        assertTrue(usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_DISABLED, "违规操作"));
     }
 
     @Test

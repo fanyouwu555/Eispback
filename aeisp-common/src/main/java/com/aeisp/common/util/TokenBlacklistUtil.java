@@ -52,6 +52,31 @@ public class TokenBlacklistUtil {
         return redisUtil.hasKey(key);
     }
 
+    /**
+     * 将用户所有 Token 加入黑名单（用于密码重置后强制登出）。
+     *
+     * @param userId         用户 ID
+     * @param expirationDate Token 过期时间
+     */
+    public void addUserToBlacklist(Long userId, Date expirationDate) {
+        String key = CacheConstants.CACHE_PREFIX + "user:blacklist:" + userId;
+        long ttlMillis = expirationDate.getTime() - System.currentTimeMillis();
+        if (ttlMillis > 0) {
+            redisUtil.set(key, BLACKLIST_VALUE, ttlMillis, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /**
+     * 检查用户是否已被拉黑（用于密码重置后阻止旧 Token）。
+     *
+     * @param userId 用户 ID
+     * @return true 表示该用户所有 Token 已失效
+     */
+    public boolean isUserBlacklisted(Long userId) {
+        String key = CacheConstants.CACHE_PREFIX + "user:blacklist:" + userId;
+        return redisUtil.hasKey(key);
+    }
+
     private String buildKey(String token) {
         return CacheConstants.CACHE_PREFIX + "token:blacklist:" + SecureUtil.md5(token);
     }

@@ -7,25 +7,34 @@ import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.user.entity.*;
 import com.aeisp.user.mapper.*;
-import com.aeisp.user.request.AdjustDurationRequest;
-import com.aeisp.user.request.UserBatchCreateRequest;
-import com.aeisp.user.request.UserCreateRequest;
-import com.aeisp.user.request.UserQueryRequest;
-import com.aeisp.user.request.UserUpdateRequest;
+import com.aeisp.user.request.*;
 import com.aeisp.user.service.UsrUserService;
+import com.aeisp.user.vo.UserExportVO;
+import com.aeisp.user.vo.UserImportResultVO;
 import com.aeisp.user.vo.UsrUserVO;
+import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,6 +58,7 @@ public class UsrUserServiceImpl implements UsrUserService {
     private final UsrDurationChangeLogMapper usrDurationChangeLogMapper;
     private final SysRoleMapper sysRoleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -221,16 +231,39 @@ public class UsrUserServiceImpl implements UsrUserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateStatus(Long userId, Integer status) {
+    public boolean updateStatus(Long userId, Integer status, String reason) {
+        UsrUser existing = usrUserMapper.selectById(userId);
+        if (existing == null) {
+            throw new BizException("用户不存在");
+        }
+        int currentStatus = existing.getStatus() != null ? existing.getStatus() : CommonConstants.USER_STATUS_NORMAL;
+
+        // 状态转换合法性校验
+        boolean validTransition = switch (currentStatus) {
+            case 1 -> status == 2 || status == 3 || status == 4; // 正常 -> 禁用/冻结/锁定
+            case 2 -> status == 1; // 禁用 -> 正常
+            case 3 -> status == 1; // 冻结 -> 正常
+            case 4 -> status == 1; // 锁定 -> 正常（管理员提前解锁）
+            default -> false;
+        };
+        if (!validTransition) {
+            throw new BizException("非法的状态转换");
+        }
+
         UsrUser user = new UsrUser();
         user.setId(userId);
         user.setStatus(status);
+        user.setStatusReason(reason);
         // 如果从锁定状态恢复，清空锁定相关字段
         if (status == CommonConstants.USER_STATUS_NORMAL) {
             user.setLockedUntil(null);
             user.setFailedLoginAttempts(0);
         }
-        return usrUserMapper.updateById(user) > 0;
+        boolean success = usrUserMapper.updateById(user) > 0;
+        if (success) {
+            eventPublisher.publishEvent(new com.aeisp.common.event.UserStatusChangeEvent(this, userId, status, reason));
+        }
+        return success;
     }
 
     @Override
@@ -240,7 +273,101 @@ public class UsrUserServiceImpl implements UsrUserService {
         user.setId(userId);
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setNeedChangePassword(1);
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
         return usrUserMapper.updateById(user) > 0;
+    }
+
+    @Override
+    public String generateStrongPassword() {
+        String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lower = "abcdefghijklmnopqrstuvwxyz";
+        String digits = "0123456789";
+        String special = "!@#$%^&*";
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(10);
+        sb.append(upper.charAt(random.nextInt(upper.length())));
+        sb.append(lower.charAt(random.nextInt(lower.length())));
+        sb.append(digits.charAt(random.nextInt(digits.length())));
+        sb.append(special.charAt(random.nextInt(special.length())));
+        String all = upper + lower + digits + special;
+        for (int i = 4; i < 10; i++) {
+            sb.append(all.charAt(random.nextInt(all.length())));
+        }
+        char[] arr = sb.toString().toCharArray();
+        for (int i = arr.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char tmp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = tmp;
+        }
+        return new String(arr);
+    }
+
+    @Override
+    public void handleLoginFailure(Long userId) {
+        UsrUser user = usrUserMapper.selectById(userId);
+        if (user == null) {
+            return;
+        }
+        int currentStatus = user.getStatus() != null ? user.getStatus() : CommonConstants.USER_STATUS_NORMAL;
+        // 只有正常状态的用户才累计失败次数
+        if (currentStatus != CommonConstants.USER_STATUS_NORMAL) {
+            return;
+        }
+        int attempts = user.getFailedLoginAttempts() != null ? user.getFailedLoginAttempts() + 1 : 1;
+        UsrUser update = new UsrUser();
+        update.setId(userId);
+        update.setFailedLoginAttempts(attempts);
+        if (attempts >= 5) {
+            update.setStatus(CommonConstants.USER_STATUS_LOCKED);
+            update.setLockedUntil(LocalDateTime.now().plusMinutes(30));
+        }
+        usrUserMapper.updateById(update);
+    }
+
+    @Override
+    public String checkAccountLock(Long userId) {
+        UsrUser user = usrUserMapper.selectById(userId);
+        if (user == null) {
+            return null;
+        }
+        int status = user.getStatus() != null ? user.getStatus() : CommonConstants.USER_STATUS_NORMAL;
+        return switch (status) {
+            case 2 -> "账号已禁用";
+            case 3 -> "账号已冻结";
+            case 4 -> {
+                LocalDateTime lockedUntil = user.getLockedUntil();
+                if (lockedUntil != null && lockedUntil.isBefore(LocalDateTime.now())) {
+                    // 锁定期已满，自动恢复
+                    UsrUser update = new UsrUser();
+                    update.setId(userId);
+                    update.setStatus(CommonConstants.USER_STATUS_NORMAL);
+                    update.setLockedUntil(null);
+                    update.setFailedLoginAttempts(0);
+                    usrUserMapper.updateById(update);
+                    yield null;
+                }
+                long minutesLeft = lockedUntil != null
+                        ? java.time.Duration.between(LocalDateTime.now(), lockedUntil).toMinutes()
+                        : 0;
+                yield "账号已锁定，请 " + Math.max(0, minutesLeft) + " 分钟后重试";
+            }
+            default -> null;
+        };
+    }
+
+    @Override
+    public void resetFailedAttempts(Long userId) {
+        UsrUser user = new UsrUser();
+        user.setId(userId);
+        user.setFailedLoginAttempts(0);
+        usrUserMapper.updateById(user);
+    }
+
+    @Override
+    public UsrUser findByUsername(String username) {
+        return usrUserMapper.selectByUsername(username);
     }
 
     @Override
@@ -252,20 +379,56 @@ public class UsrUserServiceImpl implements UsrUserService {
         }
 
         int previousRemaining = duration.getRemainingMinutes();
-        int newRemaining = previousRemaining + request.getDeltaMinutes();
+        int newRemaining;
+        int changeMinutes;
+        String operationType;
 
-        if (newRemaining < 0) {
-            throw new BizException("剩余时长不足，无法扣除，缺口：" + Math.abs(newRemaining) + " 分钟");
+        Integer adjustType = request.getAdjustType();
+        if (adjustType == null) {
+            // 兼容旧逻辑：根据 deltaMinutes 符号推断类型
+            adjustType = request.getDeltaMinutes() < 0 ? 2 : 1;
+        }
+
+        switch (adjustType) {
+            case 2 -> { // 扣减
+                if (request.getDeltaMinutes() < 0) {
+                    // 兼容旧格式：deltaMinutes 为负数
+                    newRemaining = previousRemaining + request.getDeltaMinutes();
+                    changeMinutes = request.getDeltaMinutes();
+                } else {
+                    newRemaining = previousRemaining - request.getDeltaMinutes();
+                    changeMinutes = -request.getDeltaMinutes();
+                }
+                if (newRemaining < 0) {
+                    throw new BizException("剩余时长不足，无法扣除，缺口：" + Math.abs(newRemaining) + " 分钟");
+                }
+                operationType = "ADMIN_SUBTRACT";
+            }
+            case 3 -> { // 设定
+                newRemaining = request.getDeltaMinutes();
+                if (newRemaining < 0) {
+                    throw new BizException("设定时长不能为负数");
+                }
+                changeMinutes = newRemaining - previousRemaining;
+                operationType = "ADMIN_SET";
+            }
+            default -> { // 增加
+                newRemaining = previousRemaining + request.getDeltaMinutes();
+                changeMinutes = request.getDeltaMinutes();
+                operationType = "ADMIN_ADD";
+            }
         }
 
         // 更新时长记录
         UsrUserDuration update = new UsrUserDuration();
         update.setId(duration.getId());
         update.setRemainingMinutes(newRemaining);
-        if (request.getDeltaMinutes() > 0) {
-            update.setTotalGrantedMinutes(duration.getTotalGrantedMinutes() + request.getDeltaMinutes());
-        } else {
-            update.setTotalConsumedMinutes(duration.getTotalConsumedMinutes() + Math.abs(request.getDeltaMinutes()));
+        if (changeMinutes > 0) {
+            int granted = duration.getTotalGrantedMinutes() != null ? duration.getTotalGrantedMinutes() : 0;
+            update.setTotalGrantedMinutes(granted + changeMinutes);
+        } else if (changeMinutes < 0) {
+            int consumed = duration.getTotalConsumedMinutes() != null ? duration.getTotalConsumedMinutes() : 0;
+            update.setTotalConsumedMinutes(consumed + Math.abs(changeMinutes));
         }
         update.setUpdatedAt(LocalDateTime.now());
         usrUserDurationMapper.updateById(update);

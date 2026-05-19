@@ -71,6 +71,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     writeUnauthorized(response, "无效的 Token 类型");
                     return;
                 }
+                // 检查用户是否已被全局拉黑（密码重置后强制登出）
+                String userIdStr = claims.get("userId", String.class);
+                if (StringUtils.hasText(userIdStr)) {
+                    try {
+                        Long userId = Long.parseLong(userIdStr);
+                        if (tokenBlacklistUtil.isUserBlacklisted(userId)) {
+                            writeUnauthorized(response, "账号密码已重置，请重新登录");
+                            return;
+                        }
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
                 String username = claims.get("username", String.class);
                 if (StringUtils.hasText(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
