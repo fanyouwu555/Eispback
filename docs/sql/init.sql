@@ -468,7 +468,123 @@ CREATE TABLE IF NOT EXISTS tpl_template_preview_image (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='模板预览图片表';
 
 -- --------------------------------------------------------
--- 5. 初始化数据
+-- 4. 模型管理模块 (aeisp-model)
+-- --------------------------------------------------------
+
+-- AI 模型配置表
+CREATE TABLE IF NOT EXISTS ai_model (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    model_name VARCHAR(50) NOT NULL COMMENT '模型名称',
+    model_type VARCHAR(30) NOT NULL COMMENT '模型类型',
+    api_endpoint VARCHAR(255) NOT NULL COMMENT '接口地址',
+    api_key VARCHAR(255) NOT NULL COMMENT '访问密钥（AES 加密存储）',
+    weight INT NOT NULL DEFAULT 1 COMMENT '调用权重',
+    max_qps INT NOT NULL DEFAULT 10 COMMENT '最大 QPS 限制',
+    scenario_tags JSON DEFAULT NULL COMMENT '适配场景标签（JSON 数组）',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '优先级排序',
+    maintain_window VARCHAR(50) DEFAULT NULL COMMENT '维护时间窗口',
+    default_params JSON DEFAULT NULL COMMENT '默认参数（JSON）',
+    usage_count BIGINT NOT NULL DEFAULT 0 COMMENT '累计调用次数',
+    failure_rate INT NOT NULL DEFAULT 0 COMMENT '失败率（%）',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
+    updated_by BIGINT DEFAULT NULL COMMENT '更新人 ID',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    KEY idx_ai_model_status (status),
+    KEY idx_ai_model_type (model_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 大模型配置表';
+
+-- 模型调用日志表
+CREATE TABLE IF NOT EXISTS model_call_log (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
+    model_id BIGINT NOT NULL COMMENT '模型 ID',
+    request_params JSON DEFAULT NULL COMMENT '请求参数（JSON）',
+    response_summary VARCHAR(500) DEFAULT NULL COMMENT '响应摘要',
+    tokens_used INT DEFAULT NULL COMMENT '消耗 Token 数',
+    duration_ms INT DEFAULT NULL COMMENT '调用耗时（毫秒）',
+    cost_cents INT DEFAULT NULL COMMENT '费用（分）',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-成功，2-失败',
+    error_msg VARCHAR(500) DEFAULT NULL COMMENT '错误信息',
+    ip_address VARCHAR(40) DEFAULT NULL COMMENT '调用者 IP',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_model_call_log_user_id (user_id),
+    KEY idx_model_call_log_model_id (model_id),
+    KEY idx_model_call_log_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='模型调用日志表';
+
+-- --------------------------------------------------------
+-- 5. 充值模块 (aeisp-recharge)
+-- --------------------------------------------------------
+
+-- 时长套餐表
+CREATE TABLE IF NOT EXISTS duration_package (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    package_name VARCHAR(50) NOT NULL COMMENT '套餐名称',
+    price_cents INT NOT NULL DEFAULT 0 COMMENT '价格（分）',
+    duration_minutes BIGINT NOT NULL DEFAULT 0 COMMENT '对应时长（分钟）',
+    valid_days INT DEFAULT NULL COMMENT '有效期（天）',
+    promotion VARCHAR(255) DEFAULT NULL COMMENT '优惠活动描述',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-上架，2-下架',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '排序值',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
+    updated_by BIGINT DEFAULT NULL COMMENT '更新人 ID',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    KEY idx_duration_package_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='时长套餐表';
+
+-- 充值订单表
+CREATE TABLE IF NOT EXISTS recharge_order (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    order_no VARCHAR(32) NOT NULL COMMENT '订单号',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
+    package_id BIGINT DEFAULT NULL COMMENT '关联套餐 ID',
+    amount_cents INT NOT NULL DEFAULT 0 COMMENT '充值金额（分）',
+    duration_minutes BIGINT NOT NULL DEFAULT 0 COMMENT '到账时长（分钟）',
+    pay_type VARCHAR(20) DEFAULT NULL COMMENT '支付方式',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-待支付，2-已支付，3-已退款，4-已取消',
+    pay_time DATETIME DEFAULT NULL COMMENT '支付时间',
+    refund_reason VARCHAR(255) DEFAULT NULL COMMENT '退款原因',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
+    updated_by BIGINT DEFAULT NULL COMMENT '更新人 ID',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_recharge_order_no (order_no),
+    KEY idx_recharge_order_user_id (user_id),
+    KEY idx_recharge_order_status (status),
+    KEY idx_recharge_order_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='充值订单表';
+
+-- 余额变更日志表
+CREATE TABLE IF NOT EXISTS usr_balance_change_log (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
+    change_type TINYINT NOT NULL COMMENT '变更类型：1-充值，2-消费，3-退款，4-管理员调整',
+    change_cents INT NOT NULL COMMENT '变更金额（分），正数增加，负数扣减',
+    previous_balance INT NOT NULL COMMENT '变更前余额（分）',
+    current_balance INT NOT NULL COMMENT '变更后余额（分）',
+    related_order_id BIGINT DEFAULT NULL COMMENT '关联订单 ID',
+    reason VARCHAR(200) DEFAULT NULL COMMENT '变更原因',
+    operator_id BIGINT DEFAULT NULL COMMENT '操作人 ID',
+    operator_type TINYINT NOT NULL DEFAULT 1 COMMENT '操作者类型：1-系统自动，2-管理员，3-用户本人',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_usr_balance_change_log_user_id (user_id),
+    KEY idx_usr_balance_change_log_type (change_type),
+    KEY idx_usr_balance_change_log_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='余额变更日志表';
+
+-- --------------------------------------------------------
+-- 6. 初始化数据
 -- --------------------------------------------------------
 
 -- 初始化角色

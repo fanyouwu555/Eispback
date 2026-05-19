@@ -540,7 +540,171 @@ COMMENT ON COLUMN tpl_template_preview_image.image_url IS '预览图片 URL';
 COMMENT ON COLUMN tpl_template_preview_image.sort_order IS '排序顺序';
 
 -- --------------------------------------------------------
--- 5. 初始化数据
+-- 4. 模型管理模块 (aeisp-model)
+-- --------------------------------------------------------
+
+-- AI 模型配置表
+CREATE TABLE IF NOT EXISTS ai_model (
+    id BIGSERIAL PRIMARY KEY,
+    model_name VARCHAR(50) NOT NULL,
+    model_type VARCHAR(30) NOT NULL,
+    api_endpoint VARCHAR(255) NOT NULL,
+    api_key VARCHAR(255) NOT NULL,
+    weight INT NOT NULL DEFAULT 1,
+    max_qps INT NOT NULL DEFAULT 10,
+    scenario_tags JSONB DEFAULT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    maintain_window VARCHAR(50) DEFAULT NULL,
+    default_params JSONB DEFAULT NULL,
+    usage_count BIGINT NOT NULL DEFAULT 0,
+    failure_rate INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT NULL,
+    created_by BIGINT DEFAULT NULL,
+    updated_by BIGINT DEFAULT NULL,
+    deleted SMALLINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_ai_model_status ON ai_model (status);
+CREATE INDEX IF NOT EXISTS idx_ai_model_type ON ai_model (model_type);
+COMMENT ON TABLE ai_model IS 'AI 大模型配置表';
+COMMENT ON COLUMN ai_model.model_name IS '模型名称';
+COMMENT ON COLUMN ai_model.model_type IS '模型类型';
+COMMENT ON COLUMN ai_model.api_endpoint IS '接口地址';
+COMMENT ON COLUMN ai_model.api_key IS '访问密钥（AES 加密存储）';
+COMMENT ON COLUMN ai_model.weight IS '调用权重';
+COMMENT ON COLUMN ai_model.max_qps IS '最大 QPS 限制';
+COMMENT ON COLUMN ai_model.scenario_tags IS '适配场景标签（JSON 数组）';
+COMMENT ON COLUMN ai_model.status IS '状态：0-禁用，1-启用';
+COMMENT ON COLUMN ai_model.sort_order IS '优先级排序';
+COMMENT ON COLUMN ai_model.maintain_window IS '维护时间窗口';
+COMMENT ON COLUMN ai_model.default_params IS '默认参数（JSON）';
+COMMENT ON COLUMN ai_model.usage_count IS '累计调用次数';
+COMMENT ON COLUMN ai_model.failure_rate IS '失败率（%）';
+
+-- 模型调用日志表
+CREATE TABLE IF NOT EXISTS model_call_log (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    model_id BIGINT NOT NULL,
+    request_params JSONB DEFAULT NULL,
+    response_summary VARCHAR(500) DEFAULT NULL,
+    tokens_used INT DEFAULT NULL,
+    duration_ms INT DEFAULT NULL,
+    cost_cents INT DEFAULT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    error_msg VARCHAR(500) DEFAULT NULL,
+    ip_address VARCHAR(40) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_model_call_log_user_id ON model_call_log (user_id);
+CREATE INDEX IF NOT EXISTS idx_model_call_log_model_id ON model_call_log (model_id);
+CREATE INDEX IF NOT EXISTS idx_model_call_log_created_at ON model_call_log (created_at);
+COMMENT ON TABLE model_call_log IS '模型调用日志表';
+COMMENT ON COLUMN model_call_log.user_id IS '用户 ID';
+COMMENT ON COLUMN model_call_log.model_id IS '模型 ID';
+COMMENT ON COLUMN model_call_log.request_params IS '请求参数（JSON）';
+COMMENT ON COLUMN model_call_log.response_summary IS '响应摘要';
+COMMENT ON COLUMN model_call_log.tokens_used IS '消耗 Token 数';
+COMMENT ON COLUMN model_call_log.duration_ms IS '调用耗时（毫秒）';
+COMMENT ON COLUMN model_call_log.cost_cents IS '费用（分）';
+COMMENT ON COLUMN model_call_log.status IS '状态：1-成功，2-失败';
+COMMENT ON COLUMN model_call_log.error_msg IS '错误信息';
+COMMENT ON COLUMN model_call_log.ip_address IS '调用者 IP';
+
+-- --------------------------------------------------------
+-- 5. 充值模块 (aeisp-recharge)
+-- --------------------------------------------------------
+
+-- 时长套餐表
+CREATE TABLE IF NOT EXISTS duration_package (
+    id BIGSERIAL PRIMARY KEY,
+    package_name VARCHAR(50) NOT NULL,
+    price_cents INT NOT NULL DEFAULT 0,
+    duration_minutes BIGINT NOT NULL DEFAULT 0,
+    valid_days INT DEFAULT NULL,
+    promotion VARCHAR(255) DEFAULT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT NULL,
+    created_by BIGINT DEFAULT NULL,
+    updated_by BIGINT DEFAULT NULL,
+    deleted SMALLINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_duration_package_status ON duration_package (status);
+COMMENT ON TABLE duration_package IS '时长套餐表';
+COMMENT ON COLUMN duration_package.package_name IS '套餐名称';
+COMMENT ON COLUMN duration_package.price_cents IS '价格（分）';
+COMMENT ON COLUMN duration_package.duration_minutes IS '对应时长（分钟）';
+COMMENT ON COLUMN duration_package.valid_days IS '有效期（天）';
+COMMENT ON COLUMN duration_package.promotion IS '优惠活动描述';
+COMMENT ON COLUMN duration_package.status IS '状态：1-上架，2-下架';
+COMMENT ON COLUMN duration_package.sort_order IS '排序值';
+
+-- 充值订单表
+CREATE TABLE IF NOT EXISTS recharge_order (
+    id BIGSERIAL PRIMARY KEY,
+    order_no VARCHAR(32) NOT NULL,
+    user_id BIGINT NOT NULL,
+    package_id BIGINT DEFAULT NULL,
+    amount_cents INT NOT NULL DEFAULT 0,
+    duration_minutes BIGINT NOT NULL DEFAULT 0,
+    pay_type VARCHAR(20) DEFAULT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    pay_time TIMESTAMP DEFAULT NULL,
+    refund_reason VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT NULL,
+    created_by BIGINT DEFAULT NULL,
+    updated_by BIGINT DEFAULT NULL,
+    deleted SMALLINT NOT NULL DEFAULT 0,
+    CONSTRAINT uk_recharge_order_no UNIQUE (order_no)
+);
+CREATE INDEX IF NOT EXISTS idx_recharge_order_user_id ON recharge_order (user_id);
+CREATE INDEX IF NOT EXISTS idx_recharge_order_status ON recharge_order (status);
+CREATE INDEX IF NOT EXISTS idx_recharge_order_created_at ON recharge_order (created_at);
+COMMENT ON TABLE recharge_order IS '充值订单表';
+COMMENT ON COLUMN recharge_order.order_no IS '订单号';
+COMMENT ON COLUMN recharge_order.user_id IS '用户 ID';
+COMMENT ON COLUMN recharge_order.package_id IS '关联套餐 ID';
+COMMENT ON COLUMN recharge_order.amount_cents IS '充值金额（分）';
+COMMENT ON COLUMN recharge_order.duration_minutes IS '到账时长（分钟）';
+COMMENT ON COLUMN recharge_order.pay_type IS '支付方式';
+COMMENT ON COLUMN recharge_order.status IS '状态：1-待支付，2-已支付，3-已退款，4-已取消';
+COMMENT ON COLUMN recharge_order.pay_time IS '支付时间';
+COMMENT ON COLUMN recharge_order.refund_reason IS '退款原因';
+
+-- 余额变更日志表
+CREATE TABLE IF NOT EXISTS usr_balance_change_log (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    change_type SMALLINT NOT NULL,
+    change_cents INT NOT NULL,
+    previous_balance INT NOT NULL,
+    current_balance INT NOT NULL,
+    related_order_id BIGINT DEFAULT NULL,
+    reason VARCHAR(200) DEFAULT NULL,
+    operator_id BIGINT DEFAULT NULL,
+    operator_type SMALLINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_usr_balance_change_log_user_id ON usr_balance_change_log (user_id);
+CREATE INDEX IF NOT EXISTS idx_usr_balance_change_log_type ON usr_balance_change_log (change_type);
+CREATE INDEX IF NOT EXISTS idx_usr_balance_change_log_created_at ON usr_balance_change_log (created_at);
+COMMENT ON TABLE usr_balance_change_log IS '余额变更日志表';
+COMMENT ON COLUMN usr_balance_change_log.user_id IS '用户 ID';
+COMMENT ON COLUMN usr_balance_change_log.change_type IS '变更类型：1-充值，2-消费，3-退款，4-管理员调整';
+COMMENT ON COLUMN usr_balance_change_log.change_cents IS '变更金额（分），正数增加，负数扣减';
+COMMENT ON COLUMN usr_balance_change_log.previous_balance IS '变更前余额（分）';
+COMMENT ON COLUMN usr_balance_change_log.current_balance IS '变更后余额（分）';
+COMMENT ON COLUMN usr_balance_change_log.related_order_id IS '关联订单 ID';
+COMMENT ON COLUMN usr_balance_change_log.reason IS '变更原因';
+COMMENT ON COLUMN usr_balance_change_log.operator_id IS '操作人 ID';
+COMMENT ON COLUMN usr_balance_change_log.operator_type IS '操作者类型：1-系统自动，2-管理员，3-用户本人';
+
+-- --------------------------------------------------------
+-- 6. 初始化数据
 -- --------------------------------------------------------
 
 -- 初始化角色
