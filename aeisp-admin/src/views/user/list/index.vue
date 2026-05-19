@@ -10,8 +10,9 @@
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择" clearable>
           <el-option label="正常" :value="1" />
-          <el-option label="禁用" :value="0" />
-          <el-option label="冻结" :value="2" />
+          <el-option label="禁用" :value="2" />
+          <el-option label="冻结" :value="3" />
+          <el-option label="锁定" :value="4" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -23,17 +24,18 @@
     <el-table v-loading="loading" :data="userList" border>
       <el-table-column type="index" width="50" />
       <el-table-column label="用户名" prop="username" />
+      <el-table-column label="昵称" prop="nickname" />
       <el-table-column label="手机号" prop="phone" />
       <el-table-column label="邮箱" prop="email" />
-      <el-table-column label="状态" align="center">
+      <el-table-column label="状态" align="center" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'warning' : 'danger'">
-            {{ row.status === 1 ? '正常' : row.status === 2 ? '冻结' : '禁用' }}
+          <el-tag :type="getStatusType(row.status)">
+            {{ getStatusLabel(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="剩余时长" prop="remainingDuration" />
-      <el-table-column label="充值总额" prop="totalRecharge" />
+      <el-table-column label="剩余时长(分)" prop="remainingMinutes" width="110" />
+      <el-table-column label="余额(分)" prop="balanceCents" width="100" />
       <el-table-column label="最后登录" prop="lastLoginTime" width="180" />
       <el-table-column label="操作" align="center" width="280">
         <template #default="{ row }">
@@ -50,13 +52,15 @@
     <el-dialog v-model="open" title="编辑用户" width="500px">
       <el-form :model="form" label-width="80px">
         <el-form-item label="用户名"><el-input v-model="form.username" disabled /></el-form-item>
+        <el-form-item label="昵称"><el-input v-model="form.nickname" /></el-form-item>
         <el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item>
         <el-form-item label="邮箱"><el-input v-model="form.email" /></el-form-item>
         <el-form-item label="状态">
           <el-select v-model="form.status">
             <el-option label="正常" :value="1" />
-            <el-option label="禁用" :value="0" />
-            <el-option label="冻结" :value="2" />
+            <el-option label="禁用" :value="2" />
+            <el-option label="冻结" :value="3" />
+            <el-option label="锁定" :value="4" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -80,10 +84,10 @@
     <el-dialog v-model="durationOpen" title="调整时长" width="400px">
       <el-form :model="durationForm" label-width="80px">
         <el-form-item label="调整数值">
-          <el-input-number v-model="durationForm.amount" :min="-99999" :max="99999" />
+          <el-input-number v-model="durationForm.deltaMinutes" :min="-99999" :max="99999" />
         </el-form-item>
         <el-form-item label="调整原因">
-          <el-input v-model="durationForm.reason" type="textarea" />
+          <el-input v-model="durationForm.reason" type="textarea" :rows="3" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -111,8 +115,22 @@ const currentUser = ref(null)
 const newPassword = ref('')
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, username: undefined, phone: undefined, status: undefined })
-const form = reactive({ id: undefined, username: '', phone: '', email: '', status: 1 })
-const durationForm = reactive({ amount: 0, reason: '' })
+const form = reactive({ id: undefined, username: '', nickname: '', phone: '', email: '', status: 1 })
+const durationForm = reactive({ deltaMinutes: 0, reason: '' })
+
+const statusMap = {
+  1: { label: '正常', type: 'success' },
+  2: { label: '禁用', type: 'danger' },
+  3: { label: '冻结', type: 'warning' },
+  4: { label: '锁定', type: 'info' }
+}
+
+function getStatusLabel(status) {
+  return statusMap[status]?.label || '未知'
+}
+function getStatusType(status) {
+  return statusMap[status]?.type || 'info'
+}
 
 async function getList(pagination = null) {
   loading.value = true
@@ -129,7 +147,7 @@ function resetQuery() { queryRef.value?.resetFields(); handleQuery() }
 
 function handleUpdate(row) { Object.assign(form, row); open.value = true }
 async function submitUpdate() {
-  await updateUser(form.id, { phone: form.phone, email: form.email, status: form.status })
+  await updateUser(form.id, { phone: form.phone, email: form.email, nickname: form.nickname, status: form.status })
   ElMessage.success('修改成功'); open.value = false; getList()
 }
 
@@ -140,8 +158,12 @@ async function submitReset() {
   ElMessage.success('密码重置成功')
 }
 
-function handleAdjust(row) { currentUser.value = row; durationForm.amount = 0; durationForm.reason = ''; durationOpen.value = true }
+function handleAdjust(row) { currentUser.value = row; durationForm.deltaMinutes = 0; durationForm.reason = ''; durationOpen.value = true }
 async function submitAdjust() {
+  if (!durationForm.reason || durationForm.reason.trim().length < 5) {
+    ElMessage.warning('调整原因不能少于5个字符')
+    return
+  }
   await adjustDuration(currentUser.value.id, durationForm)
   ElMessage.success('时长调整成功'); durationOpen.value = false; getList()
 }

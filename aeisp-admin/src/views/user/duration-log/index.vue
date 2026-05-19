@@ -1,16 +1,22 @@
 <template>
   <div class="app-container">
-    <el-row :gutter="20" class="mb8">
-      <el-col :span="6"><el-statistic title="总消耗时长" :value="totalDuration" /></el-col>
-      <el-col :span="6"><el-statistic title="今日消耗" :value="todayDuration" /></el-col>
-    </el-row>
     <el-form :model="queryParams" :inline="true">
-      <el-form-item label="用户名"><el-input v-model="queryParams.username" clearable /></el-form-item>
-      <el-form-item label="类型">
-        <el-select v-model="queryParams.type" clearable>
-          <el-option label="模型调用" value="model" />
-          <el-option label="仿真运行" value="simulation" />
-          <el-option label="编译调试" value="debug" />
+      <el-form-item label="操作类型">
+        <el-select v-model="queryParams.operationType" clearable>
+          <el-option label="注册赠送" value="REGISTER_GRANT" />
+          <el-option label="充值" value="RECHARGE" />
+          <el-option label="管理员增加" value="ADMIN_ADD" />
+          <el-option label="管理员扣减" value="ADMIN_SUBTRACT" />
+          <el-option label="管理员设置" value="ADMIN_SET" />
+          <el-option label="消费扣减" value="CONSUME" />
+          <el-option label="退款扣减" value="REFUND_DEDUCT" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="操作者类型">
+        <el-select v-model="queryParams.operatorType" clearable>
+          <el-option label="系统自动" :value="1" />
+          <el-option label="管理员" :value="2" />
+          <el-option label="用户本人" :value="3" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -18,12 +24,20 @@
       </el-form-item>
     </el-form>
     <el-table v-loading="loading" :data="logList" border>
-      <el-table-column label="用户名" prop="username" />
-      <el-table-column label="消耗时间" prop="consumeTime" width="180" />
-      <el-table-column label="类型" prop="type" />
-      <el-table-column label="消耗时长" prop="duration" />
-      <el-table-column label="关联项目" prop="projectName" />
-      <el-table-column label="备注" prop="remark" />
+      <el-table-column label="操作类型" prop="operationTypeLabel" width="140" />
+      <el-table-column label="变更时长(分钟)" prop="changeMinutes" width="130" align="center">
+        <template #default="{ row }">
+          <el-tag :type="row.changeMinutes > 0 ? 'success' : 'danger'">
+            {{ row.changeMinutes > 0 ? '+' : '' }}{{ row.changeMinutes }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="变更前" prop="previousRemaining" width="100" align="center" />
+      <el-table-column label="变更后" prop="currentRemaining" width="100" align="center" />
+      <el-table-column label="操作者" prop="operatorTypeLabel" width="120" />
+      <el-table-column label="原因" prop="reason" show-overflow-tooltip />
+      <el-table-column label="关联订单" prop="relatedOrderId" width="160" />
+      <el-table-column label="变更时间" prop="createdAt" width="180" />
     </el-table>
     <Pagination :total="total" :page-num="queryParams.pageNum" :page-size="queryParams.pageSize" @pagination="getList" />
   </div>
@@ -37,9 +51,12 @@ import Pagination from '@/components/Pagination.vue'
 const loading = ref(false)
 const logList = ref([])
 const total = ref(0)
-const totalDuration = ref(0)
-const todayDuration = ref(0)
-const queryParams = reactive({ pageNum: 1, pageSize: 10, username: undefined, type: undefined })
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  operationType: undefined,
+  operatorType: undefined
+})
 
 async function getList(pagination = null) {
   loading.value = true
@@ -55,5 +72,4 @@ onMounted(getList)
 
 <style scoped>
 .app-container { padding: 20px; }
-.mb8 { margin-bottom: 16px; }
 </style>
