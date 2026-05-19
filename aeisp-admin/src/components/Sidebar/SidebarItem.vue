@@ -6,7 +6,7 @@
           <el-icon v-if="onlyOneChild.meta?.icon">
             <component :is="onlyOneChild.meta.icon" />
           </el-icon>
-          <template #title>{{ onlyOneChild.meta.title }}</template>
+          <template #title>{{ onlyOneChild.meta?.title }}</template>
         </el-menu-item>
       </Link>
     </template>
@@ -15,7 +15,7 @@
         <el-icon v-if="item.meta?.icon">
           <component :is="item.meta.icon" />
         </el-icon>
-        <span>{{ item.meta.title }}</span>
+        <span>{{ item.meta?.title }}</span>
       </template>
       <SidebarItem
         v-for="child in item.children"
@@ -52,6 +52,9 @@ function hasOneShowingChild(children = [], parent) {
 }
 
 function resolvePath(routePath) {
-  return routePath
+  if (!routePath) return props.basePath
+  if (routePath.startsWith('/')) return routePath
+  const base = props.basePath.endsWith('/') ? props.basePath.slice(0, -1) : props.basePath
+  return base + '/' + routePath
 }
 </script>
