@@ -243,7 +243,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         if (template == null) {
             throw new BizException("模板不存在");
         }
-        if (!TemplateStatusEnum.ONLINE.getCode().equals(template.getStatus())) {
+        if (!TemplateStatusEnum.ACTIVE.getCode().equals(template.getStatus())) {
             throw new BizException("模板未上线");
         }
         return getDetail(templateId);

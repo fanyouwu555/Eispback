@@ -20,6 +20,11 @@ public class TplTemplate extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 模板唯一编码。
+     */
+    private String templateCode;
+
+    /**
      * 模板名称。
      */
     private String templateName;
@@ -45,7 +50,7 @@ public class TplTemplate extends BaseEntity {
     private Integer sortWeight;
 
     /**
-     * 状态：0-下线，1-上线。
+     * 状态：1-上架，2-下架。
      */
     private Integer status;
 
@@ -58,4 +63,24 @@ public class TplTemplate extends BaseEntity {
      * 使用次数（新建项目数）。
      */
     private Long usageCount;
+
+    /**
+     * 累计项目数。
+     */
+    private Integer projectCount;
+
+    /**
+     * 优化标记：0-正常，1-需要优化。
+     */
+    private Integer optimizationFlag;
+
+    /**
+     * 存储路径。
+     */
+    private String storagePath;
+
+    /**
+     * 难度系数。
+     */
+    private Integer difficulty;
 }

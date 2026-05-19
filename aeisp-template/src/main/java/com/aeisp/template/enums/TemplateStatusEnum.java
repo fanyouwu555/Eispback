@@ -11,14 +11,14 @@ import lombok.Getter;
 public enum TemplateStatusEnum {
 
     /**
-     * 下线状态。
+     * 上架状态。
      */
-    OFFLINE(0, "下线"),
+    ACTIVE(1, "上架"),
 
     /**
-     * 上线状态。
+     * 下架状态。
      */
-    ONLINE(1, "上线");
+    OFFLINE(2, "下架");
 
     /**
      * 状态码。

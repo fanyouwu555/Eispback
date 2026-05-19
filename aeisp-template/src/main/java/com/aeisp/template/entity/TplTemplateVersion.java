@@ -35,6 +35,26 @@ public class TplTemplateVersion extends BaseEntity {
     private String filePath;
 
     /**
+     * 存储 URL。
+     */
+    private String storageUrl;
+
+    /**
+     * 文件大小（字节）。
+     */
+    private Long fileSize;
+
+    /**
+     * 文件哈希值。
+     */
+    private String fileHash;
+
+    /**
+     * 是否重大更新：0-否，1-是。
+     */
+    private Integer isMajorUpdate;
+
+    /**
      * 模板配置文件内容（JSON）。
      */
     private String configContent;
