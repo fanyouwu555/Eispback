@@ -8,6 +8,7 @@ import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.mapper.UsrUserMapper;
+import com.aeisp.user.mapper.UsrUserRoleMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -39,6 +40,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UsrUserMapper usrUserMapper;
     private final SysRoleMapper sysRoleMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
+    private final UsrUserRoleMapper usrUserRoleMapper;
     private final SysPermissionMapper sysPermissionMapper;
 
     @Override
@@ -70,13 +72,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         UsrUser usrUser = usrUserMapper.selectByUsername(username);
         if (usrUser != null) {
             boolean enabled = CommonConstants.STATUS_ENABLED == usrUser.getStatus();
-            String roleCode = usrUser.getRoleCode();
-            if (roleCode == null || roleCode.isBlank()) {
-                roleCode = CommonConstants.DEFAULT_FRONTEND_ROLE_CODE;
+            List<String> roles = sysRoleMapper.selectRoleCodesByFrontendUserId(usrUser.getId());
+            if (roles == null || roles.isEmpty()) {
+                roles = List.of(CommonConstants.DEFAULT_FRONTEND_ROLE_CODE);
             }
-            List<String> roles = List.of(roleCode);
-            // 查询该角色对应的权限点
-            List<String> permissions = sysPermissionMapper.selectPermissionCodesByRoleCode(roleCode);
+            List<Long> roleIds = usrUserRoleMapper.selectRoleIdsByUserId(usrUser.getId());
+            List<String> permissions = roleIds.isEmpty()
+                    ? Collections.emptyList()
+                    : sysPermissionMapper.selectPermissionCodesByRoleIds(roleIds);
             return new CustomUserDetails(
                     usrUser.getId(),
                     usrUser.getUsername(),

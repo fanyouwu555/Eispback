@@ -20,6 +20,10 @@ class JwtUtilTest {
     @BeforeEach
     void setUp() throws Exception {
         jwtUtil = new JwtUtil();
+        // 通过反射注入 Base64 编码的密钥（32 字节 → 44 字符）
+        java.lang.reflect.Field secretField = JwtUtil.class.getDeclaredField("configuredSecret");
+        secretField.setAccessible(true);
+        secretField.set(jwtUtil, "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=");
         // 触发 @PostConstruct
         jwtUtil.init();
     }

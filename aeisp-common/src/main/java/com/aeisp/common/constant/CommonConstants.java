@@ -29,10 +29,18 @@ public final class CommonConstants {
     public static final long MAX_PAGE_SIZE = 500L;
 
     /**
-     * 启用状态：0-禁用，1-启用。
+     * 通用启用状态：0-禁用，1-启用。
      */
     public static final int STATUS_DISABLED = 0;
     public static final int STATUS_ENABLED = 1;
+
+    /**
+     * 前端用户账号状态：1-正常，2-禁用，3-冻结，4-锁定。
+     */
+    public static final int USER_STATUS_NORMAL = 1;
+    public static final int USER_STATUS_DISABLED = 2;
+    public static final int USER_STATUS_FROZEN = 3;
+    public static final int USER_STATUS_LOCKED = 4;
 
     /**
      * 逻辑删除标志：0-未删除，1-已删除。

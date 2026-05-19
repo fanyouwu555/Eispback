@@ -195,25 +195,30 @@ public class AuthController {
         if ("user".equals(userDetails.getUserType())) {
             UsrLoginLog log = new UsrLoginLog();
             log.setUserId(userDetails.getUserId());
-            log.setUsername(userDetails.getUsername());
-            log.setLoginTime(LocalDateTime.now());
-            log.setIp(ip);
-            log.setDevice(device);
-            log.setResult(success ? CommonConstants.STATUS_ENABLED : CommonConstants.STATUS_DISABLED);
-            log.setErrorMsg(errorMsg);
+            log.setLoginAccount(userDetails.getUsername());
+            log.setLoginType(1);
+            log.setLoginResult(success ? 1 : 2);
+            log.setIpAddress(ip);
+            log.setDeviceType("unknown");
+            log.setBrowserInfo(device);
+            log.setCreatedAt(LocalDateTime.now());
             usrLoginLogService.saveLog(log);
         } else {
             SysOperationLog log = new SysOperationLog();
             log.setUserId(userDetails.getUserId());
-            log.setUsername(userDetails.getUsername());
-            log.setModule("认证管理");
-            log.setOperation("登录");
+            log.setOperatorUsername(userDetails.getUsername());
+            log.setOperationType("AUTH_LOGIN");
+            log.setOperationTypeLabel("登录");
+            log.setTargetType("user");
+            log.setTargetId(String.valueOf(userDetails.getUserId()));
+            log.setOperationDetail("{}");
             log.setRequestMethod(request.getMethod());
             log.setRequestUrl(request.getRequestURI());
             log.setStatus(success ? CommonConstants.STATUS_ENABLED : CommonConstants.STATUS_DISABLED);
             log.setErrorMsg(errorMsg);
-            log.setIp(ip);
+            log.setIpAddress(ip);
             log.setDuration(0L);
+            log.setSensitivity(1);
             log.setCreatedAt(LocalDateTime.now());
             sysOperationLogService.saveLog(log);
         }
