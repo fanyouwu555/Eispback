@@ -37,4 +37,9 @@ public class UserInfoVO {
      * 角色列表。
      */
     private List<String> roles;
+
+    /**
+     * 权限编码列表。
+     */
+    private List<String> permissions;
 }

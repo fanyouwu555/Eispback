@@ -190,6 +190,38 @@ public class AuthController {
     }
 
     /**
+     * 获取当前登录用户信息。
+     *
+     * <p>解析 Token 并返回用户基本信息、角色和权限列表。</p>
+     *
+     * @param authorization Authorization 请求头
+     * @return 用户信息
+     */
+    @GetMapping("/info")
+    public Result<UserInfoVO> getInfo(@RequestHeader("Authorization") String authorization) {
+        String token = resolveBearerToken(authorization);
+        if (token == null) {
+            return Result.error(ResultCode.UNAUTHORIZED, "Token 不能为空");
+        }
+        try {
+            Claims claims = jwtUtil.parseToken(token);
+            String userId = claims.get("userId", String.class);
+            CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUserId(Long.parseLong(userId));
+            UserInfoVO vo = UserInfoVO.builder()
+                    .id(userDetails.getUserId())
+                    .username(userDetails.getUsername())
+                    .userType(userDetails.getUserType())
+                    .roles(userDetails.getRoles())
+                    .permissions(userDetails.getPermissions())
+                    .build();
+            return Result.success(vo, "获取成功");
+        } catch (Exception e) {
+            log.warn("获取用户信息失败: {}", e.getMessage());
+            return Result.error(ResultCode.UNAUTHORIZED, "Token 已过期或无效");
+        }
+    }
+
+    /**
      * 处理前端用户登录失败（记录失败次数）。
      */
     private void handleFrontendLoginFailure(String username) {

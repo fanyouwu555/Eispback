@@ -25,7 +25,7 @@ public class CorsConfig {
      *
      * <p>默认仅允许本地开发环境。生产环境必须在配置文件中覆盖。</p>
      */
-    @Value("${cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000}")
+    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000}")
     private List<String> allowedOrigins;
 
     /**
