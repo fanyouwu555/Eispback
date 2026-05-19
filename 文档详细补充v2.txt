@@ -1,0 +1,592 @@
+后端管理系统 — 功能描述与数据结构定义
+________________________________________
+阅读约定
+本文档从两个维度描述系统：一是功能描述，阐述每个业务模块的功能范围、处理逻辑、业务规则和边界条件；二是数据结构，定义支撑这些功能所需的数据库表结构、字段规范、关联关系和约束条件。文档不涉及任何接口路径、HTTP方法或请求响应格式。
+术语约定：
+术语	含义
+用户	指平台的使用者，即学生、开发者等前端账号持有者
+管理员	指通过后端管理系统操作平台的管理人员
+时长	指用户可使用的平台计算资源时间，单位为分钟
+模型	指对接的第三方或自部署AI大语言模型
+模板	指前端创建项目时可选用的编程项目模板
+________________________________________
+3.1 用户注册与用户管理模块
+3.1.1 功能描述
+用户注册功能提供两种账号创建模式，满足不同场景下的开户需求。
+自主在线注册面向普通用户，用户通过前端页面主动发起注册流程。注册暂定为后端管理员注册。注册使用用户名+密码格式。	<后期可能会和手机号绑定> 。用户名用户名在同一平台范围内全局唯一，不允许重复；<手机号需通过短信验证码完成 ownership 校验>，确保该号码确实由注册者持有。密码设置暂时不做约束。注册过程中用户必须勾选同意用户协议和隐私政策方可继续。完成注册后，系统自动为新用户分配基础角色（普通用户角色）。<后期可能注册完成会赠送用户时长或token值。具体根据业务而定，需预留接口>
+
+管理员后台开户面向企业客户和批量场景，由管理员在后台管理系统中手动录入或批量导入用户账号。手动创建模式下，管理员填写用户的基础信息，设置初始密码，分配角色权限。创建时可导出用户名密码表分发给用户。批量导入模式支持上传 Excel 文件（.xlsx或.xls格式），文件中每行代表一个待创建的用户，列头包括用户名、初始密码、角色名称、备注。系统对导入文件进行格式校验和唯一性预检：逐行校验用户名格式（只允许字母、数字、下划线，长度4-20位）。唯一性预检阶段收集所有行的用户名与数据库已有数据进行比对，发现重复则根据策略选择跳过该行或整体终止导入。导入过程使用批量写入优化，单次最多支持1000条记录。导入完成后系统生成详细的导入结果报告，标明每行的处理状态（成功/失败）及失败原因。
+用户管理功能为管理员提供全维度的账号管控能力。用户列表页面以分页形式展示平台所有注册用户，列表字段涵盖用户名、昵称、手机号、注册时间、账号状态、剩余可用时长、累计充值金额、最后登录时间。支持多条件组合筛选：可按用户名或手机号模糊搜索、按注册时间范围筛选、按账号状态（正常/禁用/冻结/锁定）筛选、按角色筛选、按剩余时长范围筛选。列表数据支持导出为 Excel 文件，导出
+账号状态管控支持四种状态的变更操作。正常（active）表示账号可正常使用；禁用（disabled）通常由管理员人工操作，因用户违反平台规范而执行，禁用后用户无法登录，所有已颁发的令牌立即失效；冻结（frozen）一般用于异常行为调查期间，冻结后用户同样无法登录但状态较禁用更为临时；锁定（locked）由系统自动触发，当用户连续5次输入错误密码后账号自动锁定30分钟，锁定期满自动恢复为正常状态，也可由管理员提前解锁。从正常状态可以转移到禁用或冻结，禁用和冻结状态可通过管理员操作恢复为正常，但四种状态之间的任意非法转换均被系统拒绝。每一次状态变更操作都要求管理员输入自身密码进行二次确认，操作完成后系统向被操作用户发送通知（站内信+邮件/短信），告知其账号状态变更及原因。
+管理员可执行密码重置操作。重置时系统生成10位随机强密码（包含大写字母、小写字母、数字、特殊字符各至少一位），通过 BCrypt 算法哈希后更新到用户记录中，同时设置”下次登录需修改密码”标记。原始随机密码需要管理员自主保存。每次生成时红色感叹号标记。重置操作强制注销该用户当前所有在线会话，将其令牌加入黑名单。
+<时长调整功能允许管理员对用户账户中的可用时长进行增加、扣减或直接设定。增加操作常用于活动赠送、补偿或奖励场景；扣减操作用于纠正错误发放或处罚，扣减时若用户剩余时长不足则操作失败并提示缺口数量；直接设定操作将余额设为指定值。所有时长调整操作必须填写调整原因（5-200字符），系统自动记录调整前后的余额、操作人、操作时间，写入审计日志。>
+数据统计功能提供平台用户维度的宏观数据视图。总用户数统计平台注册用户的累计总量，同时展示各状态的用户分布（正常/禁用/冻结/锁定）。新增用户统计按日、周、月三个时间粒度计算周期内的新注册用户数。活跃用户统计定义日活跃用户（DAU，当日至少有一次登录行为的独立用户）、周活跃用户（WAU，近7天至少有一次登录的独立用户）、月活跃用户（MAU，近30天至少有一次登录的独立用户）。趋势数据支持按天、周、月粒度聚合展示，用于前端绘制趋势折线图。
+________________________________________
+3.1.2 数据结构
+用户基础信息表（users）
+该表存储所有注册用户的账号基础信息，是平台最核心的用户身份数据。
+字段名	类型	长度/精度	可空	默认值	说明
+user_id	VARCHAR	36	否	—	主键，全局唯一用户标识，格式：u_{时间戳}_{6位随机字符串}
+username	VARCHAR	20	否	—	用户名，全局唯一索引，只允许字母、数字、下划线，首位必须为字母
+password_hash	VARCHAR	255	否	—	BCrypt哈希后的登录密码，cost factor=12
+phone	VARCHAR	11	是	NULL	手机号，全局唯一索引，11位数字
+nickname	VARCHAR	50	是	NULL	用户昵称，展示用
+avatar_url	VARCHAR	255	是	NULL	头像图片URL
+account_status	TINYINT	—	否	1	账号状态：1=正常，2=禁用，3=冻结，4=锁定
+status_reason	VARCHAR	200	是	NULL	状态变更原因说明
+locked_until	DATETIME	—	是	NULL	账号锁定到期时间，仅在锁定状态时有效
+need_change_password	TINYINT	—	否	0	下次登录是否需要修改密码：0=否，1=是
+failed_login_attempts	TINYINT	—	否	0	连续登录失败次数，登录成功后清零
+last_login_time	DATETIME	—	是	NULL	最后登录时间
+last_login_ip	VARCHAR	40	是	NULL	最后登录IP地址（支持IPv6）
+register_ip	VARCHAR	40	否	—	注册时IP地址
+register_device_info	JSON	—	是	NULL	注册设备信息JSON，包含设备类型、操作系统、浏览器、设备ID
+invitation_code_used	VARCHAR	10	是	NULL	注册时使用的邀请码
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	注册时间
+updated_at	DATETIME	—	否	CURRENT_TIMESTAMP	最后更新时间，ON UPDATE自动刷新
+					
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	user_id	唯一标识
+uk_username	唯一索引	username	用户名唯一
+uk_phone	唯一索引	phone	手机号唯一，允许NULL
+uk_email	唯一索引	email	邮箱唯一，允许NULL
+idx_status	普通索引	account_status	状态筛选
+idx_created_at	普通索引	created_at	注册时间排序/筛选
+idx_last_login	普通索引	last_login_time	活跃度统计
+关联关系：
+•	与 user_roles 表：一对多，一个用户可拥有多个角色
+•	与 user_duration 表：一对一，每个用户对应一条时长记录
+•	与 user_balance 表：一对一，每个用户对应一条余额记录
+________________________________________
+用户角色关联表（user_roles）
+该表维护用户与角色之间的多对多关联关系。
+字段名	类型	长度/精度	可空	默认值	说明
+id	BIGINT	—	否	AUTO_INCREMENT	主键，自增
+user_id	VARCHAR	36	否	—	用户ID，外键关联 users.user_id
+role_id	VARCHAR	20	否	—	角色ID，逻辑外键关联 roles.role_id
+granted_by	VARCHAR	36	是	NULL	授权人管理员ID
+granted_at	DATETIME	—	否	CURRENT_TIMESTAMP	授权时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	id	—
+uk_user_role	唯一索引	user_id, role_id	防止重复授权
+idx_user_id	普通索引	user_id	按用户查角色
+idx_role_id	普通索引	role_id	按角色查用户
+________________________________________
+角色定义表（roles）
+该表预定义系统中所有可用的角色，采用RBAC模型。
+字段名	类型	长度/精度	可空	默认值	说明
+role_id	VARCHAR	20	否	—	主键，角色唯一编码，如 role_super_admin
+role_name	VARCHAR	30	否	—	角色展示名称，如 “超级管理员”
+role_code	VARCHAR	30	否	—	角色权限编码，如 ROLE_SUPER_ADMIN
+description	VARCHAR	200	是	NULL	角色描述
+is_system	TINYINT	—	否	1	是否系统内置角色：0=自定义，1=系统内置（不可删除）
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	创建时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	role_id	—
+uk_role_code	唯一索引	role_code	角色编码唯一
+预设数据：
+role_id	role_name	role_code	is_system
+role_super_admin	超级管理员	ROLE_SUPER_ADMIN	1
+role_user_manager	用户管理员	ROLE_USER_MANAGER	1
+role_model_manager	模型管理员	ROLE_MODEL_MANAGER	1
+role_notification_mgr	消息管理员	ROLE_NOTIFICATION_MANAGER	1
+role_template_manager	模板管理员	ROLE_TEMPLATE_MANAGER	1
+role_finance_manager	财务管理员	ROLE_FINANCE_MANAGER	1
+role_user	普通用户	ROLE_USER	1
+________________________________________
+用户时长表（user_duration）
+该表记录每个用户账户中的可用计算时长。
+字段名	类型	长度/精度	可空	默认值	说明
+id	BIGINT	—	否	AUTO_INCREMENT	主键，自增
+user_id	VARCHAR	36	否	—	用户ID，外键关联 users.user_id，唯一索引
+total_granted_minutes	INT	—	否	0	累计获得时长（分钟），历史累计不减少
+total_consumed_minutes	INT	—	否	0	累计消耗时长（分钟）
+remaining_minutes	INT	—	否	0	当前剩余可用时长（分钟）
+expiry_date	DATE	—	是	NULL	当前批次时长的过期日期，NULL表示无固定过期时间
+warning_threshold	INT	—	否	120	时长预警阈值（分钟），低于此值触发预警通知
+last_consumed_at	DATETIME	—	是	NULL	最后一次消耗时间
+updated_at	DATETIME	—	否	CURRENT_TIMESTAMP	最后更新时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	id	—
+uk_user_id	唯一索引	user_id	每个用户唯一一条记录
+idx_remaining	普通索引	remaining_minutes	时长筛选/预警扫描
+________________________________________
+用户余额表（user_balance）
+该表记录每个用户的资金余额，与时长系统相互独立，支持灵活充值和时长兑换。
+字段名	类型	长度/精度	可空	默认值	说明
+id	BIGINT	—	否	AUTO_INCREMENT	主键
+user_id	VARCHAR	36	否	—	用户ID，唯一索引
+balance_cents	INT	—	否	0	当前余额，单位为分
+total_recharge_cents	INT	—	否	0	累计充值金额（分）
+total_consumed_cents	INT	—	否	0	累计消费金额（分）
+updated_at	DATETIME	—	否	CURRENT_TIMESTAMP	最后更新时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	id	—
+uk_user_id	唯一索引	user_id	—
+________________________________________
+时长变更日志表（duration_change_logs）
+该表记录每次用户时长增减的详细变更记录，用于审计和对账。
+字段名	类型	长度/精度	可空	默认值	说明
+log_id	VARCHAR	36	否	—	主键，格式：dcl_{时间戳}_{随机串}
+user_id	VARCHAR	36	否	—	关联用户
+operation_type	VARCHAR	20	否	—	操作类型：REGISTER_GRANT(注册赠送), RECHARGE(充值), ADMIN_ADD(管理员增加), ADMIN_SUBTRACT(管理员扣减), ADMIN_SET(管理员设定), CONSUME(使用消耗), REFUND_DEDUCT(退款扣减)
+change_minutes	INT	—	否	—	变更时长（分钟），正数表示增加，负数表示扣减
+previous_remaining	INT	—	否	—	变更前剩余时长
+current_remaining	INT	—	否	—	变更后剩余时长
+reason	VARCHAR	200	否	—	变更原因说明
+related_order_id	VARCHAR	36	是	NULL	关联订单ID，充值类操作时填写
+operator_id	VARCHAR	36	是	NULL	操作人ID，系统自动操作时NULL
+operator_type	TINYINT	—	否	—	操作者类型：1=系统自动，2=管理员，3=用户本人
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	变更时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	log_id	—
+idx_user_id	普通索引	user_id	按用户查记录
+idx_operation_type	普通索引	operation_type	按类型统计
+idx_created_at	普通索引	created_at	时间范围查询
+idx_order_id	普通索引	related_order_id	按订单关联
+________________________________________
+登录日志表（login_logs）
+该表记录所有用户的登录行为，用于安全审计和活跃度统计。
+字段名	类型	长度/精度	可空	默认值	说明
+log_id	VARCHAR	36	否	—	主键
+user_id	VARCHAR	36	是	NULL	用户ID，登录失败时可能为NULL
+login_account	VARCHAR	50	否	—	登录时使用的账号（用户名/手机号/邮箱）
+login_type	TINYINT	—	否	—	登录类型：1=密码登录，2=验证码登录，3=Token刷新
+login_result	TINYINT	—	否	—	结果：1=成功，2=密码错误，3=账号不存在，4=账号禁用，5=账号冻结，6=账号锁定，7=验证码错误，8=Token过期
+ip_address	VARCHAR	40	否	—	登录IP
+device_type	VARCHAR	20	是	NULL	设备类型：desktop/mobile/tablet/unknown
+os_info	VARCHAR	50	是	NULL	操作系统信息
+browser_info	VARCHAR	100	是	NULL	浏览器信息
+device_id	VARCHAR	64	是	NULL	设备唯一标识
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	登录时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	log_id	—
+idx_user_id	普通索引	user_id	按用户查登录历史
+idx_created_at	普通索引	created_at	时间范围统计
+idx_ip_address	普通索引	ip_address	IP分析
+________________________________________
+验证码发送记录表（verification_records）
+该表记录所有验证码的发送历史，用于防刷分析和安全审计。
+字段名	类型	长度/精度	可空	默认值	说明
+record_id	VARCHAR	36	否	—	主键
+target	VARCHAR	100	否	—	发送目标（手机号或邮箱）
+send_type	TINYINT	—	否	—	类型：1=短信，2=邮件
+scene	VARCHAR	20	否	—	场景：register/reset_password/bind/login
+verification_code	VARCHAR	10	否	—	发送的验证码内容（明文存储，短期有效）
+verify_result	TINYINT	—	是	NULL	验证结果：1=验证成功，2=验证失败，NULL=未验证
+ip_address	VARCHAR	40	否	—	请求IP
+expired_at	DATETIME	—	否	—	验证码过期时间
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	发送时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	record_id	—
+idx_target_scene	普通索引	target, scene	按目标和场景查询
+idx_created_at	普通索引	created_at	时间范围统计
+
+
+3.3 通知消息管理模块
+3.3.1 功能描述
+消息类型体系预设七种标准类型，覆盖平台运营和用户关怀的主要场景。系统公告类型用于发布平台重要通知和运营动态，通常由管理员编辑后手动推送，优先级较高；版本更新类型用于通知用户新功能上线或系统升级信息，包含版本号、更新内容摘要和更新时间，帮助用户了解产品演进；模板更新类型为自动触发，当用户曾经使用过或正在使用的编程模板发布新版本时，系统自动向受影响用户推送更新通知，包含变更说明和查看入口；任务结果类型为自动触发，当用户提交的代码运行任务（编译、仿真、测试等）完成或失败时，系统自动推送执行结果通知，包含运行状态、耗时、输出摘要和查看详情的链接；时长预警类型为自动触发，当用户账户的剩余可用时长低于预设阈值（默认120分钟）时，系统通过定时扫描任务检测到后自动推送预警消息，提醒用户及时充值；<充值通知类型为自动触发，当用户完成充值且支付状态变更为已支付时，系统自动发送到账确认通知，包含充值金额、到账时长和当前余额；违规提醒类型用于告知用户其操作违反了平台使用规范，可由管理员手动发送或在系统自动检测到违规行为时触发。>
+消息推送管理支持多种维度的灵活配置。推送范围方面，支持全员推送（所有注册用户，不含已禁用账号）、指定用户推送（输入一组用户ID精确推送）、指定用户组推送（按角色或标签筛选目标群体）。推送渠道方面，支持站内信（写入用户消息收件箱，前端消息铃铛展示）、<短信（发送到用户绑定手机号）和App推送（移动端实时推送）>，一次消息可选择多个渠道同时推送。推送时机方面，支持立即推送（创建后立即执行）和定时推送（指定未来的某个时间自动执行），定时推送通过延时队列实现。消息内容支持富文本编辑，管理员可在编辑器中排版文字、插入超链接，系统对HTML内容进行XSS过滤，仅允许白名单内的标签和属性。每条消息可设置过期时间，过期后消息对用户不可见，但后台保留记录用于审计。消息支持撤回操作：管理员可对已发送但用户尚未阅读的消息执行撤回，撤回后该消息从前端消息铃铛中消失，已读的消息不可撤回。重要消息可设置置顶，置顶消息在消息列表中始终排在最前面。
+消息生命周期管理遵循明确的存储策略。后端数据库永久保留所有消息记录，管理员可随时按类型、时间范围、接收人进行检索和导出。前端展示采用分层策略：消息铃铛默认展示最近90天内的消息记录，超过90天的消息自动进入归档状态，用户可通过”查看历史消息”入口访问归档内容，但归档消息不再主动推送提醒。未读消息在消息铃铛上以红点数字提示，已读消息标记为已读状态。消息是否已读的状态由前端调用已读确认接口来更新，管理员后台可查看每条消息的已读人数和未读人数，评估消息触达效果。
+自动消息触发机制基于规则引擎执行，无需人工干预。时长预警规则由后台定时任务驱动：系统每5分钟扫描一次用户时长表，筛选剩余时长低于预警阈值且状态正常的用户，对每个命中用户检查其在最近24小时内是否已接收过同类预警（通过Redis标记防重复），未收到过的则生成预警消息并推送。任务结果通知规则由任务状态变更事件驱动：当代码执行任务的状态机从”运行中”转变为”成功”或”失败”时，发布领域事件，消息模块订阅该事件后异步生成并推送结果通知。模板更新通知规则由模板版本发布事件驱动：当管理员上传模板新版本并标记为主要更新时，系统查询所有使用过该模板的用户ID列表，为每个用户生成模板更新通知。充值到账通知规则由支付回调事件驱动：当支付渠道回调通知确认充值成功后，系统生成充值确认通知。
+________________________________________
+3.3.2 数据结构
+消息模板表（notification_templates）
+该表预定义各类型消息的推送模板。
+字段名	类型	长度/精度	可空	默认值	说明
+template_id	VARCHAR	20	否	—	主键，如 tpl_duration_warning
+template_name	VARCHAR	50	否	—	模板名称
+notification_type	VARCHAR	30	否	—	消息类型编码
+channel	VARCHAR	20	否	—	推送渠道：site/email/sms/push
+title_template	VARCHAR	200	是	NULL	标题模板，支持变量占位符如{{username}}
+content_template	TEXT	—	否	—	内容模板，支持变量占位符
+is_enabled	TINYINT	—	否	1	是否启用：0=禁用，1=启用
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	创建时间
+________________________________________
+消息主表（notifications）
+该表存储管理员创建的消息主体内容。
+字段名	类型	长度/精度	可空	默认值	说明
+notification_id	VARCHAR	36	否	—	主键，格式：notif_{时间戳}_{随机串}
+title	VARCHAR	100	否	—	消息标题
+content	TEXT	—	否	—	消息内容（HTML富文本）
+notification_type	VARCHAR	30	否	—	消息类型编码
+priority	TINYINT	—	否	2	优先级：1=低，2=中，3=高，4=紧急
+push_scope	TINYINT	—	否	—	推送范围：1=全员，2=指定用户，3=指定用户组
+target_user_ids	JSON	—	是	NULL	指定用户时的用户ID数组
+target_group_ids	JSON	—	是	NULL	指定用户组时的组ID数组
+channels	JSON	—	否	—	推送渠道数组，如[“site”,“email”]
+schedule_time	DATETIME	—	是	NULL	定时推送时间，NULL表示立即推送
+expiry_time	DATETIME	—	是	NULL	消息过期时间
+is_pinned	TINYINT	—	否	0	是否置顶：0=否，1=是
+need_read_confirmation	TINYINT	—	否	0	是否需要阅读确认
+status	TINYINT	—	否	1	状态：1=草稿，2=已发送，3=已撤回，4=定时中
+target_count	INT	—	否	0	目标接收人总数
+success_count	INT	—	否	0	成功推送数
+failed_count	INT	—	否	0	失败推送数
+sent_at	DATETIME	—	是	NULL	实际发送时间
+revoked_at	DATETIME	—	是	NULL	撤回时间
+created_by	VARCHAR	36	否	—	创建人管理员ID
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	创建时间
+updated_at	DATETIME	—	否	CURRENT_TIMESTAMP	更新时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	notification_id	—
+idx_type	普通索引	notification_type	按类型查询
+idx_status	普通索引	status	状态筛选
+idx_schedule_time	普通索引	schedule_time	定时任务扫描
+idx_created_at	普通索引	created_at	时间范围查询
+________________________________________
+用户消息关联表（user_notifications）
+该表存储每个用户收到的具体消息实例及阅读状态。
+字段名	类型	长度/精度	可空	默认值	说明
+user_notification_id	VARCHAR	36	否	—	主键
+user_id	VARCHAR	36	否	—	接收用户ID
+notification_id	VARCHAR	36	否	—	关联的消息主表ID
+read_status	TINYINT	—	否	1	阅读状态：1=未读，2=已读，3=已撤回
+read_at	DATETIME	—	是	NULL	阅读时间
+channel_received	JSON	—	是	NULL	实际接收渠道数组
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	接收时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	user_notification_id	—
+idx_user_id	普通索引	user_id	按用户查消息
+idx_notification_id	普通索引	notification_id	按消息查接收人
+idx_user_read_status	普通索引	user_id, read_status	用户未读消息数
+idx_created_at	普通索引	created_at	时间范围（90天归档策略）
+________________________________________
+消息发送日志表（notification_send_logs）
+该表记录每条消息在每个渠道的发送详情。
+字段名	类型	长度/精度	可空	默认值	说明
+log_id	VARCHAR	36	否	—	主键
+notification_id	VARCHAR	36	否	—	消息ID
+user_id	VARCHAR	36	否	—	目标用户ID
+channel	VARCHAR	20	否	—	渠道：site/email/sms/push
+send_status	TINYINT	—	否	—	发送状态：1=成功，2=失败
+error_message	VARCHAR	500	是	NULL	失败原因
+sent_at	DATETIME	—	否	CURRENT_TIMESTAMP	发送时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	log_id	—
+idx_notification_id	普通索引	notification_id	按消息查发送记录
+idx_user_id	普通索引	user_id	按用户查
+________________________________________
+3.4 模板管理模块
+3.4.1 功能描述
+模板管理中有模板分类管理。模板固定分类为两种教学资源和竞赛资源。教学资源分为免费资源和付费资源。免费资源和付费资源往下再分类。分类名称可后台自定义。模板上传过程中。选择框自动调取数据库分类模板供管理员选择。
+模板上传与接入功能支持管理员将编程项目模板资源包上传到平台。上传文件格式要求为ZIP压缩包，大小限制xxxxMB，必填字段，校验通过后计算文件哈希值防止重复上传。模板基础信息包括名称、编码、分类（选择填入）
+难度系数、创作者））、简介、预览图片和排序权重。
+模板版本管理机制采用语义化版本号（格式为 主版本.次版本.修订版本，如 1.2.3），每次上传新版本时系统自动递增版本号。新版本上传后历史版本记录保留，支持随时回滚到任意历史版本。回滚操作仅影响新创建的项目（前端新建项目页面默认使用最新版本），已使用旧版本创建的项目不受影响（每个项目创建时复制一份模板快照）。版本更新日志记录每次更新的时间、操作人、变更内容摘要。
+模板上下线控制通过状态管理实现。活跃（active）状态的模板在前端新建项目页面正常展示，用户可选择使用；下线（offline）状态的模板在前端不再展示，但已使用它创建的项目不受影响，管理员可随时重新上线。状态变更即时生效，无需重启服务。
+模板预览与验证功能支持管理员在上传后在线预览模板内容，包括目录结构浏览、文件内容查看和依赖关系检查。系统还提供模板完整性校验功能，验证源码文件是否存在语法错误、依赖是否可解析、配置文件格式是否正确。
+用户使用统计从多个维度分析模板的使用情况。基础统计包括每个模板的使用次数（被用户选择创建项目的次数）和创建项目总数。热门排行按使用次数排序，帮助管理员识别受欢迎的模板和冷门模板。场景分布统计教学、竞赛、模板的使用占比，为模板资源补充提供方向。长期无人使用的模板（如连续90天零使用）系统自动标记为”待优化”状态，提醒管理员关注。
+资源分发机制：模板资源文件统一存储在对象存储服务中（如MinIO、阿里云OSS），通过CDN加速分发。用户在前端新建项目时，系统根据用户选择的模板和版本，从对象存储中拉取对应的资源文件到用户的项目工作空间中。每个模板版本对应一个独立的存储路径，格式为 templates/{templateCode}/{version}/，确保版本隔离。
+________________________________________
+3.4.2 数据结构
+模板主表（templates）
+该表存储编程模板的基础信息。
+字段名	类型	长度/精度	可空	默认值	说明
+template_id	VARCHAR	36	否	—	主键，格式：tpl_{时间戳}_{随机串}
+template_name	VARCHAR	50	否	—	模板展示名称
+template_code	VARCHAR	30	否	—	模板唯一编码，如 py-data-analysis
+scenario	TINYINT	—	否	—	
+description	VARCHAR	500	是	NULL	模板简介
+current_version_id	VARCHAR	36	是	NULL	当前最新版本ID，逻辑外键
+status	TINYINT	—	否	1	状态：1=活跃，2=下线
+sort_order	INT	—	否	0	展示排序权重
+use_count	INT	—	否	0	累计使用次数
+project_count	INT	—	否	0	累计创建项目数
+optimization_flag	TINYINT	—	否	0	待优化标记：0=正常，1=待优化
+storage_path	VARCHAR	255	否	—	资源在对象存储中的根路径
+created_by	VARCHAR	36	否	—	创建人管理员ID
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	创建时间
+updated_at	DATETIME	—	否	CURRENT_TIMESTAMP	更新时间
+Easy_at          int                25                              否            --                   难度系数
+
+
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	template_id	—
+uk_template_code	唯一索引	template_code	编码唯一
+idx_scenario	普通索引	scenario	场景筛选
+idx_status	普通索引	status	状态筛选
+idx_sort_order	普通索引	sort_order	排序
+________________________________________
+模板版本表（template_versions）
+该表记录每个模板的历史版本信息。
+字段名	类型	长度/精度	可空	默认值	说明
+version_id	VARCHAR	36	否	—	主键，格式：ver_{时间戳}{模板编码}{版本序号}
+template_id	VARCHAR	36	否	—	关联模板ID
+version	VARCHAR	15	否	—	语义化版本号，如 1.0.0
+description	VARCHAR	200	是	NULL	版本变更说明
+file_size	BIGINT	—	否	0	ZIP文件大小（字节）
+file_hash	VARCHAR	64	否	—	ZIP文件SHA-256哈希
+storage_url	VARCHAR	255	否	—	资源文件在对象存储中的URL
+config_json	JSON	—	是	NULL	解析后的config.json内容
+is_major_update	TINYINT	—	否	0	是否主要更新：0=否，1=是
+created_by	VARCHAR	36	否	—	上传人管理员ID
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	上传时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	version_id	—
+idx_template_id	普通索引	template_id	按模板查版本
+uk_template_version	唯一索引	template_id, version	每个模板的版本号唯一
+________________________________________
+模板预览图片表（template_preview_images）
+该表存储模板的预览图片信息。
+字段名	类型	长度/精度	可空	默认值	说明
+image_id	VARCHAR	36	否	—	主键
+template_id	VARCHAR	36	否	—	关联模板ID
+image_url	VARCHAR	255	否	—	图片URL
+sort_order	INT	—	否	0	展示顺序
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	上传时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	image_id	—
+idx_template_id	普通索引	template_id	按模板查图片
+
+
+3.6 系统基础管理模块
+3.6.1 功能描述
+权限管理采用RBAC（Role-Based Access Control，基于角色的访问控制）模型。系统预定义七种角色，覆盖平台管理的各个职能领域。超级管理员拥有全部权限，包括系统配置、角色管理、数据备份等最高级别操作，且系统中至少保留一个超级管理员账号不可被删除或降级。用户管理员负责用户账号的全生命周期管理（创建、状态变更、密码重置、时长调整、角色分配）。模型管理员负责AI模型的接入、配置、测试、状态管理和调用权限分配。消息管理员负责平台消息的内容编辑、推送管理、撤回和效果监控。模板管理员负责编程模板的上传、版本管理、上下线控制和统计分析。财务管理员负责充值套餐配置、订单管理、退款审核和余额调整。普通用户仅拥有与其自身相关的操作权限（查看和修改个人信息、管理自己的项目、查看自己的时长和余额、充值等），对其他用户的任何数据无访问权限。
+角色与权限的映射通过权限编码体系实现。每个角色关联一组权限编码（如 user:create 表示创建用户权限、user:status:update 表示修改用户状态权限、model:config 表示模型配置权限），系统维护角色与权限编码的多对多关系。权限校验时，系统从当前登录用户的JWT令牌中提取角色列表，查询角色对应的全部权限编码，再与当前操作所需的权限编码进行比对，匹配则放行，不匹配则拒绝访问。权限变更支持动态生效：管理员调整用户角色后，用户下次登录时新的权限才会反映在令牌中。若需即时生效，系统可强制使该用户的当前令牌失效，迫使其重新登录获取新令牌。
+权限管理的安全约束包括：不允许通过角色分配使自己失去超级管理员权限（防止管理员误操作导致系统无超级管理员）；不允许修改或删除系统内置角色的核心编码；对敏感操作（修改用户状态、重置密码、调整余额/时长、退款）强制要求操作人输入自身密码进行二次确认，操作记录详细审计。
+日志管理统一记录四类日志，分别对应不同的关注视角和操作维度。系统操作日志记录管理员在后端管理系统执行的所有操作，包括操作人、操作时间、操作类型、操作目标对象（如用户ID、模型ID、订单ID）、变更前后的数据快照、操作人IP地址。敏感操作（涉及资金变动、权限变更、状态修改）额外标记为高敏感度，留存期限更长。用户行为日志记录用户在前端的关键行为，如登录登出、创建项目、发起模型调用、充值等，用于用户行为分析和产品优化。异常报错日志记录系统运行过程中捕获的所有异常，包括异常类型、错误堆栈、请求参数、影响的用户和功能模块，用于故障排查。登录日志独立记录所有认证行为（见3.1节），用于安全审计和活跃度统计。
+日志存储策略按日志类型差异化设置保留期限：系统操作日志保留2年，用户行为日志保留1年，异常报错日志保留6个月，超过期限的数据归档到对象存储（如MinIO），归档文件按月份命名。日志查询支持多条件组合筛选：按日志类型、按时间范围、按操作人/用户ID、按关键词模糊搜索。日志数据量增长快，单表超过1000万条时按月份分表，分表命名格式为 表名_年月（如 admin_operation_logs_202401）。支持导出功能，导出为Excel格式。
+官网配置功能允许管理员动态配置前端登录页面”联系我们”入口所跳转的官网地址，无需修改前端代码或重启服务。配置支持多环境隔离，可分别为开发环境（dev）、测试环境（test）和生产环境（prod）设置不同的官网地址和联系方式（联系邮箱、客服电话）。配置数据存储在数据库中，前端页面加载时通过查询接口获取当前环境对应的配置，实现实时生效。配置变更记录操作日志。
+________________________________________
+3.6.2 数据结构
+权限定义表（permissions）
+该表定义系统中所有可用的操作权限。
+字段名	类型	长度/精度	可空	默认值	说明
+permission_id	VARCHAR	30	否	—	主键，权限编码，如 user:create
+permission_name	VARCHAR	50	否	—	权限名称，如 “创建用户”
+resource_type	VARCHAR	20	否	—	资源类型：user/model/template/order/notification/system
+action	VARCHAR	20	否	—	操作类型：create/read/update/delete/manage
+description	VARCHAR	200	是	NULL	权限描述
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	创建时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	permission_id	—
+idx_resource_type	普通索引	resource_type	按资源类型查询
+预设数据示例：
+permission_id	permission_name	resource_type	action
+user:create	创建用户	user	create
+user:read	查看用户	user	read
+user:status:update	修改用户状态	user	update
+user:password:reset	重置用户密码	user	update
+user:duration:adjust	调整用户时长	user	update
+model:create	接入模型	model	create
+model:config	配置模型	model	update
+model:test	测试模型	model	read
+order:manage	管理订单	order	manage
+order:refund	订单退款	order	update
+notification:send	发送消息	notification	create
+template:upload	上传模板	template	create
+template:version:manage	管理模板版本	template	update
+system:config	系统配置	system	update
+admin:log:read	查看操作日志	system	read
+________________________________________
+角色权限关联表（role_permissions）
+该表维护角色与权限之间的多对多关联。
+字段名	类型	长度/精度	可空	默认值	说明
+id	BIGINT	—	否	AUTO_INCREMENT	主键
+role_id	VARCHAR	20	否	—	角色ID
+permission_id	VARCHAR	30	否	—	权限ID
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	创建时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	id	—
+uk_role_permission	唯一索引	role_id, permission_id	防止重复
+idx_role_id	普通索引	role_id	按角色查权限
+________________________________________
+系统操作日志表（admin_operation_logs）
+该表记录管理员在后端系统执行的所有操作。
+字段名	类型	长度/精度	可空	默认值	说明
+log_id	VARCHAR	36	否	—	主键
+operator_id	VARCHAR	36	否	—	操作人管理员ID
+operator_username	VARCHAR	20	否	—	操作人用户名（冗余存储）
+operation_type	VARCHAR	30	否	—	操作类型编码，如 UPDATE_USER_STATUS
+operation_type_label	VARCHAR	50	是	NULL	操作类型中文标签
+target_type	VARCHAR	20	是	NULL	操作目标类型：user/model/template/order/notification/system
+target_id	VARCHAR	36	是	NULL	操作目标ID
+operation_detail	JSON	—	是	NULL	操作详情JSON，包含变更前后的数据快照
+ip_address	VARCHAR	40	否	—	操作人IP地址
+sensitivity	TINYINT	—	否	1	敏感度：1=普通，2=敏感（涉及资金/权限变更）
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	操作时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	log_id	—
+idx_operator_id	普通索引	operator_id	按操作人查询
+idx_operation_type	普通索引	operation_type	按类型统计
+idx_target	普通索引	target_type, target_id	按目标对象查询
+idx_created_at	普通索引	created_at	时间范围查询
+idx_sensitivity	普通索引	sensitivity	敏感操作筛选
+________________________________________
+用户行为日志表（user_behavior_logs）
+该表记录用户在前端的关键行为。
+字段名	类型	长度/精度	可空	默认值	说明
+log_id	VARCHAR	36	否	—	主键
+user_id	VARCHAR	36	否	—	用户ID
+behavior_type	VARCHAR	30	否	—	行为类型：LOGIN/LOGOUT/CREATE_PROJECT/MODEL_CALL/RECHARGE/等
+behavior_detail	JSON	—	是	NULL	行为详情JSON
+ip_address	VARCHAR	40	是	NULL	用户IP
+device_info	JSON	—	是	NULL	设备信息
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	行为时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	log_id	—
+idx_user_id	普通索引	user_id	按用户查询
+idx_behavior_type	普通索引	behavior_type	按类型统计
+idx_created_at	普通索引	created_at	时间范围查询
+________________________________________
+异常报错日志表（error_logs）
+该表记录系统运行中的异常和错误。
+字段名	类型	长度/精度	可空	默认值	说明
+log_id	VARCHAR	36	否	—	主键
+error_type	VARCHAR	50	否	—	异常类型
+error_message	TEXT	—	否	—	异常信息
+stack_trace	TEXT	—	是	NULL	错误堆栈
+request_url	VARCHAR	255	是	NULL	请求URL
+request_params	JSON	—	是	NULL	请求参数
+user_id	VARCHAR	36	是	NULL	受影响用户ID
+module	VARCHAR	30	是	NULL	发生异常的模块
+severity	TINYINT	—	否	2	严重程度：1=低，2=中，3=高，4=紧急
+created_at	DATETIME	—	否	CURRENT_TIMESTAMP	发生时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	log_id	—
+idx_error_type	普通索引	error_type	按类型查询
+idx_severity	普通索引	severity	按严重程度筛选
+idx_module	普通索引	module	按模块查询
+idx_created_at	普通索引	created_at	时间范围查询
+________________________________________
+系统配置表（system_settings）
+该表以键值对形式存储系统的动态配置项。
+字段名	类型	长度/精度	可空	默认值	说明
+setting_key	VARCHAR	50	否	—	主键，配置项键名
+setting_value	TEXT	—	是	NULL	配置项值
+description	VARCHAR	200	是	NULL	配置项说明
+environment	VARCHAR	10	否	‘all’	适用环境：all/dev/test/prod
+is_editable	TINYINT	—	否	1	是否可通过后台编辑：0=只读，1=可编辑
+updated_by	VARCHAR	36	是	NULL	最后更新人ID
+updated_at	DATETIME	—	否	CURRENT_TIMESTAMP	更新时间
+索引设计：
+索引名	类型	字段	说明
+PRIMARY	主键	setting_key	—
+idx_environment	普通索引	environment	按环境查询
+预设数据示例：
+setting_key	setting_value	environment	description
+official_website_url	https://www.example.com	prod	生产环境官网地址
+official_website_url	https://test.example.com	test	测试环境官网地址
+contact_email	contact@example.com	all	联系邮箱
+contact_phone	400-123-4567	all	客服电话
+default_register_duration	120	all	注册默认赠送时长（分钟）
+default_duration_expiry_days	90	all	赠送时长有效期（天）
+duration_warning_threshold	120	all	时长预警阈值（分钟）
+login_max_fail_attempts	5	all	登录最大失败次数
+login_lockout_minutes	30	all	登录锁定持续时间（分钟）
+password_min_length	8	all	密码最小长度
+password_max_length	20	all	密码最大长度
+verify_code_ttl_seconds	300	all	验证码有效期（秒）
+verify_code_cooldown_seconds	60	all	验证码发送冷却时间（秒）
+default_model_max_qps	10	all	默认模型QPS限制
+model_failure_rate_threshold	10	all	模型失败率告警阈值（%）
+notification_archive_days	90	all	消息归档天数
+recharge_order_timeout_minutes	30	all	充值订单超时时间（分钟）
+________________________________________
+附录 A：全局数据规范
+时间格式规范
+所有时间类型字段统一使用数据库的 DATETIME 类型，存储格式为 YYYY-MM-DD HH:MM:SS，时区统一采用东八区（Asia/Shanghai）。应用层与数据库交互时由连接驱动自动处理时区转换，确保数据库存储和展示均为东八区时间。代码中避免使用时区敏感的函数，所有时间比较均在同一时区内进行。
+金额存储规范
+所有金额字段以整数分为单位存储，避免浮点数精度问题。例如 199.00 元存储为 19900。前端展示时自行转换为元单位（除以100并保留两位小数）。折扣率以整数百分比存储，例如 80 表示八折（原价的80%）。
+枚举值存储规范
+状态、类型等枚举字段统一使用 TINYINT 类型存储，应用层负责将数值映射为可读标签。禁止在数据库中使用字符串存储枚举值（减少存储占用、提升比较性能、避免大小写不一致问题）。每个枚举字段需在应用代码和文档中维护完整的数值-含义映射表。
+JSON字段使用规范
+JSON类型字段适用于存储结构灵活、查询时不需要单独筛选子属性的数据场景。典型使用场景包括：设备信息（多种字段组合不固定）、场景标签数组、推送渠道数组、操作详情快照。JSON字段不参与WHERE条件筛选，若某子属性需要频繁查询，应提升为独立字段。JSON字段在应用层序列化为字符串后存入，读取后反序列化为对象使用。
+主键生成策略
+业务表的主键采用程序生成的全局唯一标识符，格式为 {前缀}_{时间戳}_{6位随机字符串}，如 u_1703001600000_abc123。时间戳精确到毫秒，随机字符串由大小写字母和数字组成。这种策略相比数据库自增ID的优势在于：全局唯一（支持分库分表后仍不冲突）、大致有序（时间戳前缀）、无暴露数据量的风险。仅关联表和日志表使用数据库自增ID作为主键。
+________________________________________
+附录 B：数据安全设计
+密码安全
+用户登录密码使用 BCrypt 算法进行单向哈希存储，cost factor 设为12（约耗时250ms），确保暴力破解成本极高。系统不保存密码明文，不支持密码找回（只能重置）。管理员重置密码时生成随机强密码一次性发送给用户，并强制标记”下次登录需修改密码”。密码字段在日志和异常信息中一律脱敏处理，以星号替代。
+密钥安全
+AI模型的API密钥使用 AES-256-CBC 算法对称加密存储，加密密钥从环境变量 MODEL_API_KEY_SECRET 获取，应用启动时加载到内存，数据库中仅存储密文。加密密钥长度固定为32字节（256位），初始向量（IV）随机生成并与密文拼接存储。支付相关的密钥（如支付宝私钥）存储在独立的密钥管理系统（KMS）中，应用通过KMS API动态获取，不存储在配置文件或数据库中。
+敏感数据脱敏
+用户手机号在日志和列表展示中脱敏为 138****8000 格式。邮箱脱敏为 d***@example.com 格式（保留首字母和域名）。用户密码在任何场景下均不以任何形式展示。API密钥在日志中仅展示前4位和后4位，中间以星号替代。管理员在后台查看用户信息时，完整手机号和邮箱的查看需要二次身份确认（输入操作人密码）。
+审计追踪
+所有涉及数据变更的操作均记录完整审计信息，包括操作人、操作时间、变更前后的数据快照（JSON格式）、操作原因。审计日志不可修改、不可删除，保留期限按敏感度分级：普通操作保留1年，敏感操作（资金、权限、状态变更）保留2年。审计日志表独立存储，与应用数据分离，支持导出为不可篡改的归档文件。
+________________________________________
+附录 C：数据库性能设计
+分表策略
+日志类表（login_logs、model_call_logs、admin_operation_logs、user_behavior_logs、error_logs）数据增长快，需按月份进行水平分表。分表规则为：表名后缀为 _YYYYMM，如 login_logs_202401 存储2024年1月的数据。应用层通过拦截器或ORM插件根据查询条件中的时间范围自动路由到对应分表。每月1日凌晨自动创建下月的空表。
+索引设计原则
+所有表的主键使用索引（聚簇索引）。频繁作为WHERE条件筛选的字段建立普通索引，高基数字段（如user_id、order_no）优先考虑。组合查询场景建立联合索引，索引字段顺序按区分度从高到低排列。ORDER BY和GROUP BY涉及的字段考虑纳入索引以减少文件排序。索引不是越多越好，写入操作频繁的表（如调用日志）需权衡查询性能和写入性能，避免过多索引拖慢写入。
+缓存策略
+用户基础信息（users表）使用Redis缓存，Key为 user:{user_id}，TTL 30分钟，用户信息变更时主动删除缓存。用户剩余时长（user_duration表）使用Redis缓存，Key为 duration:{user_id}，TTL 10分钟，时长扣减时先更新数据库再删除缓存（Cache-Aside模式）。验证码使用Redis存储，Key为 verify:{scene}:{target}，TTL 5分钟。登录失败计数使用Redis，Key为 login_fail:{user_id}，TTL 5分钟。Token黑名单使用Redis，Key为 token_blacklist:{jti}，TTL为Token剩余有效期。
+连接池配置
+数据库连接池采用HikariCP，核心参数建议值：最小空闲连接数 10，最大连接数 100，连接超时时间 30 秒，空闲连接超时时间 10 分钟，连接最大生命周期 30 分钟。连接池大小根据实际并发量调整，初始部署后通过监控连接使用情况进行优化。
+________________________________________
+附录 D：ER关系总览
+核心实体关系
+users (用户)
+  ├── 1:1 ── user_duration (用户时长)
+  ├── 1:1 ── user_balance (用户余额)
+  ├── 1:N ── user_roles (用户角色关联) ── N:1 ── roles (角色)
+  ├── 1:N ── login_logs (登录日志)
+  ├── 1:N ── duration_change_logs (时长变更日志)
+  ├── 1:N ── duration_usage_logs (时长消耗日志)
+  ├── 1:N ── balance_change_logs (余额变更日志)
+  ├── 1:N ── recharge_orders (充值订单) ── N:1 ── duration_packages (时长套餐)
+  ├── 1:N ── model_call_logs (模型调用日志) ── N:1 ── ai_models (AI模型)
+  ├── 1:1 ── user_model_permissions (用户模型权限)
+  ├── 1:N ── user_notifications (用户消息关联) ── N:1 ── notifications (消息主表)
+  └── 1:N ── user_behavior_logs (用户行为日志)
+
+roles (角色)
+  └── 1:N ── role_permissions (角色权限关联) ── N:1 ── permissions (权限)
+
+templates (模板)
+  └── 1:N ── template_versions (模板版本)
+  └── 1:N ── template_preview_images (预览图片)
+
+notification_templates (消息模板)
+notifications (消息主表)
+  └── 1:N ── notification_send_logs (消息发送日志)
+
+system_settings (系统配置)
+verification_records (验证码记录)
+admin_operation_logs (操作日志)
+error_logs (异常日志)
+外键关系汇总
+子表	外键字段	父表	父表字段	删除策略
+user_roles	user_id	users	user_id	CASCADE
+user_duration	user_id	users	user_id	CASCADE
+user_balance	user_id	users	user_id	CASCADE
+user_model_permissions	user_id	users	user_id	CASCADE
+user_notifications	user_id	users	user_id	CASCADE
+user_notifications	notification_id	notifications	notification_id	CASCADE
+notification_send_logs	notification_id	notifications	notification_id	CASCADE
+notification_send_logs	user_id	users	user_id	CASCADE
+recharge_orders	user_id	users	user_id	RESTRICT
+recharge_orders	package_id	duration_packages	package_id	SET NULL
+model_call_logs	user_id	users	user_id	RESTRICT
+model_call_logs	model_id	ai_models	model_id	RESTRICT
+duration_change_logs	user_id	users	user_id	RESTRICT
+duration_usage_logs	user_id	users	user_id	RESTRICT
+balance_change_logs	user_id	users	user_id	RESTRICT
+login_logs	user_id	users	user_id	SET NULL
+user_behavior_logs	user_id	users	user_id	SET NULL
+template_versions	template_id	templates	template_id	CASCADE
+template_preview_images	template_id	templates	template_id	CASCADE
+role_permissions	role_id	roles	role_id	CASCADE
+role_permissions	permission_id	permissions	permission_id	CASCADE
+________________________________________
+文档版本：v2.0 适用范围：后端开发团队、DBA、前端对接团队、测试团队
