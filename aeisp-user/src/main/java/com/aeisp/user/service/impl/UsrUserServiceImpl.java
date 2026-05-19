@@ -436,8 +436,8 @@ public class UsrUserServiceImpl implements UsrUserService {
         // 记录变更日志
         UsrDurationChangeLog log = new UsrDurationChangeLog();
         log.setUserId(request.getUserId());
-        log.setOperationType(request.getDeltaMinutes() >= 0 ? "ADMIN_ADD" : "ADMIN_SUBTRACT");
-        log.setChangeMinutes(request.getDeltaMinutes());
+        log.setOperationType(operationType);
+        log.setChangeMinutes(changeMinutes);
         log.setPreviousRemaining(previousRemaining);
         log.setCurrentRemaining(newRemaining);
         log.setReason(request.getReason());
@@ -468,6 +468,36 @@ public class UsrUserServiceImpl implements UsrUserService {
         if (request.getRegisterTimeEnd() != null) {
             wrapper.le(UsrUser::getRegisterTime, request.getRegisterTimeEnd());
         }
+
+        // 角色筛选
+        if (!CollectionUtils.isEmpty(request.getRoleIds())) {
+            LambdaQueryWrapper<UsrUserRole> roleWrapper = Wrappers.lambdaQuery();
+            roleWrapper.in(UsrUserRole::getRoleId, request.getRoleIds());
+            List<UsrUserRole> userRoles = usrUserRoleMapper.selectList(roleWrapper);
+            List<Long> roleUserIds = userRoles.stream().map(UsrUserRole::getUserId).distinct().toList();
+            if (roleUserIds.isEmpty()) {
+                return PageResult.of(new Page<>(), List.of());
+            }
+            wrapper.in(UsrUser::getId, roleUserIds);
+        }
+
+        // 剩余时长范围筛选
+        if (request.getRemainingMinutesMin() != null || request.getRemainingMinutesMax() != null) {
+            LambdaQueryWrapper<UsrUserDuration> durationWrapper = Wrappers.lambdaQuery();
+            if (request.getRemainingMinutesMin() != null) {
+                durationWrapper.ge(UsrUserDuration::getRemainingMinutes, request.getRemainingMinutesMin());
+            }
+            if (request.getRemainingMinutesMax() != null) {
+                durationWrapper.le(UsrUserDuration::getRemainingMinutes, request.getRemainingMinutesMax());
+            }
+            List<UsrUserDuration> durations = usrUserDurationMapper.selectList(durationWrapper);
+            List<Long> durationUserIds = durations.stream().map(UsrUserDuration::getUserId).distinct().toList();
+            if (durationUserIds.isEmpty()) {
+                return PageResult.of(new Page<>(), List.of());
+            }
+            wrapper.in(UsrUser::getId, durationUserIds);
+        }
+
         wrapper.orderByDesc(UsrUser::getCreatedAt);
 
         Page<UsrUser> page = new Page<>(request.getPageNum(), request.getPageSize());
@@ -499,6 +529,221 @@ public class UsrUserServiceImpl implements UsrUserService {
         UsrUserBalance balance = usrUserBalanceMapper.selectByUserId(userId);
         List<String> roleCodes = queryRoleCodesByUserId(userId);
         return convertToVO(user, duration, balance, roleCodes);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UserImportResultVO importFromExcel(MultipartFile file) {
+        List<UserImportRow> rows;
+        try {
+            rows = EasyExcel.read(file.getInputStream()).head(UserImportRow.class).sheet().doReadSync();
+        } catch (IOException e) {
+            throw new BizException("读取 Excel 文件失败");
+        }
+
+        UserImportResultVO result = new UserImportResultVO();
+        result.setTotal(rows.size());
+        if (rows.isEmpty()) {
+            result.setSuccessCount(0);
+            result.setFailCount(0);
+            return result;
+        }
+
+        if (rows.size() > 1000) {
+            throw new BizException("单次导入最多 1000 条记录");
+        }
+
+        List<UserImportResultVO.FailItem> failList = new ArrayList<>();
+        Set<String> usernameSet = new HashSet<>();
+
+        for (int i = 0; i < rows.size(); i++) {
+            UserImportRow row = rows.get(i);
+            int rowNum = i + 2;
+            String username = row.getUsername();
+
+            if (!StringUtils.hasText(username)) {
+                failList.add(createFailItem(rowNum, "", "用户名不能为空"));
+                continue;
+            }
+            if (!username.matches("^[a-zA-Z][a-zA-Z0-9_]{3,19}$")) {
+                failList.add(createFailItem(rowNum, username, "用户名格式不正确"));
+                continue;
+            }
+            if (!StringUtils.hasText(row.getPassword())) {
+                failList.add(createFailItem(rowNum, username, "初始密码不能为空"));
+                continue;
+            }
+            if (!usernameSet.add(username)) {
+                failList.add(createFailItem(rowNum, username, "Excel 内用户名重复"));
+                continue;
+            }
+            if (usrUserMapper.selectByUsername(username) != null) {
+                failList.add(createFailItem(rowNum, username, "用户名已存在"));
+            }
+        }
+
+        if (!failList.isEmpty()) {
+            result.setSuccessCount(0);
+            result.setFailCount(failList.size());
+            result.setFailList(failList);
+            return result;
+        }
+
+        Set<String> allRoleNames = rows.stream()
+                .map(UserImportRow::getRoleNames)
+                .filter(StringUtils::hasText)
+                .flatMap(rn -> Arrays.stream(rn.split(",")))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Map<String, Long> roleNameToIdMap = Map.of();
+        if (!allRoleNames.isEmpty()) {
+            LambdaQueryWrapper<SysRole> roleWrapper = Wrappers.lambdaQuery();
+            roleWrapper.in(SysRole::getRoleName, allRoleNames);
+            List<SysRole> roles = sysRoleMapper.selectList(roleWrapper);
+            roleNameToIdMap = roles.stream()
+                    .collect(Collectors.toMap(SysRole::getRoleName, SysRole::getId, (a, b) -> a));
+        }
+
+        int successCount = 0;
+        LocalDateTime now = LocalDateTime.now();
+        for (UserImportRow row : rows) {
+            UsrUser user = new UsrUser();
+            user.setUsername(row.getUsername());
+            user.setPassword(passwordEncoder.encode(row.getPassword()));
+            user.setNickname(row.getRemark());
+            user.setStatus(CommonConstants.USER_STATUS_NORMAL);
+            user.setNeedChangePassword(0);
+            user.setFailedLoginAttempts(0);
+            user.setRegisterTime(now);
+            user.setDeleted(CommonConstants.DELETED_NO);
+            usrUserMapper.insert(user);
+
+            Long userId = user.getId();
+            createDefaultDuration(userId);
+            createDefaultBalance(userId);
+
+            if (StringUtils.hasText(row.getRoleNames())) {
+                List<Long> roleIds = Arrays.stream(row.getRoleNames().split(","))
+                        .map(String::trim)
+                        .filter(StringUtils::hasText)
+                        .map(roleNameToIdMap::get)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+                if (!roleIds.isEmpty()) {
+                    bindUserRoles(userId, roleIds, null);
+                }
+            }
+            successCount++;
+        }
+
+        result.setSuccessCount(successCount);
+        result.setFailCount(0);
+        return result;
+    }
+
+    private UserImportResultVO.FailItem createFailItem(int rowNum, String username, String reason) {
+        UserImportResultVO.FailItem item = new UserImportResultVO.FailItem();
+        item.setRowNum(rowNum);
+        item.setUsername(username);
+        item.setReason(reason);
+        return item;
+    }
+
+    @Override
+    public void exportToExcel(UserQueryRequest request, HttpServletResponse response) {
+        LambdaQueryWrapper<UsrUser> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(UsrUser::getDeleted, CommonConstants.DELETED_NO);
+
+        if (StringUtils.hasText(request.getUsername())) {
+            wrapper.like(UsrUser::getUsername, request.getUsername());
+        }
+        if (StringUtils.hasText(request.getPhone())) {
+            wrapper.like(UsrUser::getPhone, request.getPhone());
+        }
+        if (request.getStatus() != null) {
+            wrapper.eq(UsrUser::getStatus, request.getStatus());
+        }
+        if (request.getRegisterTimeStart() != null) {
+            wrapper.ge(UsrUser::getRegisterTime, request.getRegisterTimeStart());
+        }
+        if (request.getRegisterTimeEnd() != null) {
+            wrapper.le(UsrUser::getRegisterTime, request.getRegisterTimeEnd());
+        }
+
+        boolean emptyResult = false;
+
+        // 角色筛选
+        if (!CollectionUtils.isEmpty(request.getRoleIds())) {
+            LambdaQueryWrapper<UsrUserRole> roleWrapper = Wrappers.lambdaQuery();
+            roleWrapper.in(UsrUserRole::getRoleId, request.getRoleIds());
+            List<UsrUserRole> userRoles = usrUserRoleMapper.selectList(roleWrapper);
+            List<Long> roleUserIds = userRoles.stream().map(UsrUserRole::getUserId).distinct().toList();
+            if (roleUserIds.isEmpty()) {
+                emptyResult = true;
+            } else {
+                wrapper.in(UsrUser::getId, roleUserIds);
+            }
+        }
+
+        // 剩余时长范围筛选
+        if (!emptyResult && (request.getRemainingMinutesMin() != null || request.getRemainingMinutesMax() != null)) {
+            LambdaQueryWrapper<UsrUserDuration> durationWrapper = Wrappers.lambdaQuery();
+            if (request.getRemainingMinutesMin() != null) {
+                durationWrapper.ge(UsrUserDuration::getRemainingMinutes, request.getRemainingMinutesMin());
+            }
+            if (request.getRemainingMinutesMax() != null) {
+                durationWrapper.le(UsrUserDuration::getRemainingMinutes, request.getRemainingMinutesMax());
+            }
+            List<UsrUserDuration> durations = usrUserDurationMapper.selectList(durationWrapper);
+            List<Long> durationUserIds = durations.stream().map(UsrUserDuration::getUserId).distinct().toList();
+            if (durationUserIds.isEmpty()) {
+                emptyResult = true;
+            } else {
+                wrapper.in(UsrUser::getId, durationUserIds);
+            }
+        }
+
+        wrapper.orderByDesc(UsrUser::getCreatedAt);
+
+        List<UsrUser> userList = emptyResult ? List.of() : usrUserMapper.selectList(wrapper);
+
+        List<Long> userIds = userList.stream().map(UsrUser::getId).toList();
+        Map<Long, UsrUserDuration> durationMap = batchQueryDuration(userIds);
+        Map<Long, UsrUserBalance> balanceMap = batchQueryBalance(userIds);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(CommonConstants.DEFAULT_DATE_TIME_FORMAT);
+
+        List<UserExportVO> voList = userList.stream().map(u -> {
+            UserExportVO vo = new UserExportVO();
+            vo.setUsername(u.getUsername());
+            vo.setNickname(u.getNickname());
+            vo.setPhone(u.getPhone());
+            vo.setRegisterTime(u.getRegisterTime() != null ? u.getRegisterTime().format(formatter) : "");
+            vo.setStatusLabel(switch (u.getStatus() != null ? u.getStatus() : 1) {
+                case 2 -> "禁用";
+                case 3 -> "冻结";
+                case 4 -> "锁定";
+                default -> "正常";
+            });
+            UsrUserDuration duration = durationMap.get(u.getId());
+            vo.setRemainingMinutes(duration != null ? duration.getRemainingMinutes() : 0);
+            UsrUserBalance balance = balanceMap.get(u.getId());
+            vo.setTotalRechargeCents(balance != null ? balance.getTotalRechargeCents() : 0);
+            vo.setLastLoginTime(u.getLastLoginTime() != null ? u.getLastLoginTime().format(formatter) : "");
+            return vo;
+        }).toList();
+
+        try {
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("UTF-8");
+            String fileName = URLEncoder.encode("用户列表", StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+            EasyExcel.write(response.getOutputStream(), UserExportVO.class).sheet("用户列表").doWrite(voList);
+        } catch (IOException e) {
+            throw new BizException("导出 Excel 失败");
+        }
     }
 
     /**
@@ -547,6 +792,9 @@ public class UsrUserServiceImpl implements UsrUserService {
      * 批量查询用户时长。
      */
     private Map<Long, UsrUserDuration> batchQueryDuration(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
         LambdaQueryWrapper<UsrUserDuration> wrapper = Wrappers.lambdaQuery();
         wrapper.in(UsrUserDuration::getUserId, userIds);
         return usrUserDurationMapper.selectList(wrapper).stream()
@@ -557,6 +805,9 @@ public class UsrUserServiceImpl implements UsrUserService {
      * 批量查询用户余额。
      */
     private Map<Long, UsrUserBalance> batchQueryBalance(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
         LambdaQueryWrapper<UsrUserBalance> wrapper = Wrappers.lambdaQuery();
         wrapper.in(UsrUserBalance::getUserId, userIds);
         return usrUserBalanceMapper.selectList(wrapper).stream()
@@ -567,6 +818,9 @@ public class UsrUserServiceImpl implements UsrUserService {
      * 批量查询用户角色编码。
      */
     private Map<Long, List<String>> batchQueryRoleCodes(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
         LambdaQueryWrapper<UsrUserRole> wrapper = Wrappers.lambdaQuery();
         wrapper.in(UsrUserRole::getUserId, userIds);
         List<UsrUserRole> userRoles = usrUserRoleMapper.selectList(wrapper);

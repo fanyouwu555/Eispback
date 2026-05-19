@@ -47,4 +47,24 @@ public class UserStatisticsVO {
      * 月活跃用户（MAU）。
      */
     private Long mau;
+
+    /**
+     * 正常状态用户数。
+     */
+    private Long normalCount;
+
+    /**
+     * 禁用状态用户数。
+     */
+    private Long disabledCount;
+
+    /**
+     * 冻结状态用户数。
+     */
+    private Long frozenCount;
+
+    /**
+     * 锁定状态用户数。
+     */
+    private Long lockedCount;
 }

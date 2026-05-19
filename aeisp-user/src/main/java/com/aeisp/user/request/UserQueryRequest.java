@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 用户分页查询请求。
@@ -50,4 +51,19 @@ public class UserQueryRequest {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime registerTimeEnd;
+
+    /**
+     * 角色 ID 列表（IN 查询）。
+     */
+    private List<Long> roleIds;
+
+    /**
+     * 剩余时长下限（分钟，含）。
+     */
+    private Integer remainingMinutesMin;
+
+    /**
+     * 剩余时长上限（分钟，含）。
+     */
+    private Integer remainingMinutesMax;
 }

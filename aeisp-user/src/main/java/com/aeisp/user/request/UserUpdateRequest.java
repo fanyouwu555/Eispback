@@ -1,7 +1,6 @@
 package com.aeisp.user.request;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -17,9 +16,8 @@ import java.util.List;
 public class UserUpdateRequest {
 
     /**
-     * 用户 ID。
+     * 用户 ID（由路径参数注入，无需请求体传递）。
      */
-    @NotNull(message = "用户 ID 不能为空")
     private Long id;
 
     /**

@@ -16,4 +16,12 @@
         <result column="created_at" property="createdAt"/>
     </resultMap>
 
+    <select id="countActiveUsers" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT user_id)
+        FROM usr_login_log
+        WHERE login_result = 1
+          AND created_at &gt;= #{start}
+          AND created_at &lt;= #{end}
+    </select>
+
 </mapper>

@@ -1,17 +1,26 @@
 package com.aeisp.user.controller;
 
-import cn.hutool.core.util.RandomUtil;
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.util.TokenBlacklistUtil;
 import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.request.*;
 import com.aeisp.user.service.UsrUserService;
+import com.aeisp.user.vo.UserImportResultVO;
 import com.aeisp.user.vo.UsrUserVO;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import com.aeisp.common.exception.BizException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -30,6 +39,8 @@ import java.util.List;
 public class UserController {
 
     private final UsrUserService usrUserService;
+    private final TokenBlacklistUtil tokenBlacklistUtil;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 用户列表分页查询。
@@ -77,20 +88,30 @@ public class UserController {
      */
     @PatchMapping("/{id}/status")
     public Result<Void> updateStatus(@PathVariable Long id,
-                                     @RequestParam Integer status) {
-        boolean success = usrUserService.updateStatus(id, status);
+                                     @Valid @RequestBody StatusUpdateRequest request) {
+        verifyAdminPassword(request.getAdminPassword());
+        boolean success = usrUserService.updateStatus(id, request.getStatus(), request.getReason());
         return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "状态修改失败");
     }
 
     /**
      * 重置用户密码。
      *
-     * <p>后台生成 12 位随机密码并返回给前端（实际应通过邮件/短信通知用户）。</p>
+     * <p>后台生成 10 位强密码（含大写、小写、数字、特殊字符各至少一位），
+     * 强制注销该用户所有在线会话。</p>
      */
     @PostMapping("/{id}/reset-password")
-    public Result<String> resetPassword(@PathVariable Long id) {
-        String newPassword = RandomUtil.randomString(12);
+    public Result<String> resetPassword(@PathVariable Long id,
+                                        @Valid @RequestBody ResetPasswordRequest request) {
+        verifyAdminPassword(request.getAdminPassword());
+        String newPassword = StringUtils.hasText(request.getNewPassword())
+                ? request.getNewPassword()
+                : usrUserService.generateStrongPassword();
         boolean success = usrUserService.resetPassword(id, newPassword);
+        if (success) {
+            tokenBlacklistUtil.addUserToBlacklist(id,
+                    new java.util.Date(System.currentTimeMillis() + 7200000L));
+        }
         return success ? Result.success(newPassword, "密码已重置，请通知用户尽快修改") :
                 Result.error(ResultCode.INTERNAL_ERROR, "密码重置失败");
     }
@@ -101,6 +122,7 @@ public class UserController {
     @PostMapping("/{id}/adjust-duration")
     public Result<Void> adjustDuration(@PathVariable Long id,
                                        @Valid @RequestBody AdjustDurationRequest request) {
+        verifyAdminPassword(request.getAdminPassword());
         request.setUserId(id);
         boolean success = usrUserService.adjustDuration(request);
         return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "时长调整失败");
@@ -113,5 +135,37 @@ public class UserController {
     public Result<Void> batchCreate(@Valid @RequestBody UserBatchCreateRequest request) {
         boolean success = usrUserService.batchCreate(request);
         return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "批量导入失败");
+    }
+
+    /**
+     * Excel 批量导入用户。
+     */
+    @PostMapping("/import-excel")
+    public Result<UserImportResultVO> importExcel(@RequestParam("file") MultipartFile file) {
+        UserImportResultVO result = usrUserService.importFromExcel(file);
+        return Result.success(result);
+    }
+
+    /**
+     * 导出用户列表到 Excel。
+     */
+    @GetMapping("/export-excel")
+    public void exportExcel(UserQueryRequest request, HttpServletResponse response) {
+        usrUserService.exportToExcel(request, response);
+    }
+
+    /**
+     * 校验当前管理员的登录密码（敏感操作二次确认）。
+     *
+     * @param adminPassword 管理员明文密码
+     */
+    private void verifyAdminPassword(String adminPassword) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserDetails details)) {
+            throw new BizException("无法获取当前管理员信息");
+        }
+        if (!passwordEncoder.matches(adminPassword, details.getPassword())) {
+            throw new BizException("管理员密码错误");
+        }
     }
 }
