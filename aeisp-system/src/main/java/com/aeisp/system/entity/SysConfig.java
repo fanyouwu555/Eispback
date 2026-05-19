@@ -33,4 +33,14 @@ public class SysConfig extends BaseEntity {
      * 配置描述。
      */
     private String description;
+
+    /**
+     * 适用环境：all/dev/test/prod。
+     */
+    private String environment;
+
+    /**
+     * 是否可通过后台编辑：0-只读，1-可编辑。
+     */
+    private Integer isEditable;
 }

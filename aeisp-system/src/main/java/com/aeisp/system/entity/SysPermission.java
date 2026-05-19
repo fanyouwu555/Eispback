@@ -30,6 +30,16 @@ public class SysPermission extends BaseEntity {
     private String permissionCode;
 
     /**
+     * 资源类型：user/model/template/order/notification/system。
+     */
+    private String resourceType;
+
+    /**
+     * 操作类型：create/read/update/delete/manage。
+     */
+    private String action;
+
+    /**
      * 权限描述。
      */
     private String description;

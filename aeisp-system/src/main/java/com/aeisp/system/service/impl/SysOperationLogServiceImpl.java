@@ -36,10 +36,10 @@ public class SysOperationLogServiceImpl implements SysOperationLogService {
     public PageResult<SysOperationLogVO> listLogs(LogQueryRequest request) {
         LambdaQueryWrapper<SysOperationLog> wrapper = Wrappers.lambdaQuery();
         if (StringUtils.hasText(request.getUsername())) {
-            wrapper.like(SysOperationLog::getUsername, request.getUsername());
+            wrapper.like(SysOperationLog::getOperatorUsername, request.getUsername());
         }
         if (StringUtils.hasText(request.getModule())) {
-            wrapper.like(SysOperationLog::getModule, request.getModule());
+            wrapper.like(SysOperationLog::getOperationType, request.getModule());
         }
         if (request.getStatus() != null) {
             wrapper.eq(SysOperationLog::getStatus, request.getStatus());
@@ -65,17 +65,21 @@ public class SysOperationLogServiceImpl implements SysOperationLogService {
         SysOperationLogVO vo = new SysOperationLogVO();
         vo.setId(log.getId());
         vo.setUserId(log.getUserId());
-        vo.setUsername(log.getUsername());
-        vo.setModule(log.getModule());
-        vo.setOperation(log.getOperation());
+        vo.setOperatorUsername(log.getOperatorUsername());
+        vo.setOperationType(log.getOperationType());
+        vo.setOperationTypeLabel(log.getOperationTypeLabel());
+        vo.setTargetType(log.getTargetType());
+        vo.setTargetId(log.getTargetId());
+        vo.setOperationDetail(log.getOperationDetail());
         vo.setRequestMethod(log.getRequestMethod());
         vo.setRequestUrl(log.getRequestUrl());
         vo.setRequestParams(log.getRequestParams());
         vo.setResponseData(log.getResponseData());
         vo.setStatus(log.getStatus());
         vo.setErrorMsg(log.getErrorMsg());
-        vo.setIp(log.getIp());
+        vo.setIpAddress(log.getIpAddress());
         vo.setDuration(log.getDuration());
+        vo.setSensitivity(log.getSensitivity());
         vo.setCreatedAt(log.getCreatedAt());
         return vo;
     }

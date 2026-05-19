@@ -29,19 +29,34 @@ public class SysOperationLogVO implements Serializable {
     private Long userId;
 
     /**
-     * 操作人用户名。
+     * 操作人用户名（冗余存储）。
      */
-    private String username;
+    private String operatorUsername;
 
     /**
-     * 操作模块。
+     * 操作类型编码。
      */
-    private String module;
+    private String operationType;
 
     /**
-     * 操作类型。
+     * 操作类型中文标签。
      */
-    private String operation;
+    private String operationTypeLabel;
+
+    /**
+     * 操作目标类型。
+     */
+    private String targetType;
+
+    /**
+     * 操作目标ID。
+     */
+    private String targetId;
+
+    /**
+     * 操作详情JSON。
+     */
+    private String operationDetail;
 
     /**
      * HTTP 请求方法。
@@ -74,14 +89,19 @@ public class SysOperationLogVO implements Serializable {
     private String errorMsg;
 
     /**
-     * 操作人 IP。
+     * 操作人IP地址。
      */
-    private String ip;
+    private String ipAddress;
 
     /**
      * 执行时长（毫秒）。
      */
     private Long duration;
+
+    /**
+     * 敏感度：1-普通，2-敏感。
+     */
+    private Integer sensitivity;
 
     /**
      * 创建时间。

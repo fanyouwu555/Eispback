@@ -35,19 +35,34 @@ public class SysOperationLog {
     private Long userId;
 
     /**
-     * 操作人用户名。
+     * 操作人用户名（冗余存储）。
      */
-    private String username;
+    private String operatorUsername;
 
     /**
-     * 操作模块，如 {@code 用户管理}、{@code 角色管理}。
+     * 操作类型编码，如 {@code UPDATE_USER_STATUS}。
      */
-    private String module;
+    private String operationType;
 
     /**
-     * 操作类型，如 {@code 新增}、{@code 修改}、{@code 删除}、{@code 查询}。
+     * 操作类型中文标签。
      */
-    private String operation;
+    private String operationTypeLabel;
+
+    /**
+     * 操作目标类型：user/model/template/order/notification/system。
+     */
+    private String targetType;
+
+    /**
+     * 操作目标ID。
+     */
+    private String targetId;
+
+    /**
+     * 操作详情JSON，包含变更前后的数据快照。
+     */
+    private String operationDetail;
 
     /**
      * HTTP 请求方法，如 {@code GET}、{@code POST}、{@code PUT}、{@code DELETE}。
@@ -80,14 +95,19 @@ public class SysOperationLog {
     private String errorMsg;
 
     /**
-     * 操作人 IP 地址。
+     * 操作人IP地址。
      */
-    private String ip;
+    private String ipAddress;
 
     /**
      * 请求执行时长，单位毫秒。
      */
     private Long duration;
+
+    /**
+     * 敏感度：1-普通，2-敏感（涉及资金/权限变更）。
+     */
+    private Integer sensitivity;
 
     /**
      * 创建时间。

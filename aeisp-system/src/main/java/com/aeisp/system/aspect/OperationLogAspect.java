@@ -69,8 +69,8 @@ public class OperationLogAspect {
                          Object result, Exception exception, long duration) {
         try {
             SysOperationLog logEntity = new SysOperationLog();
-            logEntity.setModule(operationLog.module());
-            logEntity.setOperation(operationLog.operation());
+            logEntity.setOperationType(operationLog.module());
+            logEntity.setOperationTypeLabel(operationLog.operation());
             logEntity.setDuration(duration);
             logEntity.setCreatedAt(LocalDateTime.now());
 
@@ -81,7 +81,7 @@ public class OperationLogAspect {
                 HttpServletRequest request = attributes.getRequest();
                 logEntity.setRequestMethod(request.getMethod());
                 logEntity.setRequestUrl(request.getRequestURI());
-                logEntity.setIp(getClientIp(request));
+                logEntity.setIpAddress(getClientIp(request));
             }
 
             // 请求参数
@@ -110,7 +110,7 @@ public class OperationLogAspect {
             if (authentication != null && authentication.getPrincipal() != null) {
                 Object principal = authentication.getPrincipal();
                 if (principal instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
-                    logEntity.setUsername(userDetails.getUsername());
+                    logEntity.setOperatorUsername(userDetails.getUsername());
                 }
                 // 反射获取 userId 字段（CustomUserDetails 中有该字段）
                 try {
