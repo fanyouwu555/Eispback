@@ -47,3 +47,6 @@ redis_data/
 
 # Frontend build output
 aeisp-admin/dist/
+
+# Test screenshots
+admin-*.png
