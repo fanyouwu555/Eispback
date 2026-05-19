@@ -2,11 +2,11 @@ package com.aeisp.user.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
-import com.aeisp.user.request.DurationLogQueryRequest;
+import com.aeisp.user.request.DurationChangeLogQueryRequest;
 import com.aeisp.user.request.LogQueryRequest;
-import com.aeisp.user.service.UsrDurationLogService;
+import com.aeisp.user.service.UsrDurationChangeLogService;
 import com.aeisp.user.service.UsrLoginLogService;
-import com.aeisp.user.vo.UsrDurationLogVO;
+import com.aeisp.user.vo.UsrDurationChangeLogVO;
 import com.aeisp.user.vo.UsrLoginLogVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 用户日志查询 Controller。
  *
- * <p>提供用户登录日志和时长消耗日志的分页查询。
+ * <p>提供用户登录日志和时长变更日志的分页查询。
  * 路径前缀 {@code /api/v1/users}。</p>
  *
  * @author AEISP Team
@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserLogController {
 
     private final UsrLoginLogService usrLoginLogService;
-    private final UsrDurationLogService usrDurationLogService;
+    private final UsrDurationChangeLogService usrDurationChangeLogService;
 
     /**
      * 查询指定用户的登录日志。
@@ -44,13 +44,13 @@ public class UserLogController {
     }
 
     /**
-     * 查询指定用户的时长消耗日志。
+     * 查询指定用户的时长变更日志。
      */
     @GetMapping("/{userId}/duration-logs")
-    public Result<PageResult<UsrDurationLogVO>> listDurationLogs(@PathVariable Long userId,
-                                                                 DurationLogQueryRequest request) {
+    public Result<PageResult<UsrDurationChangeLogVO>> listDurationLogs(@PathVariable Long userId,
+                                                                       DurationChangeLogQueryRequest request) {
         request.setUserId(userId);
-        PageResult<UsrDurationLogVO> result = usrDurationLogService.listLogs(request);
+        PageResult<UsrDurationChangeLogVO> result = usrDurationChangeLogService.listLogs(request);
         return Result.success(result);
     }
 }

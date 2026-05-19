@@ -67,7 +67,7 @@ public class AuthController {
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
         user.setRegisterIp(getClientIp(httpRequest));
-        user.setRegisterDevice(httpRequest.getHeader("User-Agent"));
+        user.setRegisterDeviceInfo(httpRequest.getHeader("User-Agent"));
 
         boolean success = usrUserService.register(user);
         return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "注册失败");

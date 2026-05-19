@@ -7,12 +7,12 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 登录日志分页查询请求。
+ * 时长变更日志分页查询请求。
  *
  * @author AEISP Team
  */
 @Data
-public class LogQueryRequest {
+public class DurationChangeLogQueryRequest {
 
     /**
      * 页码。
@@ -30,28 +30,23 @@ public class LogQueryRequest {
     private Long userId;
 
     /**
-     * 登录账号（模糊查询）。
+     * 操作类型编码。
      */
-    private String loginAccount;
+    private String operationType;
 
     /**
-     * 登录类型：1-密码登录，2-验证码登录，3-Token刷新。
+     * 操作者类型：1-系统自动，2-管理员，3-用户本人。
      */
-    private Integer loginType;
+    private Integer operatorType;
 
     /**
-     * 登录结果：1-成功，2-密码错误，3-账号不存在，4-账号禁用，5-账号冻结，6-账号锁定，7-验证码错误，8-Token过期。
-     */
-    private Integer loginResult;
-
-    /**
-     * 登录时间起始。
+     * 变更时间起始。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAtStart;
 
     /**
-     * 登录时间截止。
+     * 变更时间截止。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAtEnd;

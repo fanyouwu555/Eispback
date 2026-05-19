@@ -5,12 +5,15 @@
     <resultMap id="BaseResultMap" type="com.aeisp.user.entity.UsrLoginLog">
         <id column="id" property="id"/>
         <result column="user_id" property="userId"/>
-        <result column="username" property="username"/>
-        <result column="login_time" property="loginTime"/>
-        <result column="ip" property="ip"/>
-        <result column="device" property="device"/>
-        <result column="result" property="result"/>
-        <result column="error_msg" property="errorMsg"/>
+        <result column="login_account" property="loginAccount"/>
+        <result column="login_type" property="loginType"/>
+        <result column="login_result" property="loginResult"/>
+        <result column="ip_address" property="ipAddress"/>
+        <result column="device_type" property="deviceType"/>
+        <result column="os_info" property="osInfo"/>
+        <result column="browser_info" property="browserInfo"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="created_at" property="createdAt"/>
     </resultMap>
 
 </mapper>

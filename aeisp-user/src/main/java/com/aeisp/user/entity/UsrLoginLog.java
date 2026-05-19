@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 /**
  * 用户登录日志实体。
  *
- * <p>记录前端用户的每次登录行为，包括登录时间、IP、设备、结果及失败原因。
+ * <p>记录所有用户的登录行为，用于安全审计和活跃度统计。
  * 不继承 {@link com.aeisp.common.entity.BaseEntity}，使用独立轻量结构。</p>
  *
  * @author AEISP Team
@@ -29,38 +29,53 @@ public class UsrLoginLog {
     private Long id;
 
     /**
-     * 关联用户 ID。
+     * 用户ID，登录失败时可能为NULL。
      */
     private Long userId;
 
     /**
-     * 登录用户名（冗余，方便查询）。
+     * 登录时使用的账号（用户名/手机号/邮箱）。
      */
-    private String username;
+    private String loginAccount;
+
+    /**
+     * 登录类型：1-密码登录，2-验证码登录，3-Token刷新。
+     */
+    private Integer loginType;
+
+    /**
+     * 登录结果：1-成功，2-密码错误，3-账号不存在，4-账号禁用，5-账号冻结，6-账号锁定，7-验证码错误，8-Token过期。
+     */
+    private Integer loginResult;
+
+    /**
+     * 登录IP。
+     */
+    private String ipAddress;
+
+    /**
+     * 设备类型：desktop/mobile/tablet/unknown。
+     */
+    private String deviceType;
+
+    /**
+     * 操作系统信息。
+     */
+    private String osInfo;
+
+    /**
+     * 浏览器信息。
+     */
+    private String browserInfo;
+
+    /**
+     * 设备唯一标识。
+     */
+    private String deviceId;
 
     /**
      * 登录时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime loginTime;
-
-    /**
-     * 登录 IP 地址。
-     */
-    private String ip;
-
-    /**
-     * 登录设备信息。
-     */
-    private String device;
-
-    /**
-     * 登录结果：0-失败，1-成功。
-     */
-    private Integer result;
-
-    /**
-     * 失败时的错误信息。
-     */
-    private String errorMsg;
+    private LocalDateTime createdAt;
 }

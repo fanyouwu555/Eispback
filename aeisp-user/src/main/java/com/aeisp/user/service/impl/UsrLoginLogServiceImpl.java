@@ -40,19 +40,22 @@ public class UsrLoginLogServiceImpl implements UsrLoginLogService {
         if (request.getUserId() != null) {
             wrapper.eq(UsrLoginLog::getUserId, request.getUserId());
         }
-        if (StringUtils.hasText(request.getUsername())) {
-            wrapper.like(UsrLoginLog::getUsername, request.getUsername());
+        if (StringUtils.hasText(request.getLoginAccount())) {
+            wrapper.like(UsrLoginLog::getLoginAccount, request.getLoginAccount());
         }
-        if (request.getResult() != null) {
-            wrapper.eq(UsrLoginLog::getResult, request.getResult());
+        if (request.getLoginType() != null) {
+            wrapper.eq(UsrLoginLog::getLoginType, request.getLoginType());
         }
-        if (request.getLoginTimeStart() != null) {
-            wrapper.ge(UsrLoginLog::getLoginTime, request.getLoginTimeStart());
+        if (request.getLoginResult() != null) {
+            wrapper.eq(UsrLoginLog::getLoginResult, request.getLoginResult());
         }
-        if (request.getLoginTimeEnd() != null) {
-            wrapper.le(UsrLoginLog::getLoginTime, request.getLoginTimeEnd());
+        if (request.getCreatedAtStart() != null) {
+            wrapper.ge(UsrLoginLog::getCreatedAt, request.getCreatedAtStart());
         }
-        wrapper.orderByDesc(UsrLoginLog::getLoginTime);
+        if (request.getCreatedAtEnd() != null) {
+            wrapper.le(UsrLoginLog::getCreatedAt, request.getCreatedAtEnd());
+        }
+        wrapper.orderByDesc(UsrLoginLog::getCreatedAt);
 
         Page<UsrLoginLog> page = new Page<>(request.getPageNum(), request.getPageSize());
         Page<UsrLoginLog> resultPage = usrLoginLogMapper.selectPage(page, wrapper);
@@ -70,12 +73,15 @@ public class UsrLoginLogServiceImpl implements UsrLoginLogService {
         UsrLoginLogVO vo = new UsrLoginLogVO();
         vo.setId(log.getId());
         vo.setUserId(log.getUserId());
-        vo.setUsername(log.getUsername());
-        vo.setLoginTime(log.getLoginTime());
-        vo.setIp(log.getIp());
-        vo.setDevice(log.getDevice());
-        vo.setResult(log.getResult());
-        vo.setErrorMsg(log.getErrorMsg());
+        vo.setLoginAccount(log.getLoginAccount());
+        vo.setLoginType(log.getLoginType());
+        vo.setLoginResult(log.getLoginResult());
+        vo.setIpAddress(log.getIpAddress());
+        vo.setDeviceType(log.getDeviceType());
+        vo.setOsInfo(log.getOsInfo());
+        vo.setBrowserInfo(log.getBrowserInfo());
+        vo.setDeviceId(log.getDeviceId());
+        vo.setCreatedAt(log.getCreatedAt());
         return vo;
     }
 }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aeisp.user.mapper.UsrVerificationRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.aeisp.user.entity.UsrVerificationRecord">
+        <id column="id" property="id"/>
+        <result column="target" property="target"/>
+        <result column="send_type" property="sendType"/>
+        <result column="scene" property="scene"/>
+        <result column="verification_code" property="verificationCode"/>
+        <result column="verify_result" property="verifyResult"/>
+        <result column="ip_address" property="ipAddress"/>
+        <result column="expired_at" property="expiredAt"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+</mapper>

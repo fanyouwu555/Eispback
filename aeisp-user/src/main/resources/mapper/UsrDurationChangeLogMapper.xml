@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aeisp.user.mapper.UsrDurationChangeLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.aeisp.user.entity.UsrDurationChangeLog">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="operation_type" property="operationType"/>
+        <result column="change_minutes" property="changeMinutes"/>
+        <result column="previous_remaining" property="previousRemaining"/>
+        <result column="current_remaining" property="currentRemaining"/>
+        <result column="reason" property="reason"/>
+        <result column="related_order_id" property="relatedOrderId"/>
+        <result column="operator_id" property="operatorId"/>
+        <result column="operator_type" property="operatorType"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+</mapper>

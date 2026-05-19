@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aeisp.user.mapper.UsrUserBalanceMapper">
+
+    <resultMap id="BaseResultMap" type="com.aeisp.user.entity.UsrUserBalance">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="balance_cents" property="balanceCents"/>
+        <result column="total_recharge_cents" property="totalRechargeCents"/>
+        <result column="total_consumed_cents" property="totalConsumedCents"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, balance_cents, total_recharge_cents, total_consumed_cents, updated_at
+    </sql>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM usr_user_balance
+        WHERE user_id = #{userId}
+        LIMIT 1
+    </select>
+
+</mapper>

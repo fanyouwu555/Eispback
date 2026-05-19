@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 /**
  * 前端注册用户主表实体。
  *
- * <p>存储平台前端用户的账号信息、状态、剩余时长及充值记录等核心数据。
+ * <p>存储平台前端用户的账号信息、状态、登录及注册信息等核心数据。
+ * 时长与余额已拆分为独立表 {@link UsrUserDuration} 和 {@link UsrUserBalance}。
  * 与 {@code aeisp-system} 的 {@code SysUser}（后台管理员）为两套独立的账号体系。</p>
  *
  * @author AEISP Team
@@ -24,12 +25,17 @@ public class UsrUser extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 用户名，全局唯一，用于登录。
+     * 用户名，全局唯一，只允许字母、数字、下划线，首位必须为字母。
      */
     private String username;
 
     /**
-     * 手机号，全局唯一。
+     * 登录密码，采用 BCrypt 加密存储。
+     */
+    private String password;
+
+    /**
+     * 手机号，全局唯一，11位数字。
      */
     private String phone;
 
@@ -39,42 +45,61 @@ public class UsrUser extends BaseEntity {
     private String email;
 
     /**
-     * 登录密码，采用 BCrypt 加密存储。
+     * 用户昵称，展示用。
      */
-    private String password;
+    private String nickname;
 
     /**
-     * 账号状态：0-禁用，1-正常，2-冻结。
-     *
-     * @see com.aeisp.common.constant.CommonConstants
+     * 头像图片URL。
+     */
+    private String avatarUrl;
+
+    /**
+     * 账号状态：1-正常，2-禁用，3-冻结，4-锁定。
      */
     private Integer status;
 
     /**
-     * 剩余使用时长（分钟）。
+     * 状态变更原因说明。
      */
-    private Long remainingDuration;
+    private String statusReason;
 
     /**
-     * 充值总额（单位：分）。
+     * 账号锁定到期时间，仅在锁定状态时有效。
      */
-    private Long totalRecharge;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lockedUntil;
 
     /**
-     * 最近一次登录时间。
+     * 下次登录是否需要修改密码：0-否，1-是。
+     */
+    private Integer needChangePassword;
+
+    /**
+     * 连续登录失败次数，登录成功后清零。
+     */
+    private Integer failedLoginAttempts;
+
+    /**
+     * 最后登录时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastLoginTime;
 
     /**
-     * 注册 IP 地址。
+     * 最后登录IP地址（支持IPv6）。
+     */
+    private String lastLoginIp;
+
+    /**
+     * 注册时IP地址。
      */
     private String registerIp;
 
     /**
-     * 注册设备信息。
+     * 注册设备信息JSON，包含设备类型、操作系统、浏览器、设备ID。
      */
-    private String registerDevice;
+    private String registerDeviceInfo;
 
     /**
      * 注册时间。
@@ -83,7 +108,7 @@ public class UsrUser extends BaseEntity {
     private LocalDateTime registerTime;
 
     /**
-     * 角色编码，关联 sys_role.role_code。
+     * 注册时使用的邀请码。
      */
-    private String roleCode;
+    private String invitationCodeUsed;
 }

@@ -5,16 +5,22 @@
     <resultMap id="BaseResultMap" type="com.aeisp.user.entity.UsrUser">
         <id column="id" property="id"/>
         <result column="username" property="username"/>
+        <result column="password" property="password"/>
         <result column="phone" property="phone"/>
         <result column="email" property="email"/>
-        <result column="password" property="password"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar_url" property="avatarUrl"/>
         <result column="status" property="status"/>
-        <result column="remaining_duration" property="remainingDuration"/>
-        <result column="total_recharge" property="totalRecharge"/>
+        <result column="status_reason" property="statusReason"/>
+        <result column="locked_until" property="lockedUntil"/>
+        <result column="need_change_password" property="needChangePassword"/>
+        <result column="failed_login_attempts" property="failedLoginAttempts"/>
         <result column="last_login_time" property="lastLoginTime"/>
+        <result column="last_login_ip" property="lastLoginIp"/>
         <result column="register_ip" property="registerIp"/>
-        <result column="register_device" property="registerDevice"/>
+        <result column="register_device_info" property="registerDeviceInfo"/>
         <result column="register_time" property="registerTime"/>
+        <result column="invitation_code_used" property="invitationCodeUsed"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
         <result column="created_by" property="createdBy"/>
@@ -23,8 +29,9 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, username, phone, email, password, status, remaining_duration, total_recharge,
-        last_login_time, register_ip, register_device, register_time,
+        id, username, password, phone, email, nickname, avatar_url, status, status_reason,
+        locked_until, need_change_password, failed_login_attempts, last_login_time, last_login_ip,
+        register_ip, register_device_info, register_time, invitation_code_used,
         created_at, updated_at, created_by, updated_by, deleted
     </sql>
 
@@ -54,14 +61,16 @@
 
     <insert id="batchInsert">
         INSERT INTO usr_user
-        (username, phone, email, password, status, remaining_duration, total_recharge,
-         last_login_time, register_ip, register_device, register_time,
+        (username, password, phone, email, nickname, avatar_url, status, status_reason,
+         locked_until, need_change_password, failed_login_attempts, last_login_time, last_login_ip,
+         register_ip, register_device_info, register_time, invitation_code_used,
          created_at, updated_at, created_by, updated_by, deleted)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.username}, #{item.phone}, #{item.email}, #{item.password}, #{item.status},
-             #{item.remainingDuration}, #{item.totalRecharge}, #{item.lastLoginTime},
-             #{item.registerIp}, #{item.registerDevice}, #{item.registerTime},
+            (#{item.username}, #{item.password}, #{item.phone}, #{item.email}, #{item.nickname}, #{item.avatarUrl},
+             #{item.status}, #{item.statusReason}, #{item.lockedUntil}, #{item.needChangePassword},
+             #{item.failedLoginAttempts}, #{item.lastLoginTime}, #{item.lastLoginIp},
+             #{item.registerIp}, #{item.registerDeviceInfo}, #{item.registerTime}, #{item.invitationCodeUsed},
              #{item.createdAt}, #{item.updatedAt}, #{item.createdBy}, #{item.updatedBy}, #{item.deleted})
         </foreach>
     </insert>
