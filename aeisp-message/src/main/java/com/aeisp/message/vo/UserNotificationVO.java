@@ -49,15 +49,15 @@ public class UserNotificationVO implements Serializable {
     private String msgTypeLabel;
 
     /**
-     * 是否已读：0-未读，1-已读。
+     * 阅读状态：1-未读，2-已读，3-已撤回。
      */
-    private Integer isRead;
+    private Integer readStatus;
 
     /**
      * 阅读时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime readTime;
+    private LocalDateTime readAt;
 
     /**
      * 消息发送时间。

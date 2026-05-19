@@ -86,7 +86,7 @@ public class MsgUserNotificationServiceImpl extends ServiceImpl<MsgUserNotificat
             Long readCount = msgUserNotificationMapper.selectCount(
                     new LambdaQueryWrapper<MsgUserNotification>()
                             .eq(MsgUserNotification::getNotificationId, notificationId)
-                            .eq(MsgUserNotification::getIsRead, CommonConstants.STATUS_ENABLED));
+                            .eq(MsgUserNotification::getReadStatus, 2));
             MsgNotification notification = new MsgNotification();
             notification.setId(notificationId);
             notification.setReadCount(readCount);
@@ -106,8 +106,8 @@ public class MsgUserNotificationServiceImpl extends ServiceImpl<MsgUserNotificat
         UserNotificationVO vo = new UserNotificationVO();
         vo.setId(userNotification.getId());
         vo.setNotificationId(userNotification.getNotificationId());
-        vo.setIsRead(userNotification.getIsRead());
-        vo.setReadTime(userNotification.getReadTime());
+        vo.setReadStatus(userNotification.getReadStatus());
+        vo.setReadAt(userNotification.getReadAt());
         vo.setCreatedAt(userNotification.getCreatedAt());
 
         MsgNotification notification = msgNotificationMapper.selectById(userNotification.getNotificationId());

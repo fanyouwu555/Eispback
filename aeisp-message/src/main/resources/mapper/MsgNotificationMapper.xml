@@ -16,6 +16,16 @@
         <result column="is_top" property="isTop"/>
         <result column="read_count" property="readCount"/>
         <result column="total_count" property="totalCount"/>
+        <result column="priority" property="priority"/>
+        <result column="channels" property="channels"/>
+        <result column="target_user_ids" property="targetUserIds"/>
+        <result column="target_group_ids" property="targetGroupIds"/>
+        <result column="need_read_confirmation" property="needReadConfirmation"/>
+        <result column="target_count" property="targetCount"/>
+        <result column="success_count" property="successCount"/>
+        <result column="failed_count" property="failedCount"/>
+        <result column="sent_at" property="sentAt"/>
+        <result column="revoked_at" property="revokedAt"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
         <result column="created_by" property="createdBy"/>
@@ -25,40 +35,42 @@
 
     <sql id="Base_Column_List">
         id, title, content, msg_type, push_scope, push_target, push_type, push_time, expire_time,
-        status, is_top, read_count, total_count, created_at, updated_at, created_by, updated_by, deleted
+        status, is_top, read_count, total_count, priority, channels, target_user_ids, target_group_ids,
+        need_read_confirmation, target_count, success_count, failed_count, sent_at, revoked_at,
+        created_at, updated_at, created_by, updated_by, deleted
     </sql>
 
-    <!-- 查询用户未读消息列表；status = 1 对应已推送状态 -->
+    <!-- 查询用户未读消息列表；status = 2 对应已发送状态，read_status = 1 对应未读 -->
     <select id="selectUnreadByUserId" resultMap="BaseResultMap">
         SELECT
             <include refid="Base_Column_List"/>
         FROM msg_notification n
         INNER JOIN msg_user_notification un ON n.id = un.notification_id
         WHERE un.user_id = #{userId}
-          AND un.is_read = 0
+          AND un.read_status = 1
           AND n.deleted = 0
-          AND n.status = 1
+          AND n.status = 2
         ORDER BY n.is_top DESC, n.push_time DESC
     </select>
 
-    <!-- 查询用户未读消息数量；status = 1 对应已推送状态 -->
+    <!-- 查询用户未读消息数量；status = 2 对应已发送状态，read_status = 1 对应未读 -->
     <select id="selectUnreadCountByUserId" resultType="java.lang.Long">
         SELECT COUNT(*)
         FROM msg_notification n
         INNER JOIN msg_user_notification un ON n.id = un.notification_id
         WHERE un.user_id = #{userId}
-          AND un.is_read = 0
+          AND un.read_status = 1
           AND n.deleted = 0
-          AND n.status = 1
+          AND n.status = 2
     </select>
 
-    <!-- 查询已到推送时间的定时消息；push_type = 2 对应定时推送，status = 0 对应草稿状态 -->
+    <!-- 查询已到推送时间的定时消息；push_type = 2 对应定时推送，status = 1 对应草稿状态 -->
     <select id="selectScheduledNotificationsToPush" resultMap="BaseResultMap">
         SELECT
             <include refid="Base_Column_List"/>
         FROM msg_notification
         WHERE push_type = 2
-          AND status = 0
+          AND status = 1
           AND push_time &lt;= NOW()
           AND deleted = 0
         ORDER BY push_time ASC

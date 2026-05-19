@@ -27,7 +27,7 @@ public class PushTargetUserVO implements Serializable {
     private String username;
 
     /**
-     * 是否已读：0-未读，1-已读。
+     * 阅读状态：1-未读，2-已读，3-已撤回。
      */
-    private Integer isRead;
+    private Integer readStatus;
 }

@@ -61,11 +61,12 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
 
     /**
      * 状态常量。
+     * 1-草稿，2-已发送，3-已撤回，4-定时发送。
      */
-    private static final int STATUS_DRAFT = 0;
-    private static final int STATUS_PUSHED = 1;
-    private static final int STATUS_REVOKED = 2;
-    private static final int STATUS_ARCHIVED = 3;
+    private static final int STATUS_DRAFT = 1;
+    private static final int STATUS_SENT = 2;
+    private static final int STATUS_REVOKED = 3;
+    private static final int STATUS_SCHEDULED = 4;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -128,7 +129,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
             totalCount = userNotifications.size();
         }
 
-        notification.setStatus(STATUS_PUSHED);
+        notification.setStatus(STATUS_SENT);
         notification.setTotalCount(totalCount);
         if (Objects.equals(notification.getPushType(), PushTypeEnum.IMMEDIATE.getValue())) {
             notification.setPushTime(now);
@@ -178,7 +179,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         MsgUserNotification un = new MsgUserNotification();
         un.setUserId(userId);
         un.setNotificationId(notificationId);
-        un.setIsRead(CommonConstants.STATUS_DISABLED);
+        un.setReadStatus(1);
         un.setCreatedAt(now);
         return un;
     }
@@ -190,14 +191,16 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         if (notification == null) {
             throw new BizException("消息不存在");
         }
-        if (!Objects.equals(notification.getStatus(), STATUS_PUSHED)) {
-            throw new BizException("只有已推送的消息才能撤回");
+        if (!Objects.equals(notification.getStatus(), STATUS_SENT)) {
+            throw new BizException("只有已发送的消息才能撤回");
         }
         notification.setStatus(STATUS_REVOKED);
         boolean updated = updateById(notification);
-        // 删除用户关联记录，确保用户端不再展示
+        // 将用户关联记录标记为已撤回，确保用户端不再展示
         if (updated) {
-            msgUserNotificationMapper.delete(
+            MsgUserNotification revokedRecord = new MsgUserNotification();
+            revokedRecord.setReadStatus(3);
+            msgUserNotificationMapper.update(revokedRecord,
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MsgUserNotification>()
                             .eq(MsgUserNotification::getNotificationId, notificationId));
         }
@@ -211,7 +214,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         if (notification == null) {
             throw new BizException("消息不存在");
         }
-        notification.setStatus(STATUS_ARCHIVED);
+        notification.setStatus(STATUS_SENT);
         return updateById(notification);
     }
 
@@ -272,9 +275,9 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         vo.setUpdatedAt(notification.getUpdatedAt());
 
         List<PushTargetUserVO> targetUsers = new ArrayList<>();
-        if (Objects.equals(notification.getStatus(), STATUS_PUSHED)
+        if (Objects.equals(notification.getStatus(), STATUS_SENT)
                 || Objects.equals(notification.getStatus(), STATUS_REVOKED)
-                || Objects.equals(notification.getStatus(), STATUS_ARCHIVED)) {
+                || Objects.equals(notification.getStatus(), STATUS_SCHEDULED)) {
             List<MsgUserNotification> userNotifications = msgUserNotificationMapper.selectList(
                     new LambdaQueryWrapper<MsgUserNotification>()
                             .eq(MsgUserNotification::getNotificationId, notificationId));
@@ -283,7 +286,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
                 targetUser.setUserId(un.getUserId());
                 UsrUser user = usrUserMapper.selectById(un.getUserId());
                 targetUser.setUsername(user != null ? user.getUsername() : "");
-                targetUser.setIsRead(un.getIsRead());
+                targetUser.setReadStatus(un.getReadStatus());
                 targetUsers.add(targetUser);
             }
         }
@@ -390,9 +393,9 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     private String getStatusLabel(Integer status) {
         return switch (status) {
             case STATUS_DRAFT -> "草稿";
-            case STATUS_PUSHED -> "已推送";
+            case STATUS_SENT -> "已发送";
             case STATUS_REVOKED -> "已撤回";
-            case STATUS_ARCHIVED -> "已归档";
+            case STATUS_SCHEDULED -> "定时发送";
             default -> "";
         };
     }

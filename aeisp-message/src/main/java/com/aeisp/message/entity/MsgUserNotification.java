@@ -41,15 +41,22 @@ public class MsgUserNotification implements Serializable {
     private Long notificationId;
 
     /**
-     * 是否已读：0-未读，1-已读。
+     * 阅读状态：1-未读，2-已读，3-已撤回。
+     *
+     * @see com.aeisp.message.enums.UserNotificationReadStatusEnum
      */
-    private Integer isRead;
+    private Integer readStatus;
+
+    /**
+     * 已接收渠道（JSON 数组：site/email/sms/push）。
+     */
+    private String channelReceived;
 
     /**
      * 阅读时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime readTime;
+    private LocalDateTime readAt;
 
     /**
      * 创建时间（消息推送时间）。

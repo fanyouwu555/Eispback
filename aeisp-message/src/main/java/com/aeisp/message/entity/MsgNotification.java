@@ -72,7 +72,9 @@ public class MsgNotification extends BaseEntity {
     private LocalDateTime expireTime;
 
     /**
-     * 状态：0-草稿，1-已推送，2-已撤回，3-已归档。
+     * 状态：1-草稿，2-已发送，3-已撤回，4-定时发送。
+     *
+     * @see com.aeisp.message.enums.NotificationStatusEnum
      */
     private Integer status;
 
@@ -90,4 +92,58 @@ public class MsgNotification extends BaseEntity {
      * 推送总人数。
      */
     private Long totalCount;
+
+    /**
+     * 优先级：1-低，2-中，3-高，4-紧急。
+     *
+     * @see com.aeisp.message.enums.NotificationPriorityEnum
+     */
+    private Integer priority;
+
+    /**
+     * 推送渠道（JSON 数组：site/email/sms/push）。
+     */
+    private String channels;
+
+    /**
+     * 目标用户 ID 列表（JSON 数组）。
+     */
+    private String targetUserIds;
+
+    /**
+     * 目标分组 ID 列表（JSON 数组）。
+     */
+    private String targetGroupIds;
+
+    /**
+     * 是否需要阅读确认：0-否，1-是。
+     */
+    private Integer needReadConfirmation;
+
+    /**
+     * 目标人数。
+     */
+    private Integer targetCount;
+
+    /**
+     * 发送成功人数。
+     */
+    private Integer successCount;
+
+    /**
+     * 发送失败人数。
+     */
+    private Integer failedCount;
+
+    /**
+     * 发送时间。
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sentAt;
+
+    /**
+     * 撤回时间。
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime revokedAt;
 }
