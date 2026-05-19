@@ -40,7 +40,7 @@ public class MsgUserNotificationController {
      *
      * @return 用户 ID
      */
-    private Long getCurrentUserId() {
+    private static Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getPrincipal())) {

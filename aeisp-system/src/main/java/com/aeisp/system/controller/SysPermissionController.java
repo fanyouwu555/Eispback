@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 权限点管理控制器。
@@ -35,12 +34,12 @@ public class SysPermissionController {
     public Result<List<SysPermissionVO>> listAll() {
         List<SysPermission> permissions = sysPermissionService.listAll();
         List<SysPermissionVO> voList = permissions.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+                .map(SysPermissionController::convertToVO)
+                .toList();
         return Result.success(voList);
     }
 
-    private SysPermissionVO convertToVO(SysPermission permission) {
+    private static SysPermissionVO convertToVO(SysPermission permission) {
         SysPermissionVO vo = new SysPermissionVO();
         vo.setId(permission.getId());
         vo.setPermissionName(permission.getPermissionName());

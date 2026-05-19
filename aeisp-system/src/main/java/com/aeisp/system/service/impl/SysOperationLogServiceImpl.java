@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 操作日志 Service 实现类。
@@ -56,12 +55,12 @@ public class SysOperationLogServiceImpl implements SysOperationLogService {
         Page<SysOperationLog> resultPage = sysOperationLogMapper.selectPage(page, wrapper);
 
         List<SysOperationLogVO> voList = resultPage.getRecords().stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+                .map(SysOperationLogServiceImpl::convertToVO)
+                .toList();
         return PageResult.of(resultPage, voList);
     }
 
-    private SysOperationLogVO convertToVO(SysOperationLog log) {
+    private static SysOperationLogVO convertToVO(SysOperationLog log) {
         SysOperationLogVO vo = new SysOperationLogVO();
         vo.setId(log.getId());
         vo.setUserId(log.getUserId());

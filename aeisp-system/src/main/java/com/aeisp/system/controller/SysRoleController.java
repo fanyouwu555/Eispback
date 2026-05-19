@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 角色管理控制器。
@@ -37,8 +36,8 @@ public class SysRoleController {
     public Result<List<SysRoleVO>> listAll() {
         List<SysRole> roles = sysRoleService.listAll();
         List<SysRoleVO> voList = roles.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+                .map(SysRoleController::convertToVO)
+                .toList();
         return Result.success(voList);
     }
 
@@ -90,7 +89,7 @@ public class SysRoleController {
         return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "删除角色失败");
     }
 
-    private SysRoleVO convertToVO(SysRole role) {
+    private static SysRoleVO convertToVO(SysRole role) {
         SysRoleVO vo = new SysRoleVO();
         vo.setId(role.getId());
         vo.setRoleName(role.getRoleName());

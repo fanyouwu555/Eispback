@@ -61,7 +61,7 @@ public class UsrLoginLogServiceImpl implements UsrLoginLogService {
         Page<UsrLoginLog> resultPage = usrLoginLogMapper.selectPage(page, wrapper);
 
         List<UsrLoginLogVO> voList = resultPage.getRecords().stream()
-                .map(this::convertToVO)
+                .map(UsrLoginLogServiceImpl::convertToVO)
                 .toList();
         return PageResult.of(resultPage, voList);
     }
@@ -69,7 +69,7 @@ public class UsrLoginLogServiceImpl implements UsrLoginLogService {
     /**
      * 将实体转换为 VO。
      */
-    private UsrLoginLogVO convertToVO(UsrLoginLog log) {
+    private static UsrLoginLogVO convertToVO(UsrLoginLog log) {
         UsrLoginLogVO vo = new UsrLoginLogVO();
         vo.setId(log.getId());
         vo.setUserId(log.getUserId());

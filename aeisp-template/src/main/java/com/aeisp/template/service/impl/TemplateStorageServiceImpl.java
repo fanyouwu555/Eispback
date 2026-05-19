@@ -76,7 +76,7 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
      * @param path 待校验的路径片段
      * @return true 表示安全
      */
-    private boolean isPathSafe(String path) {
+    private static boolean isPathSafe(String path) {
         if (path == null || path.isBlank()) {
             return false;
         }

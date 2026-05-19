@@ -175,7 +175,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     /**
      * 构建用户消息关联实体。
      */
-    private MsgUserNotification buildUserNotification(Long userId, Long notificationId, LocalDateTime now) {
+    private static MsgUserNotification buildUserNotification(Long userId, Long notificationId, LocalDateTime now) {
         MsgUserNotification un = new MsgUserNotification();
         un.setUserId(userId);
         un.setNotificationId(notificationId);
@@ -382,22 +382,22 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         return vo;
     }
 
-    private String getMsgTypeLabel(Integer value) {
+    private static String getMsgTypeLabel(Integer value) {
         MsgTypeEnum e = MsgTypeEnum.fromValue(value);
         return e != null ? e.getLabel() : "";
     }
 
-    private String getPushScopeLabel(Integer value) {
+    private static String getPushScopeLabel(Integer value) {
         PushScopeEnum e = PushScopeEnum.fromValue(value);
         return e != null ? e.getLabel() : "";
     }
 
-    private String getPushTypeLabel(Integer value) {
+    private static String getPushTypeLabel(Integer value) {
         PushTypeEnum e = PushTypeEnum.fromValue(value);
         return e != null ? e.getLabel() : "";
     }
 
-    private String getStatusLabel(Integer status) {
+    private static String getStatusLabel(Integer status) {
         return switch (status) {
             case STATUS_DRAFT -> "草稿";
             case STATUS_SENT -> "已发送";

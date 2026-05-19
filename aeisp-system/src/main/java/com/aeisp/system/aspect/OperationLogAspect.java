@@ -140,7 +140,7 @@ public class OperationLogAspect {
         }
     }
 
-    private String getClientIp(HttpServletRequest request) {
+    private static String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (!hasText(ip) || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");
@@ -157,7 +157,7 @@ public class OperationLogAspect {
         return ip;
     }
 
-    private boolean hasText(String str) {
+    private static boolean hasText(String str) {
         return str != null && !str.isBlank();
     }
 }

@@ -2,7 +2,6 @@ package com.aeisp.system.service.impl;
 
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.entity.SysRole;
-import com.aeisp.system.entity.SysRolePermission;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysRolePermissionMapper;
 import com.aeisp.system.service.SysRoleService;

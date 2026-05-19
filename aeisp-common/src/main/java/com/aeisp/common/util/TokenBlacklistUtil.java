@@ -77,7 +77,7 @@ public class TokenBlacklistUtil {
         return redisUtil.hasKey(key);
     }
 
-    private String buildKey(String token) {
+    private static String buildKey(String token) {
         return CacheConstants.CACHE_PREFIX + "token:blacklist:" + SecureUtil.md5(token);
     }
 }

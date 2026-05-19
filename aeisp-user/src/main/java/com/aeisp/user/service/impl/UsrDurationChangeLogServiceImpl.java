@@ -56,12 +56,12 @@ public class UsrDurationChangeLogServiceImpl implements UsrDurationChangeLogServ
         Page<UsrDurationChangeLog> resultPage = usrDurationChangeLogMapper.selectPage(page, wrapper);
 
         List<UsrDurationChangeLogVO> voList = resultPage.getRecords().stream()
-                .map(this::convertToVO)
+                .map(UsrDurationChangeLogServiceImpl::convertToVO)
                 .toList();
         return PageResult.of(resultPage, voList);
     }
 
-    private UsrDurationChangeLogVO convertToVO(UsrDurationChangeLog log) {
+    private static UsrDurationChangeLogVO convertToVO(UsrDurationChangeLog log) {
         UsrDurationChangeLogVO vo = new UsrDurationChangeLogVO();
         vo.setId(log.getId());
         vo.setUserId(log.getUserId());
@@ -79,7 +79,7 @@ public class UsrDurationChangeLogServiceImpl implements UsrDurationChangeLogServ
         return vo;
     }
 
-    private String resolveOperationTypeLabel(String operationType) {
+    private static String resolveOperationTypeLabel(String operationType) {
         if (operationType == null) {
             return "未知";
         }
@@ -95,7 +95,7 @@ public class UsrDurationChangeLogServiceImpl implements UsrDurationChangeLogServ
         };
     }
 
-    private String resolveOperatorTypeLabel(Integer operatorType) {
+    private static String resolveOperatorTypeLabel(Integer operatorType) {
         if (operatorType == null) {
             return "未知";
         }

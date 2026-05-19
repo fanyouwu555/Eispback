@@ -203,7 +203,7 @@ public class AuthController {
         }
     }
 
-    private String resolveBearerToken(String authorization) {
+    private static String resolveBearerToken(String authorization) {
         if (authorization != null && authorization.startsWith("Bearer ")) {
             return authorization.substring(7);
         }
@@ -262,7 +262,7 @@ public class AuthController {
      * @param request HTTP 请求
      * @return 客户端 IP
      */
-    private String getClientIp(HttpServletRequest request) {
+    private static String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");

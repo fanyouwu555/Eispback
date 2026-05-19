@@ -62,7 +62,7 @@ public class RateLimitAspect {
         return count != null ? count : 1;
     }
 
-    private String buildKey(RateLimit rateLimit) {
+    private static String buildKey(RateLimit rateLimit) {
         ServletRequestAttributes attributes = (ServletRequestAttributes)
                 RequestContextHolder.getRequestAttributes();
         HttpServletRequest request = attributes != null ? attributes.getRequest() : null;
@@ -86,7 +86,7 @@ public class RateLimitAspect {
         }
     }
 
-    private String getCurrentUserId() {
+    private static String getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() != null) {
             Object principal = authentication.getPrincipal();
@@ -101,7 +101,7 @@ public class RateLimitAspect {
         return "anonymous";
     }
 
-    private String getClientIp(HttpServletRequest request) {
+    private static String getClientIp(HttpServletRequest request) {
         if (request == null) {
             return "unknown";
         }
@@ -121,7 +121,7 @@ public class RateLimitAspect {
         return ip;
     }
 
-    private boolean hasText(String str) {
+    private static boolean hasText(String str) {
         return str != null && !str.isBlank();
     }
 }

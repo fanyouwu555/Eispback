@@ -7,7 +7,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -86,12 +85,12 @@ public class CustomUserDetails implements UserDetails {
         // 将角色和权限都转换为 SimpleGrantedAuthority
         List<SimpleGrantedAuthority> roleAuthorities = roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .collect(Collectors.toList());
+                .toList();
         List<SimpleGrantedAuthority> permissionAuthorities = permissions.stream()
                 .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
+                .toList();
         return Stream.concat(roleAuthorities.stream(), permissionAuthorities.stream())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

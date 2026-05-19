@@ -4,7 +4,6 @@ import com.aeisp.common.PageResult;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.dto.UserQueryRequest;
 import com.aeisp.system.entity.SysUser;
-import com.aeisp.system.entity.SysUserRole;
 import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.system.service.SysUserService;
@@ -19,9 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 后台管理员账号 Service 实现类。
@@ -117,12 +114,12 @@ public class SysUserServiceImpl implements SysUserService {
         Page<SysUser> resultPage = sysUserMapper.selectPage(page, wrapper);
 
         List<SysUserVO> voList = resultPage.getRecords().stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+                .map(SysUserServiceImpl::convertToVO)
+                .toList();
         return PageResult.of(resultPage, voList);
     }
 
-    private SysUserVO convertToVO(SysUser user) {
+    private static SysUserVO convertToVO(SysUser user) {
         SysUserVO vo = new SysUserVO();
         vo.setId(user.getId());
         vo.setUsername(user.getUsername());

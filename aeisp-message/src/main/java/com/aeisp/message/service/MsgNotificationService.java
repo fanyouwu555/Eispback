@@ -1,7 +1,6 @@
 package com.aeisp.message.service;
 
 import com.aeisp.common.PageResult;
-import com.aeisp.message.entity.MsgNotification;
 import com.aeisp.message.request.CreateNotificationRequest;
 import com.aeisp.message.request.NotificationQueryRequest;
 import com.aeisp.message.vo.MsgNotificationDetailVO;

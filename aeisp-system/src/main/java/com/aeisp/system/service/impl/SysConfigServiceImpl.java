@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 系统配置 Service 实现类。
@@ -47,11 +46,11 @@ public class SysConfigServiceImpl implements SysConfigService {
         wrapper.orderByAsc(SysConfig::getConfigKey);
         List<SysConfig> list = sysConfigMapper.selectList(wrapper);
         return list.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+                .map(SysConfigServiceImpl::convertToVO)
+                .toList();
     }
 
-    private SysConfigVO convertToVO(SysConfig config) {
+    private static SysConfigVO convertToVO(SysConfig config) {
         SysConfigVO vo = new SysConfigVO();
         vo.setId(config.getId());
         vo.setConfigKey(config.getConfigKey());

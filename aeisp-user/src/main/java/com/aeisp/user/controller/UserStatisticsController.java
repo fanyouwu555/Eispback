@@ -1,7 +1,6 @@
 package com.aeisp.user.controller;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.mapper.UsrLoginLogMapper;
 import com.aeisp.user.mapper.UsrUserMapper;

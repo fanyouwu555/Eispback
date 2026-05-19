@@ -4,7 +4,6 @@ import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.ResultCode;
 import com.aeisp.common.util.TokenBlacklistUtil;
-import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.request.*;
 import com.aeisp.user.service.UsrUserService;
 import com.aeisp.user.vo.UserImportResultVO;
@@ -21,8 +20,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 /**
  * 用户管理 Controller。

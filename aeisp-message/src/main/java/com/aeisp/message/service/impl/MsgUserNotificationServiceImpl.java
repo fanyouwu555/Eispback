@@ -1,7 +1,6 @@
 package com.aeisp.message.service.impl;
 
 import com.aeisp.common.PageResult;
-import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.message.entity.MsgNotification;
 import com.aeisp.message.entity.MsgUserNotification;
 import com.aeisp.message.enums.MsgTypeEnum;
@@ -20,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * 用户消息关联 Service 实现类。
@@ -49,7 +46,7 @@ public class MsgUserNotificationServiceImpl extends ServiceImpl<MsgUserNotificat
 
         List<UserNotificationVO> voList = resultPage.getRecords().stream()
                 .map(this::convertToVO)
-                .collect(Collectors.toList());
+                .toList();
         return PageResult.of(resultPage, voList);
     }
 
@@ -126,7 +123,7 @@ public class MsgUserNotificationServiceImpl extends ServiceImpl<MsgUserNotificat
      * @param content 原始内容
      * @return 摘要文本
      */
-    private String truncateContent(String content) {
+    private static String truncateContent(String content) {
         if (content == null) {
             return "";
         }
@@ -137,7 +134,7 @@ public class MsgUserNotificationServiceImpl extends ServiceImpl<MsgUserNotificat
         return content.substring(0, maxLength) + "...";
     }
 
-    private String getMsgTypeLabel(Integer value) {
+    private static String getMsgTypeLabel(Integer value) {
         MsgTypeEnum e = MsgTypeEnum.fromValue(value);
         return e != null ? e.getLabel() : "";
     }

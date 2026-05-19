@@ -271,13 +271,13 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         return vo;
     }
 
-    private TplTemplateVersionVO convertToVersionVO(TplTemplateVersion version) {
+    private static TplTemplateVersionVO convertToVersionVO(TplTemplateVersion version) {
         TplTemplateVersionVO vo = new TplTemplateVersionVO();
         BeanUtils.copyProperties(version, vo);
         return vo;
     }
 
-    private List<FileNodeVO> buildFileTree(List<String> filePaths) {
+    private static List<FileNodeVO> buildFileTree(List<String> filePaths) {
         Map<String, FileNodeVO> dirMap = new HashMap<>();
         List<FileNodeVO> root = new ArrayList<>();
 

@@ -12,8 +12,6 @@ import com.aeisp.user.vo.UsrUserVO;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 /**
  * 前端用户 Service 接口。
  *

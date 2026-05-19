@@ -54,7 +54,7 @@ public class UsrDurationLogServiceImpl implements UsrDurationLogService {
         Page<UsrDurationLog> resultPage = usrDurationLogMapper.selectPage(page, wrapper);
 
         List<UsrDurationLogVO> voList = resultPage.getRecords().stream()
-                .map(this::convertToVO)
+                .map(UsrDurationLogServiceImpl::convertToVO)
                 .toList();
         return PageResult.of(resultPage, voList);
     }
@@ -62,7 +62,7 @@ public class UsrDurationLogServiceImpl implements UsrDurationLogService {
     /**
      * 将实体转换为 VO。
      */
-    private UsrDurationLogVO convertToVO(UsrDurationLog log) {
+    private static UsrDurationLogVO convertToVO(UsrDurationLog log) {
         UsrDurationLogVO vo = new UsrDurationLogVO();
         vo.setId(log.getId());
         vo.setUserId(log.getUserId());

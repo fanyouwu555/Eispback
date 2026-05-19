@@ -1,7 +1,6 @@
 package com.aeisp.user.service.impl;
 
 import com.aeisp.common.PageResult;
-import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.user.entity.UsrLoginLog;
 import com.aeisp.user.mapper.UsrLoginLogMapper;
 import com.aeisp.user.request.LogQueryRequest;
