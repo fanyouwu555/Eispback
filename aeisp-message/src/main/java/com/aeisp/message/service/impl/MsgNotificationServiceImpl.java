@@ -342,11 +342,18 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
             return Collections.emptyList();
         }
         try {
+            // 先尝试解析为 DTO 对象格式: {"ids":[1,2,3]}
             PushTargetDTO dto = objectMapper.readValue(pushTarget, PushTargetDTO.class);
             return dto.getIds() != null ? dto.getIds() : Collections.emptyList();
         } catch (Exception e) {
-            log.warn("解析 pushTarget 失败: {}", pushTarget, e);
-            return Collections.emptyList();
+            try {
+                // 兼容原始 JSON 数组格式: [1,2,3]
+                return objectMapper.readValue(pushTarget, objectMapper.getTypeFactory()
+                        .constructCollectionType(List.class, Long.class));
+            } catch (Exception ex) {
+                log.warn("解析 pushTarget 失败: {}", pushTarget, ex);
+                return Collections.emptyList();
+            }
         }
     }
 
