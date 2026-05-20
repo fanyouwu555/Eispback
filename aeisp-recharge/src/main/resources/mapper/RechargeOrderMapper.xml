@@ -17,4 +17,18 @@
         ORDER BY created_at DESC
     </select>
 
+    <select id="selectDailyRechargeSum" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(amount_cents), 0)
+        FROM recharge_order
+        WHERE status = 2
+          AND pay_time &gt;= #{start}
+          AND pay_time &lt;= #{end}
+    </select>
+
+    <select id="selectTotalRechargeSum" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(amount_cents), 0)
+        FROM recharge_order
+        WHERE status = 2
+    </select>
+
 </mapper>

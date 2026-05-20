@@ -18,4 +18,24 @@ public interface UsrUserBalanceMapper extends BaseMapper<UsrUserBalance> {
      * @return 余额实体，不存在则返回 null
      */
     UsrUserBalance selectByUserId(@Param("userId") Long userId);
+
+    /**
+     * 查询平台总充值金额（分）。
+     */
+    Long selectTotalRechargeSum();
+
+    /**
+     * 查询平台总消费金额（分）。
+     */
+    Long selectTotalConsumedSum();
+
+    /**
+     * 查询用户平均余额（分）。
+     */
+    Long selectAvgBalance();
+
+    /**
+     * 查询平台当前总余额（分）。
+     */
+    Long selectTotalBalanceSum();
 }

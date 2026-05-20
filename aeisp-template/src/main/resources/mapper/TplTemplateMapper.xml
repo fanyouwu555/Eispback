@@ -19,4 +19,12 @@
         WHERE id = #{id}
     </update>
 
+    <select id="selectTopHotTemplates" resultType="java.util.Map">
+        SELECT id, template_name AS templateName, usage_count AS usageCount
+        FROM tpl_template
+        WHERE deleted = 0
+        ORDER BY usage_count DESC
+        LIMIT #{limit}
+    </select>
+
 </mapper>

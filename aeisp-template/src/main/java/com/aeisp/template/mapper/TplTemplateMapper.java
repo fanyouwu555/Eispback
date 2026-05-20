@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 模板主表 Mapper 接口。
@@ -28,4 +29,9 @@ public interface TplTemplateMapper extends BaseMapper<TplTemplate> {
      * @return 影响行数
      */
     int incrementUsageCount(@Param("id") Long id);
+
+    /**
+     * 查询热门模板 Top N。
+     */
+    List<Map<String, Object>> selectTopHotTemplates(@Param("limit") int limit);
 }

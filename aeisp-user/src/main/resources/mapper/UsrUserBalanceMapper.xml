@@ -22,4 +22,20 @@
         LIMIT 1
     </select>
 
+    <select id="selectTotalRechargeSum" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(total_recharge_cents), 0) FROM usr_user_balance
+    </select>
+
+    <select id="selectTotalConsumedSum" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(total_consumed_cents), 0) FROM usr_user_balance
+    </select>
+
+    <select id="selectAvgBalance" resultType="java.lang.Long">
+        SELECT COALESCE(AVG(balance_cents), 0) FROM usr_user_balance
+    </select>
+
+    <select id="selectTotalBalanceSum" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(balance_cents), 0) FROM usr_user_balance
+    </select>
+
 </mapper>

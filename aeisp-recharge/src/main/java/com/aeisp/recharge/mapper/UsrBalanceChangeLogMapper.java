@@ -4,6 +4,7 @@ import com.aeisp.recharge.entity.UsrBalanceChangeLog;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -20,4 +21,10 @@ public interface UsrBalanceChangeLogMapper extends BaseMapper<UsrBalanceChangeLo
      * @return 变更记录列表
      */
     List<UsrBalanceChangeLog> selectByUserId(@Param("userId") Long userId);
+
+    /**
+     * 查询指定时间范围内消费总额（分）。
+     */
+    Long selectDailyConsumeSum(@Param("start") LocalDateTime start,
+                               @Param("end") LocalDateTime end);
 }

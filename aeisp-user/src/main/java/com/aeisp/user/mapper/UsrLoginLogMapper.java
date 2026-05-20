@@ -20,4 +20,9 @@ public interface UsrLoginLogMapper extends BaseMapper<UsrLoginLog> {
      */
     Long countActiveUsers(@Param("start") java.time.LocalDateTime start,
                           @Param("end") java.time.LocalDateTime end);
+
+    /**
+     * 统计全量有过成功登录记录的独立用户数量。
+     */
+    Long countAllActiveUsers();
 }

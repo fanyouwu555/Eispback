@@ -41,6 +41,7 @@
         <module>aeisp-message</module>
         <module>aeisp-template</module>
         <module>aeisp-model</module>
+        <module>aeisp-project</module>
         <module>aeisp-recharge</module>
         <module>aeisp-boot</module>
     </modules>

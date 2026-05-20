@@ -4,6 +4,7 @@ import com.aeisp.recharge.entity.RechargeOrder;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -28,4 +29,15 @@ public interface RechargeOrderMapper extends BaseMapper<RechargeOrder> {
      * @return 订单列表
      */
     List<RechargeOrder> selectByUserId(@Param("userId") Long userId);
+
+    /**
+     * 查询指定时间范围内已支付订单的总金额（分）。
+     */
+    Long selectDailyRechargeSum(@Param("start") LocalDateTime start,
+                                @Param("end") LocalDateTime end);
+
+    /**
+     * 查询所有已支付订单的总金额（分）。
+     */
+    Long selectTotalRechargeSum();
 }

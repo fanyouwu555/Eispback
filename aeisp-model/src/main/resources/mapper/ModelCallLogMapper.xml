@@ -9,4 +9,23 @@
           AND created_at BETWEEN #{start} AND #{end}
     </select>
 
+    <select id="countTotalCalls" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM model_call_log
+    </select>
+
+    <select id="countSuccessCalls" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM model_call_log WHERE status = 1
+    </select>
+
+    <select id="selectDailyCallStats" resultType="java.util.Map">
+        SELECT DATE(created_at) AS date,
+               COUNT(*) AS callCount,
+               COALESCE(SUM(tokens_used), 0) AS tokenCount
+        FROM model_call_log
+        WHERE created_at &gt;= #{start}
+          AND created_at &lt;= #{end}
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+    </select>
+
 </mapper>

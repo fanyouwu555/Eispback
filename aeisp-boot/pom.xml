@@ -72,6 +72,13 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Project Module -->
+        <dependency>
+            <groupId>com.aeisp</groupId>
+            <artifactId>aeisp-project</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Runtime starters (required by aeisp-common but scoped provided there) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
