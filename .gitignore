@@ -48,5 +48,10 @@ redis_data/
 # Frontend build output
 aeisp-admin/dist/
 
-# Test screenshots
+# Test screenshots and snapshots
 admin-*.png
+*.snapshot.yml
+
+# Error output files
+*.err
+
