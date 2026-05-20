@@ -44,7 +44,7 @@ function hasOneShowingChild(children = [], parent) {
     onlyOneChild.value = { ...parent, path: '', noShowingChildren: true }
     return true
   }
-  if (showingChildren.length === 1) {
+  if (showingChildren.length === 1 && !parent.meta?.alwaysShow) {
     onlyOneChild.value = showingChildren[0]
     return true
   }

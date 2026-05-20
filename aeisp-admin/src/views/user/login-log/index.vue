@@ -2,6 +2,17 @@
   <div class="app-container">
     <el-form :model="queryParams" :inline="true">
       <el-form-item label="登录账号"><el-input v-model="queryParams.loginAccount" clearable /></el-form-item>
+      <el-form-item label="登录时间">
+        <el-date-picker
+          v-model="timeRange"
+          type="daterange"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          @change="onTimeRangeChange"
+        />
+      </el-form-item>
       <el-form-item label="登录类型">
         <el-select v-model="queryParams.loginType" clearable>
           <el-option label="密码登录" :value="1" />
@@ -23,10 +34,12 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
-    <el-table v-loading="loading" :data="logList" border>
+    <el-table v-loading="loading" :data="logList" border :row-class-name="getRowClass">
       <el-table-column label="登录账号" prop="loginAccount" />
+      <el-table-column label="登录时间" prop="createdAt" width="180" />
       <el-table-column label="登录类型" prop="loginType" width="120">
         <template #default="{ row }">
           <el-tag v-if="row.loginType === 1">密码登录</el-tag>
@@ -51,9 +64,39 @@
           <el-tag v-else type="info">未知</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="登录时间" prop="createdAt" width="180" />
+      <el-table-column label="操作" align="center" width="80">
+        <template #default="{ row }">
+          <el-button link type="primary" icon="View" @click="handleDetail(row)">详情</el-button>
+        </template>
+      </el-table-column>
     </el-table>
     <Pagination :total="total" :page-num="queryParams.pageNum" :page-size="queryParams.pageSize" @pagination="getList" />
+
+    <!-- 详情弹窗 -->
+    <el-dialog v-model="detailOpen" title="登录详情" width="500px">
+      <el-form label-width="120px">
+        <el-form-item label="登录账号">{{ detailRow?.loginAccount }}</el-form-item>
+        <el-form-item label="登录时间">{{ detailRow?.createdAt }}</el-form-item>
+        <el-form-item label="登录结果">
+          <el-tag v-if="detailRow?.loginResult === 1" type="success">成功</el-tag>
+          <el-tag v-else-if="detailRow?.loginResult === 2" type="danger">密码错误</el-tag>
+          <el-tag v-else-if="detailRow?.loginResult === 3" type="warning">账号不存在</el-tag>
+          <el-tag v-else-if="detailRow?.loginResult === 4" type="warning">账号禁用</el-tag>
+          <el-tag v-else-if="detailRow?.loginResult === 5" type="warning">账号冻结</el-tag>
+          <el-tag v-else-if="detailRow?.loginResult === 6" type="warning">账号锁定</el-tag>
+          <el-tag v-else-if="detailRow?.loginResult === 7" type="danger">验证码错误</el-tag>
+          <el-tag v-else-if="detailRow?.loginResult === 8" type="info">Token过期</el-tag>
+        </el-form-item>
+        <el-form-item label="IP 地址">{{ detailRow?.ipAddress }}</el-form-item>
+        <el-form-item label="设备类型">{{ detailRow?.deviceType || '-' }}</el-form-item>
+        <el-form-item label="操作系统">{{ detailRow?.osInfo || '-' }}</el-form-item>
+        <el-form-item label="浏览器">{{ detailRow?.browserInfo || '-' }}</el-form-item>
+        <el-form-item label="设备ID">{{ detailRow?.deviceId || '-' }}</el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="detailOpen = false">关 闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -65,13 +108,38 @@ import Pagination from '@/components/Pagination.vue'
 const loading = ref(false)
 const logList = ref([])
 const total = ref(0)
+const detailOpen = ref(false)
+const detailRow = ref(null)
+const timeRange = ref(null)
+
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
   loginAccount: undefined,
   loginType: undefined,
-  loginResult: undefined
+  loginResult: undefined,
+  createdAtStart: undefined,
+  createdAtEnd: undefined
 })
+
+function onTimeRangeChange(range) {
+  if (range) {
+    queryParams.createdAtStart = range[0]
+    queryParams.createdAtEnd = range[1]
+  } else {
+    queryParams.createdAtStart = undefined
+    queryParams.createdAtEnd = undefined
+  }
+}
+
+function getRowClass({ row }) {
+  return row.loginResult && row.loginResult !== 1 ? 'danger-row' : ''
+}
+
+function handleDetail(row) {
+  detailRow.value = row
+  detailOpen.value = true
+}
 
 async function getList(pagination = null) {
   loading.value = true
@@ -82,9 +150,21 @@ async function getList(pagination = null) {
   loading.value = false
 }
 function handleQuery() { queryParams.pageNum = 1; getList() }
+function resetQuery() {
+  timeRange.value = null
+  queryParams.createdAtStart = undefined
+  queryParams.createdAtEnd = undefined
+  queryParams.loginAccount = undefined
+  queryParams.loginType = undefined
+  queryParams.loginResult = undefined
+  handleQuery()
+}
 onMounted(getList)
 </script>
 
 <style scoped>
 .app-container { padding: 20px; }
+</style>
+<style>
+.el-table .danger-row { background-color: #fef0f0; }
 </style>

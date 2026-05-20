@@ -3,7 +3,6 @@
     <el-table v-loading="loading" :data="configList" border>
       <el-table-column type="index" width="50" />
       <el-table-column label="配置名称" prop="configKey" />
-      <el-table-column label="配置Key" prop="configKey" />
       <el-table-column label="配置值" prop="configValue" />
       <el-table-column label="备注" prop="description" />
       <el-table-column label="操作" align="center" width="120">
@@ -16,9 +15,6 @@
     <el-dialog v-model="open" title="编辑配置" width="500px">
       <el-form :model="form" label-width="100px">
         <el-form-item label="配置名称">
-          <el-input v-model="form.configKey" disabled />
-        </el-form-item>
-        <el-form-item label="配置Key">
           <el-input v-model="form.configKey" disabled />
         </el-form-item>
         <el-form-item label="配置值">

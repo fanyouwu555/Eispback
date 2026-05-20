@@ -1,5 +1,6 @@
 <template>
   <div class="app-container">
+    <!-- 搜索表单 -->
     <el-form :model="queryParams" ref="queryRef" :inline="true">
       <el-form-item label="用户名" prop="username">
         <el-input v-model="queryParams.username" placeholder="请输入用户名" clearable />
@@ -15,14 +16,50 @@
           <el-option label="锁定" :value="4" />
         </el-select>
       </el-form-item>
+      <el-form-item label="比赛用户" prop="isCompetition">
+        <el-select v-model="queryParams.isCompetition" clearable placeholder="请选择" style="width:100px">
+          <el-option label="是" :value="1" />
+          <el-option label="否" :value="0" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="注册时间" prop="registerTime">
+        <el-date-picker
+          v-model="registerTimeRange"
+          type="daterange"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          @change="onRegisterTimeChange"
+        />
+      </el-form-item>
+      <el-form-item label="角色" prop="roleIds">
+        <el-select v-model="queryParams.roleIds" placeholder="请选择" clearable multiple>
+          <el-option label="超级管理员" :value="1" />
+          <el-option label="用户管理员" :value="2" />
+          <el-option label="模型管理员" :value="3" />
+          <el-option label="消息管理员" :value="4" />
+          <el-option label="模板管理员" :value="5" />
+          <el-option label="财务管理员" :value="6" />
+          <el-option label="普通用户" :value="7" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="剩余时长">
+        <el-input-number v-model="queryParams.remainingMinutesMin" :min="0" placeholder="最低" style="width: 100px" />
+        <span style="margin: 0 8px">-</span>
+        <el-input-number v-model="queryParams.remainingMinutesMax" :min="0" placeholder="最高" style="width: 100px" />
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+        <el-button icon="Plus" @click="handleCreate">创建</el-button>
+        <el-button icon="Upload" @click="handleImport">导入</el-button>
       </el-form-item>
     </el-form>
 
     <el-table v-loading="loading" :data="userList" border>
       <el-table-column type="index" width="50" />
+      <el-table-column label="用户ID" prop="id" width="80" />
       <el-table-column label="用户名" prop="username" />
       <el-table-column label="昵称" prop="nickname" />
       <el-table-column label="手机号" prop="phone" />
@@ -34,14 +71,27 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="需改密" align="center" width="70">
+        <template #default="{ row }">
+          <el-icon v-if="row.needChangePassword === 1" color="#f56c6c" size="18"><WarningFilled /></el-icon>
+        </template>
+      </el-table-column>
+      <el-table-column label="比赛用户" align="center" width="80">
+        <template #default="{ row }">
+          <el-tag v-if="row.isCompetition === 1" type="success" size="small">是</el-tag>
+          <span v-else>否</span>
+        </template>
+      </el-table-column>
       <el-table-column label="剩余时长(分)" prop="remainingMinutes" width="110" />
       <el-table-column label="余额(分)" prop="balanceCents" width="100" />
       <el-table-column label="最后登录" prop="lastLoginTime" width="180" />
+      <el-table-column label="注册时间" prop="registerTime" width="180" />
       <el-table-column label="操作" align="center" width="280">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">编辑</el-button>
           <el-button link type="warning" icon="Key" @click="handleResetPwd(row)">重置密码</el-button>
           <el-button link type="success" icon="Timer" @click="handleAdjust(row)">调整时长</el-button>
+          <el-button link type="primary" icon="Setting" @click="handlePermission(row)">权限</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -63,6 +113,9 @@
             <el-option label="锁定" :value="4" />
           </el-select>
         </el-form-item>
+        <el-form-item v-if="form.status !== form.originalStatus" label="管理员密码">
+          <el-input v-model="form.adminPassword" type="password" placeholder="输入当前管理员密码" show-password />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="open = false">取 消</el-button>
@@ -73,7 +126,13 @@
     <!-- 重置密码弹窗 -->
     <el-dialog v-model="pwdOpen" title="重置密码" width="400px">
       <p>确认重置用户 "{{ currentUser?.username }}" 的密码？</p>
-      <p v-if="newPassword" style="color: #f56c6c; margin-top: 10px;">新密码：{{ newPassword }}</p>
+      <div style="margin: 15px 0;">
+        <el-input v-model="pwdAdminPassword" type="password" placeholder="输入当前管理员密码（二次确认）" show-password />
+      </div>
+      <p v-if="newPassword" style="color: #f56c6c; margin-top: 10px;">
+        <el-icon color="#f56c6c"><WarningFilled /></el-icon>
+        新密码：{{ newPassword }}
+      </p>
       <template #footer>
         <el-button @click="pwdOpen = false">取 消</el-button>
         <el-button type="primary" @click="submitReset">确 定</el-button>
@@ -83,16 +142,136 @@
     <!-- 调整时长弹窗 -->
     <el-dialog v-model="durationOpen" title="调整时长" width="400px">
       <el-form :model="durationForm" label-width="80px">
+        <el-form-item label="调整类型">
+          <el-select v-model="durationForm.adjustType">
+            <el-option label="增加" :value="1" />
+            <el-option label="扣减" :value="2" />
+            <el-option label="设定" :value="3" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="调整数值">
-          <el-input-number v-model="durationForm.deltaMinutes" :min="-99999" :max="99999" />
+          <el-input-number v-model="durationForm.deltaMinutes" :min="0" :max="99999" />
         </el-form-item>
         <el-form-item label="调整原因">
           <el-input v-model="durationForm.reason" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="管理员密码">
+          <el-input v-model="durationForm.adminPassword" type="password" placeholder="输入当前管理员密码" show-password />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="durationOpen = false">取 消</el-button>
         <el-button type="primary" @click="submitAdjust">确 定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 导入弹窗 -->
+    <el-dialog v-model="importOpen" title="批量导入用户" width="600px">
+      <el-upload
+        ref="uploadRef"
+        drag
+        accept=".xlsx,.xls"
+        :auto-upload="false"
+        :limit="1"
+        :on-change="onImportFileChange"
+      >
+        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">将Excel文件拖到此处，或<em>点击选择</em></div>
+        <template #tip>
+          <div class="el-upload__tip">仅支持 .xlsx / .xls 格式，列头：用户名、初始密码、角色、备注</div>
+        </template>
+      </el-upload>
+      <div style="margin-top: 15px;" v-if="importResult">
+        <el-alert :title="'导入完成：成功 ' + importResult.successCount + ' 条，失败 ' + importResult.failCount + ' 条'" :type="importResult.failCount > 0 ? 'warning' : 'success'" show-icon />
+        <el-table v-if="importResult.failList?.length" :data="importResult.failList" style="margin-top: 10px;" size="small">
+          <el-table-column label="行号" prop="rowNum" width="60" />
+          <el-table-column label="用户名" prop="username" />
+          <el-table-column label="失败原因" prop="reason" />
+        </el-table>
+      </div>
+      <template #footer>
+        <el-button @click="importOpen = false">关 闭</el-button>
+        <el-button type="primary" @click="submitImport" :disabled="!importFile">开始导入</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 创建用户结果弹窗 -->
+    <el-dialog v-model="createResultOpen" title="创建用户成功" width="400px">
+      <el-alert title="请务必保存以下密码，关闭后无法再次查看" type="warning" show-icon :closable="false" style="margin-bottom: 15px;" />
+      <p>用户名：<strong>{{ createResult?.username }}</strong></p>
+      <p>
+        密 码：<strong style="color: #f56c6c;">{{ createResult?.password }}</strong>
+        <el-button link type="primary" @click="copyPassword">复制密码</el-button>
+      </p>
+      <template #footer>
+        <el-button type="primary" @click="createResultOpen = false">已保存，关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 创建用户弹窗 -->
+    <el-dialog v-model="createOpen" title="创建用户" width="500px">
+      <el-form :model="createForm" label-width="80px">
+        <el-form-item label="用户名">
+          <el-input v-model="createForm.username" placeholder="4-20位字母/数字/下划线" />
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="createForm.password" type="password" show-password placeholder="初始密码" />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="createForm.phone" placeholder="11位手机号" />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="createForm.email" placeholder="邮箱地址" />
+        </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="createForm.nickname" />
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-select v-model="createForm.roleIds" multiple>
+            <el-option label="普通用户" :value="7" />
+            <el-option label="用户管理员" :value="2" />
+            <el-option label="模型管理员" :value="3" />
+            <el-option label="消息管理员" :value="4" />
+            <el-option label="模板管理员" :value="5" />
+            <el-option label="财务管理员" :value="6" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="初始化时长(分)">
+          <el-input-number v-model="createForm.remainingMinutes" :min="0" />
+        </el-form-item>
+        <el-form-item label="比赛用户">
+          <el-select v-model="createForm.isCompetition" style="width:100px">
+            <el-option label="否" :value="0" />
+            <el-option label="是" :value="1" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createOpen = false">取 消</el-button>
+        <el-button type="primary" @click="submitCreate">确 定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 用户权限弹窗 -->
+    <el-dialog v-model="permOpen" title="用户权限设置" width="550px">
+      <el-form label-width="140px" v-if="permKeys.length > 0">
+        <el-form-item v-for="key in permKeys" :key="key.key" :label="key.label">
+          <template v-if="key.type === 'boolean'">
+            <el-switch v-model="permValues[key.key]" :active-value="'true'" :inactive-value="'false'" />
+          </template>
+          <template v-else>
+            <el-input-number v-model="permValues[key.key]" :min="0" :max="99999" />
+          </template>
+          <span style="margin-left: 10px; color: #909399; font-size: 12px;">默认值: {{ key.defaultValue }}</span>
+        </el-form-item>
+        <el-form-item v-if="currentPermUser" label="过期时间">
+          <el-date-picker v-model="permExpireAt" type="datetime" placeholder="不设置则永不过期" clearable value-format="YYYY-MM-DD HH:mm:ss" />
+        </el-form-item>
+      </el-form>
+      <el-empty v-else description="暂无权限配置" />
+      <template #footer>
+        <el-button @click="permOpen = false">取 消</el-button>
+        <el-button type="primary" :disabled="permKeys.length === 0" @click="submitPermission">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -101,7 +280,9 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listUsers, updateUser, resetUserPassword, adjustDuration } from '@/api/user'
+import { WarningFilled, UploadFilled, Plus } from '@element-plus/icons-vue'
+import { listUsers, updateUser, updateUserStatus, resetUserPassword, adjustDuration, importUsers, createUser } from '@/api/user'
+import { getUserPermissions, updateUserPermissions, getPermissionKeys } from '@/api/user/permission'
 import Pagination from '@/components/Pagination.vue'
 
 const loading = ref(false)
@@ -110,13 +291,43 @@ const total = ref(0)
 const open = ref(false)
 const pwdOpen = ref(false)
 const durationOpen = ref(false)
+const importOpen = ref(false)
+const createResultOpen = ref(false)
 const queryRef = ref(null)
+const uploadRef = ref(null)
 const currentUser = ref(null)
 const newPassword = ref('')
+const pwdAdminPassword = ref('')
+const importFile = ref(null)
+const importResult = ref(null)
+const createOpen = ref(false)
+const createResult = ref(null)
+const createForm = reactive({
+  username: '', password: '', phone: '', email: '', nickname: '',
+  roleIds: [], remainingMinutes: 0, isCompetition: 0
+})
+const registerTimeRange = ref(null)
 
-const queryParams = reactive({ pageNum: 1, pageSize: 10, username: undefined, phone: undefined, status: undefined })
-const form = reactive({ id: undefined, username: '', nickname: '', phone: '', email: '', status: 1 })
-const durationForm = reactive({ deltaMinutes: 0, reason: '' })
+const queryParams = reactive({
+  pageNum: 1, pageSize: 10,
+  username: undefined, phone: undefined, status: undefined,
+  roleIds: undefined,
+  registerTimeStart: undefined, registerTimeEnd: undefined,
+  remainingMinutesMin: undefined, remainingMinutesMax: undefined,
+  isCompetition: undefined
+})
+const form = reactive({
+  id: undefined, username: '', nickname: '', phone: '', email: '',
+  status: 1, originalStatus: 1, adminPassword: ''
+})
+const durationForm = reactive({ adjustType: 1, deltaMinutes: 0, reason: '', adminPassword: '' })
+
+// 权限管理
+const permOpen = ref(false)
+const currentPermUser = ref(null)
+const permKeys = ref([])
+const permValues = reactive({})
+const permExpireAt = ref(null)
 
 const statusMap = {
   1: { label: '正常', type: 'success' },
@@ -132,6 +343,16 @@ function getStatusType(status) {
   return statusMap[status]?.type || 'info'
 }
 
+function onRegisterTimeChange(range) {
+  if (range) {
+    queryParams.registerTimeStart = range[0]
+    queryParams.registerTimeEnd = range[1]
+  } else {
+    queryParams.registerTimeStart = undefined
+    queryParams.registerTimeEnd = undefined
+  }
+}
+
 async function getList(pagination = null) {
   loading.value = true
   try {
@@ -143,29 +364,191 @@ async function getList(pagination = null) {
 }
 
 function handleQuery() { queryParams.pageNum = 1; getList() }
-function resetQuery() { queryRef.value?.resetFields(); handleQuery() }
-
-function handleUpdate(row) { Object.assign(form, row); open.value = true }
-async function submitUpdate() {
-  await updateUser(form.id, { phone: form.phone, email: form.email, nickname: form.nickname, status: form.status })
-  ElMessage.success('修改成功'); open.value = false; getList()
+function resetQuery() {
+  queryRef.value?.resetFields()
+  registerTimeRange.value = null
+  queryParams.registerTimeStart = undefined
+  queryParams.registerTimeEnd = undefined
+  queryParams.roleIds = undefined
+  queryParams.remainingMinutesMin = undefined
+  queryParams.remainingMinutesMax = undefined
+  queryParams.isCompetition = undefined
+  handleQuery()
 }
 
-function handleResetPwd(row) { currentUser.value = row; newPassword.value = ''; pwdOpen.value = true }
+function handleUpdate(row) {
+  Object.assign(form, {
+    id: row.id, username: row.username, nickname: row.nickname,
+    phone: row.phone, email: row.email, status: row.status,
+    originalStatus: row.status, adminPassword: ''
+  })
+  open.value = true
+}
+async function submitUpdate() {
+  const baseData = { phone: form.phone, email: form.email, nickname: form.nickname }
+  if (form.status !== form.originalStatus) {
+    if (!form.adminPassword) {
+      ElMessage.warning('状态已变更，请输入管理员密码')
+      return
+    }
+    await updateUserStatus(form.id, {
+      status: form.status,
+      reason: '管理员手动修改',
+      adminPassword: form.adminPassword
+    })
+    ElMessage.success('状态修改成功')
+  }
+  await updateUser(form.id, baseData)
+  ElMessage.success('修改成功')
+  open.value = false
+  getList()
+}
+
+function handleResetPwd(row) {
+  currentUser.value = row
+  newPassword.value = ''
+  pwdAdminPassword.value = ''
+  pwdOpen.value = true
+}
 async function submitReset() {
-  const res = await resetUserPassword(currentUser.value.id)
+  if (!pwdAdminPassword.value) {
+    ElMessage.warning('请输入管理员密码')
+    return
+  }
+  const res = await resetUserPassword(currentUser.value.id, { adminPassword: pwdAdminPassword.value })
   newPassword.value = res || '已重置'
   ElMessage.success('密码重置成功')
 }
 
-function handleAdjust(row) { currentUser.value = row; durationForm.deltaMinutes = 0; durationForm.reason = ''; durationOpen.value = true }
+function handleAdjust(row) {
+  currentUser.value = row
+  durationForm.adjustType = 1
+  durationForm.deltaMinutes = 0
+  durationForm.reason = ''
+  durationForm.adminPassword = ''
+  durationOpen.value = true
+}
 async function submitAdjust() {
   if (!durationForm.reason || durationForm.reason.trim().length < 5) {
     ElMessage.warning('调整原因不能少于5个字符')
     return
   }
-  await adjustDuration(currentUser.value.id, durationForm)
-  ElMessage.success('时长调整成功'); durationOpen.value = false; getList()
+  if (!durationForm.adminPassword) {
+    ElMessage.warning('请输入管理员密码')
+    return
+  }
+  await adjustDuration(currentUser.value.id, {
+    adjustType: durationForm.adjustType,
+    deltaMinutes: durationForm.deltaMinutes,
+    reason: durationForm.reason,
+    adminPassword: durationForm.adminPassword
+  })
+  ElMessage.success('时长调整成功')
+  durationOpen.value = false
+  getList()
+}
+
+// 权限管理
+async function handlePermission(row) {
+  currentPermUser.value = row
+  permExpireAt.value = null
+  permOpen.value = true
+  // 加载权限键定义
+  try {
+    const keys = await getPermissionKeys()
+    permKeys.value = keys || []
+  } catch {
+    permKeys.value = []
+  }
+  // 加载用户现有权限值
+  try {
+    const perms = await getUserPermissions(row.id)
+    permKeys.value.forEach(k => {
+      const existing = (perms || []).find(p => p.permKey === k.key)
+      permValues[k.key] = existing ? existing.permValue : k.defaultValue
+      if (existing?.expireAt) {
+        permExpireAt.value = existing.expireAt
+      }
+    })
+  } catch {
+    permKeys.value.forEach(k => {
+      permValues[k.key] = k.defaultValue
+    })
+  }
+}
+
+async function submitPermission() {
+  const permissions = permKeys.value.map(k => ({
+    permKey: k.key,
+    permValue: String(permValues[k.key] ?? k.defaultValue),
+    expireAt: permExpireAt.value || null
+  }))
+  await updateUserPermissions(currentPermUser.value.id, { userId: currentPermUser.value.id, permissions })
+  ElMessage.success('权限设置成功')
+  permOpen.value = false
+}
+
+function handleCreate() {
+  createForm.username = ''; createForm.password = ''; createForm.phone = ''
+  createForm.email = ''; createForm.nickname = ''
+  createForm.roleIds = []; createForm.remainingMinutes = 0; createForm.isCompetition = 0
+  createOpen.value = true
+}
+async function submitCreate() {
+  if (!createForm.username || !createForm.password) {
+    ElMessage.warning('用户名和密码不能为空')
+    return
+  }
+  try {
+    const password = await createUser({
+      username: createForm.username,
+      password: createForm.password,
+      phone: createForm.phone || undefined,
+      email: createForm.email || undefined,
+      nickname: createForm.nickname || undefined,
+      roleIds: createForm.roleIds.length ? createForm.roleIds : undefined,
+      remainingMinutes: createForm.remainingMinutes || undefined,
+      isCompetition: createForm.isCompetition
+    })
+    createOpen.value = false
+    createResult.value = { username: createForm.username, password }
+    createResultOpen.value = true
+    getList()
+  } catch (e) {
+    ElMessage.error('创建失败：' + (e.message || '未知错误'))
+  }
+}
+
+function handleImport() {
+  importOpen.value = true
+  importResult.value = null
+  importFile.value = null
+}
+function onImportFileChange(uploadFile) {
+  importFile.value = uploadFile.raw
+}
+async function submitImport() {
+  if (!importFile.value) {
+    ElMessage.warning('请选择文件')
+    return
+  }
+  try {
+    const res = await importUsers(importFile.value)
+    importResult.value = res
+    ElMessage.success('导入完成')
+  } catch (e) {
+    ElMessage.error('导入失败：' + (e.message || '未知错误'))
+  }
+}
+
+function copyPassword() {
+  if (createResult.value?.password) {
+    navigator.clipboard.writeText(createResult.value.password).then(() => {
+      ElMessage.success('密码已复制')
+    }).catch(() => {
+      ElMessage.warning('复制失败，请手动复制')
+    })
+  }
 }
 
 onMounted(getList)

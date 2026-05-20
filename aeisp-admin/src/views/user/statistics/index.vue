@@ -14,7 +14,7 @@
         <el-card>
           <div class="card-panel-description">
             <div class="card-panel-text">今日新增</div>
-            <div class="card-panel-num">{{ stats.todayNewUsers || 0 }}</div>
+            <div class="card-panel-num">{{ stats.newUsersToday || 0 }}</div>
           </div>
         </el-card>
       </el-col>
@@ -22,15 +22,15 @@
         <el-card>
           <div class="card-panel-description">
             <div class="card-panel-text">今日活跃</div>
-            <div class="card-panel-num">{{ stats.todayActiveUsers || 0 }}</div>
+            <div class="card-panel-num">{{ stats.dau || 0 }}</div>
           </div>
         </el-card>
       </el-col>
       <el-col :span="6">
         <el-card>
           <div class="card-panel-description">
-            <div class="card-panel-text">总时长消耗</div>
-            <div class="card-panel-num">{{ stats.totalDurationConsumed || 0 }}</div>
+            <div class="card-panel-text">本周新增</div>
+            <div class="card-panel-num">{{ stats.newUsersWeek || 0 }}</div>
           </div>
         </el-card>
       </el-col>

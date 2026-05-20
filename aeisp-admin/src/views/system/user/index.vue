@@ -34,15 +34,21 @@
       <el-table-column label="昵称" prop="nickname" />
       <el-table-column label="手机号" prop="phone" />
       <el-table-column label="邮箱" prop="email" />
-      <el-table-column label="状态" align="center">
+      <el-table-column label="绑定角色" width="180">
+        <template #default="{ row }">
+          <span>{{ row.roles?.map(r => r.roleName).join(', ') || '-' }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" align="center" width="100">
         <template #default="{ row }">
           <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
         </template>
       </el-table-column>
       <el-table-column label="创建时间" prop="createdAt" width="180" />
-      <el-table-column label="操作" align="center" width="200">
+      <el-table-column label="操作" align="center" width="280">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">编辑</el-button>
+          <el-button link type="warning" icon="Key" @click="handleResetPwd(row)">重置密码</el-button>
           <el-button link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
@@ -75,10 +81,31 @@
             <el-radio :label="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="绑定角色" v-if="roleOptions.length > 0">
+          <el-select v-model="form.roleIds" multiple placeholder="请选择角色">
+            <el-option v-for="role in roleOptions" :key="role.id" :label="role.roleName" :value="role.id" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="open = false">取 消</el-button>
         <el-button type="primary" @click="submitForm">确 定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 重置密码弹窗 -->
+    <el-dialog v-model="pwdOpen" title="重置密码" width="400px">
+      <p>确认重置用户 "{{ currentUser?.username }}" 的密码？</p>
+      <div style="margin: 15px 0;">
+        <el-input v-model="newPassword" type="password" show-password placeholder="输入新密码（留空自动生成）" />
+      </div>
+      <p v-if="generatedPassword" style="color: #f56c6c; margin-top: 10px;">
+        <el-icon color="#f56c6c"><WarningFilled /></el-icon>
+        新密码：{{ generatedPassword }}
+      </p>
+      <template #footer>
+        <el-button @click="pwdOpen = false">取 消</el-button>
+        <el-button type="primary" @click="submitResetPwd">确 定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -87,7 +114,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listSysUsers, addSysUser, updateSysUser, deleteSysUser } from '@/api/system'
+import { listSysUsers, addSysUser, updateSysUser, deleteSysUser, listRoles } from '@/api/system'
 import Pagination from '@/components/Pagination.vue'
 
 const loading = ref(false)
@@ -97,6 +124,11 @@ const open = ref(false)
 const title = ref('')
 const queryRef = ref(null)
 const formRef = ref(null)
+const roleOptions = ref([])
+const pwdOpen = ref(false)
+const currentUser = ref(null)
+const newPassword = ref('')
+const generatedPassword = ref('')
 
 const queryParams = reactive({
   pageNum: 1,
@@ -113,7 +145,8 @@ const form = reactive({
   nickname: '',
   phone: '',
   email: '',
-  status: 1
+  status: 1,
+  roleIds: []
 })
 
 const rules = {
@@ -154,7 +187,8 @@ function resetForm() {
     nickname: '',
     phone: '',
     email: '',
-    status: 1
+    status: 1,
+    roleIds: []
   })
 }
 
@@ -166,7 +200,15 @@ function handleAdd() {
 
 function handleUpdate(row) {
   resetForm()
-  Object.assign(form, row)
+  Object.assign(form, {
+    id: row.id,
+    username: row.username,
+    nickname: row.realName || row.nickname,
+    phone: row.phone,
+    email: row.email,
+    status: row.status ?? 1,
+    roleIds: row.roles?.map(r => r.id) || []
+  })
   open.value = true
   title.value = '编辑用户'
 }
@@ -178,6 +220,29 @@ async function handleStatusChange(row) {
   } catch {
     row.status = row.status === 1 ? 0 : 1
   }
+}
+
+function handleResetPwd(row) {
+  currentUser.value = row
+  newPassword.value = ''
+  generatedPassword.value = ''
+  pwdOpen.value = true
+}
+
+async function submitResetPwd() {
+  const pwd = newPassword.value || generateRandomPwd()
+  await updateSysUser(currentUser.value.id, { password: pwd })
+  generatedPassword.value = pwd
+  ElMessage.success('密码重置成功')
+}
+
+function generateRandomPwd() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%'
+  let result = ''
+  for (let i = 0; i < 12; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
 }
 
 function handleDelete(row) {
@@ -195,11 +260,21 @@ function handleDelete(row) {
 async function submitForm() {
   try {
     await formRef.value.validate()
+    const data = {
+      realName: form.nickname,
+      phone: form.phone,
+      email: form.email,
+      status: form.status,
+      roleIds: form.roleIds.length ? form.roleIds : undefined
+    }
     if (form.id) {
-      await updateSysUser(form.id, form)
+      if (form.password) data.password = form.password
+      await updateSysUser(form.id, data)
       ElMessage.success('修改成功')
     } else {
-      await addSysUser(form)
+      data.username = form.username
+      data.password = form.password
+      await addSysUser(data)
       ElMessage.success('新增成功')
     }
     open.value = false
@@ -209,7 +284,10 @@ async function submitForm() {
   }
 }
 
-onMounted(getList)
+onMounted(() => {
+  getList()
+  listRoles().then(res => { roleOptions.value = res.list || [] }).catch(() => {})
+})
 </script>
 
 <style scoped>
