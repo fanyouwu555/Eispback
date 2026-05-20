@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS sys_role (
     role_code VARCHAR(32) NOT NULL COMMENT '角色编码',
     description VARCHAR(255) DEFAULT NULL COMMENT '角色描述',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-禁用，1-正常',
+    is_system TINYINT NOT NULL DEFAULT 0 COMMENT '是否系统内置角色：0-自定义，1-系统内置（不可删除）',
     created_at DATETIME DEFAULT NULL COMMENT '创建时间',
     updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
     created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
@@ -46,7 +47,8 @@ CREATE TABLE IF NOT EXISTS sys_role (
     deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
     PRIMARY KEY (id),
     UNIQUE KEY uk_sys_role_code (role_code),
-    KEY idx_sys_role_status (status)
+    KEY idx_sys_role_status (status),
+    KEY idx_sys_role_is_system (is_system)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统角色表';
 
 -- 权限点表
@@ -588,14 +590,71 @@ CREATE TABLE IF NOT EXISTS usr_balance_change_log (
 -- --------------------------------------------------------
 
 -- 初始化角色
-INSERT INTO sys_role (id, role_name, role_code, description, status, created_at, updated_at) VALUES
-(1, '超级管理员', 'ROLE_SUPER_ADMIN', '系统最高权限，拥有所有操作权限', 1, NOW(), NOW()),
-(2, '用户管理员', 'ROLE_USER_MANAGER', '负责用户账号的全生命周期管理', 1, NOW(), NOW()),
-(3, '模型管理员', 'ROLE_MODEL_MANAGER', '负责AI模型的接入、配置、测试、状态管理', 1, NOW(), NOW()),
-(4, '消息管理员', 'ROLE_NOTIFICATION_MANAGER', '负责平台消息的内容编辑、推送管理、撤回和效果监控', 1, NOW(), NOW()),
-(5, '模板管理员', 'ROLE_TEMPLATE_MANAGER', '负责编程模板的上传、版本管理、上下线控制和统计分析', 1, NOW(), NOW()),
-(6, '财务管理员', 'ROLE_FINANCE_MANAGER', '负责充值套餐配置、订单管理、退款审核和余额调整', 1, NOW(), NOW()),
-(7, '普通用户', 'ROLE_USER', '平台注册用户默认角色', 1, NOW(), NOW());
+INSERT INTO sys_role (id, role_name, role_code, description, status, is_system, created_at, updated_at) VALUES
+(1, '超级管理员', 'ROLE_SUPER_ADMIN', '系统最高权限，拥有所有操作权限', 1, 1, NOW(), NOW()),
+(2, '用户管理员', 'ROLE_USER_MANAGER', '负责用户账号的全生命周期管理', 1, 1, NOW(), NOW()),
+(3, '模型管理员', 'ROLE_MODEL_MANAGER', '负责AI模型的接入、配置、测试、状态管理', 1, 1, NOW(), NOW()),
+(4, '消息管理员', 'ROLE_NOTIFICATION_MANAGER', '负责平台消息的内容编辑、推送管理、撤回和效果监控', 1, 1, NOW(), NOW()),
+(5, '模板管理员', 'ROLE_TEMPLATE_MANAGER', '负责编程模板的上传、版本管理、上下线控制和统计分析', 1, 1, NOW(), NOW()),
+(6, '财务管理员', 'ROLE_FINANCE_MANAGER', '负责充值套餐配置、订单管理、退款审核和余额调整', 1, 1, NOW(), NOW()),
+(7, '普通用户', 'ROLE_USER', '平台注册用户默认角色', 1, 1, NOW(), NOW());
+
+-- 初始化权限点
+INSERT INTO sys_permission (id, permission_name, permission_code, resource_type, action, description, created_at, updated_at, created_by, updated_by) VALUES
+(1, '创建用户', 'user:create', 'user', 'create', NULL, NOW(), NOW(), 1, 1),
+(2, '查看用户', 'user:read', 'user', 'read', NULL, NOW(), NOW(), 1, 1),
+(3, '修改用户', 'user:update', 'user', 'update', NULL, NOW(), NOW(), 1, 1),
+(4, '删除用户', 'user:delete', 'user', 'delete', NULL, NOW(), NOW(), 1, 1),
+(5, '修改用户状态', 'user:status:update', 'user', 'update', NULL, NOW(), NOW(), 1, 1),
+(6, '重置用户密码', 'user:password:reset', 'user', 'update', NULL, NOW(), NOW(), 1, 1),
+(7, '调整用户时长', 'user:duration:adjust', 'user', 'update', NULL, NOW(), NOW(), 1, 1),
+(8, '接入模型', 'model:create', 'model', 'create', NULL, NOW(), NOW(), 1, 1),
+(9, '查看模型', 'model:read', 'model', 'read', NULL, NOW(), NOW(), 1, 1),
+(10, '修改模型', 'model:update', 'model', 'update', NULL, NOW(), NOW(), 1, 1),
+(11, '删除模型', 'model:delete', 'model', 'delete', NULL, NOW(), NOW(), 1, 1),
+(12, '配置模型', 'model:config', 'model', 'update', NULL, NOW(), NOW(), 1, 1),
+(13, '测试模型', 'model:test', 'model', 'read', NULL, NOW(), NOW(), 1, 1),
+(14, '管理订单', 'order:manage', 'order', 'manage', NULL, NOW(), NOW(), 1, 1),
+(15, '订单退款', 'order:refund', 'order', 'update', NULL, NOW(), NOW(), 1, 1),
+(16, '创建消息', 'notification:create', 'notification', 'create', NULL, NOW(), NOW(), 1, 1),
+(17, '查看消息', 'notification:read', 'notification', 'read', NULL, NOW(), NOW(), 1, 1),
+(18, '修改消息', 'notification:update', 'notification', 'update', NULL, NOW(), NOW(), 1, 1),
+(19, '删除消息', 'notification:delete', 'notification', 'delete', NULL, NOW(), NOW(), 1, 1),
+(20, '发送消息', 'notification:send', 'notification', 'create', NULL, NOW(), NOW(), 1, 1),
+(21, '创建模板', 'template:create', 'template', 'create', NULL, NOW(), NOW(), 1, 1),
+(22, '查看模板', 'template:read', 'template', 'read', NULL, NOW(), NOW(), 1, 1),
+(23, '修改模板', 'template:update', 'template', 'update', NULL, NOW(), NOW(), 1, 1),
+(24, '删除模板', 'template:delete', 'template', 'delete', NULL, NOW(), NOW(), 1, 1),
+(25, '管理模板版本', 'template:version:manage', 'template', 'update', NULL, NOW(), NOW(), 1, 1),
+(26, '系统配置', 'system:config', 'system', 'update', NULL, NOW(), NOW(), 1, 1),
+(27, '角色管理', 'system:role:manage', 'system', 'manage', NULL, NOW(), NOW(), 1, 1),
+(28, '用户管理', 'system:user:manage', 'system', 'manage', NULL, NOW(), NOW(), 1, 1),
+(29, '查看权限点', 'system:permission:read', 'system', 'read', NULL, NOW(), NOW(), 1, 1),
+(30, '查看操作日志', 'admin:log:read', 'system', 'read', NULL, NOW(), NOW(), 1, 1),
+(31, '管理充值套餐', 'finance:package:manage', 'finance', 'manage', NULL, NOW(), NOW(), 1, 1),
+(32, '管理财务订单', 'finance:order:manage', 'finance', 'manage', NULL, NOW(), NOW(), 1, 1),
+(33, '调整余额', 'finance:balance:adjust', 'finance', 'update', NULL, NOW(), NOW(), 1, 1);
+
+-- 初始化角色权限映射
+INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
+-- 超级管理员
+(1, 1, NOW()), (1, 2, NOW()), (1, 3, NOW()), (1, 4, NOW()), (1, 5, NOW()), (1, 6, NOW()), (1, 7, NOW()),
+(1, 8, NOW()), (1, 9, NOW()), (1, 10, NOW()), (1, 11, NOW()), (1, 12, NOW()), (1, 13, NOW()),
+(1, 14, NOW()), (1, 15, NOW()),
+(1, 16, NOW()), (1, 17, NOW()), (1, 18, NOW()), (1, 19, NOW()), (1, 20, NOW()),
+(1, 21, NOW()), (1, 22, NOW()), (1, 23, NOW()), (1, 24, NOW()), (1, 25, NOW()),
+(1, 26, NOW()), (1, 27, NOW()), (1, 28, NOW()), (1, 29, NOW()), (1, 30, NOW()),
+(1, 31, NOW()), (1, 32, NOW()), (1, 33, NOW()),
+-- 用户管理员
+(2, 1, NOW()), (2, 2, NOW()), (2, 3, NOW()), (2, 4, NOW()), (2, 5, NOW()), (2, 6, NOW()), (2, 7, NOW()),
+-- 模型管理员
+(3, 8, NOW()), (3, 9, NOW()), (3, 10, NOW()), (3, 11, NOW()), (3, 12, NOW()), (3, 13, NOW()),
+-- 消息管理员
+(4, 16, NOW()), (4, 17, NOW()), (4, 18, NOW()), (4, 19, NOW()), (4, 20, NOW()),
+-- 模板管理员
+(5, 21, NOW()), (5, 22, NOW()), (5, 23, NOW()), (5, 24, NOW()), (5, 25, NOW()),
+-- 财务管理员
+(6, 14, NOW()), (6, 15, NOW()), (6, 31, NOW()), (6, 32, NOW()), (6, 33, NOW());
 
 -- 初始化超级管理员账号（密码明文：admin123，BCrypt 加密后）
 INSERT INTO sys_user (id, username, password, real_name, email, phone, status, created_at, updated_at) VALUES
@@ -612,6 +671,7 @@ INSERT INTO sys_config (config_key, config_value, environment, description, crea
 ('system.copyright', '© 2026 AEISP Team', 'all', '系统版权信息', NOW(), NOW()),
 ('official_website_url', 'https://www.example.com', 'prod', '生产环境官网地址', NOW(), NOW()),
 ('official_website_url', 'https://test.example.com', 'test', '测试环境官网地址', NOW(), NOW()),
+('official_website_url', 'https://dev.example.com', 'dev', '开发环境官网地址', NOW(), NOW()),
 ('contact_email', 'contact@example.com', 'all', '联系邮箱', NOW(), NOW()),
 ('contact_phone', '400-123-4567', 'all', '客服电话', NOW(), NOW()),
 ('default_register_duration', '120', 'all', '注册默认赠送时长（分钟）', NOW(), NOW()),
