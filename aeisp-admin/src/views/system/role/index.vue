@@ -11,12 +11,18 @@
       <el-table-column label="角色名称" prop="roleName" />
       <el-table-column label="角色编码" prop="roleCode" />
       <el-table-column label="描述" prop="description" />
+      <el-table-column label="类型" align="center" width="100">
+        <template #default="{ row }">
+          <el-tag v-if="row.isSystem === 1" type="warning">系统内置</el-tag>
+          <el-tag v-else type="info">自定义</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" prop="createdAt" width="180" />
       <el-table-column label="操作" align="center" width="250">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">编辑</el-button>
           <el-button link type="primary" icon="User" @click="handleAssignPermission(row)">分配权限</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
+          <el-button v-if="row.isSystem !== 1" link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -133,7 +139,7 @@ async function submitForm() {
 
 async function submitPermission() {
   const checkedKeys = treeRef.value.getCheckedKeys()
-  console.log('分配权限:', currentRole.value.id, checkedKeys)
+  await updateRole(currentRole.value.id, { permissionIds: checkedKeys })
   permOpen.value = false
   ElMessage.success('权限分配成功')
 }

@@ -2,10 +2,10 @@
   <div class="app-container">
     <el-table v-loading="loading" :data="configList" border>
       <el-table-column type="index" width="50" />
-      <el-table-column label="配置名称" prop="configName" />
+      <el-table-column label="配置名称" prop="configKey" />
       <el-table-column label="配置Key" prop="configKey" />
       <el-table-column label="配置值" prop="configValue" />
-      <el-table-column label="备注" prop="remark" />
+      <el-table-column label="备注" prop="description" />
       <el-table-column label="操作" align="center" width="120">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">编辑</el-button>
@@ -16,7 +16,7 @@
     <el-dialog v-model="open" title="编辑配置" width="500px">
       <el-form :model="form" label-width="100px">
         <el-form-item label="配置名称">
-          <el-input v-model="form.configName" disabled />
+          <el-input v-model="form.configKey" disabled />
         </el-form-item>
         <el-form-item label="配置Key">
           <el-input v-model="form.configKey" disabled />
@@ -25,7 +25,7 @@
           <el-input v-model="form.configValue" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" disabled />
+          <el-input v-model="form.description" type="textarea" disabled />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -44,7 +44,7 @@ import { listConfigs, updateConfig } from '@/api/system'
 const loading = ref(false)
 const configList = ref([])
 const open = ref(false)
-const form = reactive({ configKey: '', configName: '', configValue: '', remark: '' })
+const form = reactive({ configKey: '', configValue: '', description: '' })
 
 async function getList() {
   loading.value = true

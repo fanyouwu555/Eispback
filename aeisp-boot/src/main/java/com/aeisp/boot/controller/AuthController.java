@@ -13,6 +13,8 @@ import com.aeisp.system.entity.SysOperationLog;
 import com.aeisp.system.service.SysOperationLogService;
 import com.aeisp.user.entity.UsrLoginLog;
 import com.aeisp.user.entity.UsrUser;
+import com.aeisp.system.entity.SysUserBehaviorLog;
+import com.aeisp.system.mapper.SysUserBehaviorLogMapper;
 import com.aeisp.user.service.UsrLoginLogService;
 import com.aeisp.user.service.UsrUserService;
 import io.jsonwebtoken.Claims;
@@ -53,6 +55,7 @@ public class AuthController {
     private final TokenBlacklistUtil tokenBlacklistUtil;
     private final com.aeisp.boot.security.CustomUserDetailsService customUserDetailsService;
     private final UsrUserService usrUserService;
+    private final SysUserBehaviorLogMapper sysUserBehaviorLogMapper;
 
     /**
      * 用户登录。
@@ -174,16 +177,29 @@ public class AuthController {
      * @return 登出结果
      */
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestHeader("Authorization") String authorization) {
+    public Result<Void> logout(@RequestHeader("Authorization") String authorization,
+                               HttpServletRequest httpRequest) {
         String token = resolveBearerToken(authorization);
+        Long userId = null;
         if (token != null) {
             try {
                 Claims claims = jwtUtil.parseToken(token);
                 Date expiration = claims.getExpiration();
                 tokenBlacklistUtil.addToBlacklist(token, expiration);
+                userId = Long.valueOf(claims.get("userId", String.class));
             } catch (Exception e) {
                 log.warn("登出时解析 Token 失败: {}", e.getMessage());
             }
+        }
+        // 记录用户行为日志
+        if (userId != null && sysUserBehaviorLogMapper != null) {
+            SysUserBehaviorLog behaviorLog = new SysUserBehaviorLog();
+            behaviorLog.setUserId(userId);
+            behaviorLog.setBehaviorType("LOGOUT");
+            behaviorLog.setIpAddress(getClientIp(httpRequest));
+            behaviorLog.setDeviceInfo(httpRequest.getHeader("User-Agent"));
+            behaviorLog.setCreatedAt(LocalDateTime.now());
+            sysUserBehaviorLogMapper.insert(behaviorLog);
         }
         SecurityContextHolder.clearContext();
         return Result.success(null, "登出成功");
@@ -267,6 +283,17 @@ public class AuthController {
             log.setBrowserInfo(device);
             log.setCreatedAt(LocalDateTime.now());
             usrLoginLogService.saveLog(log);
+
+            // 记录用户行为日志
+            if (success && sysUserBehaviorLogMapper != null) {
+                SysUserBehaviorLog behaviorLog = new SysUserBehaviorLog();
+                behaviorLog.setUserId(userDetails.getUserId());
+                behaviorLog.setBehaviorType("LOGIN");
+                behaviorLog.setIpAddress(ip);
+                behaviorLog.setDeviceInfo(device);
+                behaviorLog.setCreatedAt(LocalDateTime.now());
+                sysUserBehaviorLogMapper.insert(behaviorLog);
+            }
         } else {
             SysOperationLog log = new SysOperationLog();
             log.setUserId(userDetails.getUserId());
