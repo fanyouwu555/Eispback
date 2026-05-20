@@ -1,11 +1,17 @@
 package com.aeisp.recharge.controller;
 
 import com.aeisp.common.Result;
+import com.aeisp.common.exception.BizException;
 import com.aeisp.recharge.dto.BalanceVO;
 import com.aeisp.recharge.service.BalanceService;
+import com.aeisp.system.annotation.OperationLog;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class BalanceController {
 
     private final BalanceService balanceService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 获取用户余额。
@@ -61,9 +68,15 @@ public class BalanceController {
      * @param reason 抵扣原因
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('finance:balance:adjust')")
+    @OperationLog(module = "余额管理", operation = "余额抵扣", sensitivity = 2)
     @Operation(summary = "余额抵扣")
     @PostMapping("/{userId}/deduct")
-    public Result<Boolean> deductBalance(@PathVariable Long userId, @RequestParam Integer amount, @RequestParam String reason) {
+    public Result<Boolean> deductBalance(@PathVariable Long userId,
+                                           @RequestParam Integer amount,
+                                           @RequestParam String reason,
+                                           @RequestParam String adminPassword) {
+        verifyAdminPassword(adminPassword);
         return Result.success(balanceService.deductBalance(userId, amount, reason));
     }
 
@@ -76,12 +89,26 @@ public class BalanceController {
      * @param operatorId 操作人 ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('finance:balance:adjust')")
+    @OperationLog(module = "余额管理", operation = "手动调整余额", sensitivity = 2)
     @Operation(summary = "手动调整余额")
     @PostMapping("/{userId}/adjust")
     public Result<Boolean> adjustBalance(@PathVariable Long userId,
                                           @RequestParam Integer delta,
                                           @RequestParam String reason,
-                                          @RequestParam Long operatorId) {
+                                          @RequestParam Long operatorId,
+                                          @RequestParam String adminPassword) {
+        verifyAdminPassword(adminPassword);
         return Result.success(balanceService.adjustBalance(userId, delta, reason, operatorId));
+    }
+
+    private void verifyAdminPassword(String adminPassword) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserDetails details)) {
+            throw new BizException("无法获取当前管理员信息");
+        }
+        if (!passwordEncoder.matches(adminPassword, details.getPassword())) {
+            throw new BizException("管理员密码错误");
+        }
     }
 }

@@ -9,6 +9,7 @@ import com.aeisp.recharge.service.PackageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,6 +43,7 @@ public class PackageController {
      * @param dto 套餐数据
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('finance:package:manage')")
     @Operation(summary = "创建套餐")
     @PostMapping
     public Result<Boolean> createPackage(@Validated @RequestBody PackageDTO dto) {
@@ -55,6 +57,7 @@ public class PackageController {
      * @param dto 套餐数据
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('finance:package:manage')")
     @Operation(summary = "更新套餐")
     @PutMapping("/{id}")
     public Result<Boolean> updatePackage(@PathVariable Long id, @Validated @RequestBody PackageDTO dto) {
@@ -67,6 +70,7 @@ public class PackageController {
      * @param id 套餐 ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('finance:package:manage')")
     @Operation(summary = "删除套餐")
     @DeleteMapping("/{id}")
     public Result<Boolean> deletePackage(@PathVariable Long id) {
@@ -90,6 +94,7 @@ public class PackageController {
      * @param request 查询条件
      * @return 分页结果
      */
+    @PreAuthorize("hasAuthority('finance:package:manage')")
     @Operation(summary = "套餐列表")
     @GetMapping
     public Result<PageResult<PackageVO>> listPackages(PackageQueryRequest request) {

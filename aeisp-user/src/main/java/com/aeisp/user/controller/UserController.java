@@ -4,6 +4,7 @@ import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.ResultCode;
 import com.aeisp.common.util.TokenBlacklistUtil;
+import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.user.request.*;
 import com.aeisp.user.service.UsrUserService;
 import com.aeisp.user.vo.UserImportResultVO;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import com.aeisp.common.exception.BizException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -42,6 +44,7 @@ public class UserController {
     /**
      * 用户列表分页查询。
      */
+    @PreAuthorize("hasAuthority('user:read')")
     @GetMapping
     public Result<PageResult<UsrUserVO>> listUsers(UserQueryRequest request) {
         PageResult<UsrUserVO> result = usrUserService.listUsers(request);
@@ -51,6 +54,7 @@ public class UserController {
     /**
      * 用户详情。
      */
+    @PreAuthorize("hasAuthority('user:read')")
     @GetMapping("/{id}")
     public Result<UsrUserVO> getUserDetail(@PathVariable Long id) {
         UsrUserVO vo = usrUserService.getUserDetail(id);
@@ -63,6 +67,7 @@ public class UserController {
     /**
      * 后台创建用户。
      */
+    @PreAuthorize("hasAuthority('user:create')")
     @PostMapping
     public Result<Void> createUser(@Valid @RequestBody UserCreateRequest request) {
         boolean success = usrUserService.createByAdmin(request);
@@ -72,6 +77,7 @@ public class UserController {
     /**
      * 更新用户信息。
      */
+    @PreAuthorize("hasAuthority('user:update')")
     @PutMapping("/{id}")
     public Result<Void> updateUser(@PathVariable Long id,
                                    @Valid @RequestBody UserUpdateRequest request) {
@@ -83,6 +89,8 @@ public class UserController {
     /**
      * 修改用户状态。
      */
+    @PreAuthorize("hasAuthority('user:status:update')")
+    @OperationLog(module = "用户管理", operation = "修改状态", sensitivity = 2)
     @PatchMapping("/{id}/status")
     public Result<Void> updateStatus(@PathVariable Long id,
                                      @Valid @RequestBody StatusUpdateRequest request) {
@@ -97,6 +105,8 @@ public class UserController {
      * <p>后台生成 10 位强密码（含大写、小写、数字、特殊字符各至少一位），
      * 强制注销该用户所有在线会话。</p>
      */
+    @PreAuthorize("hasAuthority('user:password:reset')")
+    @OperationLog(module = "用户管理", operation = "重置密码", sensitivity = 2)
     @PostMapping("/{id}/reset-password")
     public Result<String> resetPassword(@PathVariable Long id,
                                         @Valid @RequestBody ResetPasswordRequest request) {
@@ -116,6 +126,8 @@ public class UserController {
     /**
      * 手动调整用户剩余时长。
      */
+    @PreAuthorize("hasAuthority('user:duration:adjust')")
+    @OperationLog(module = "用户管理", operation = "调整时长", sensitivity = 2)
     @PostMapping("/{id}/adjust-duration")
     public Result<Void> adjustDuration(@PathVariable Long id,
                                        @Valid @RequestBody AdjustDurationRequest request) {
@@ -128,6 +140,7 @@ public class UserController {
     /**
      * 批量导入用户。
      */
+    @PreAuthorize("hasAuthority('user:create')")
     @PostMapping("/batch")
     public Result<Void> batchCreate(@Valid @RequestBody UserBatchCreateRequest request) {
         boolean success = usrUserService.batchCreate(request);
@@ -137,6 +150,7 @@ public class UserController {
     /**
      * Excel 批量导入用户。
      */
+    @PreAuthorize("hasAuthority('user:create')")
     @PostMapping("/import-excel")
     public Result<UserImportResultVO> importExcel(@RequestParam("file") MultipartFile file) {
         UserImportResultVO result = usrUserService.importFromExcel(file);
@@ -146,6 +160,7 @@ public class UserController {
     /**
      * 导出用户列表到 Excel。
      */
+    @PreAuthorize("hasAuthority('user:read')")
     @GetMapping("/export-excel")
     public void exportExcel(UserQueryRequest request, HttpServletResponse response) {
         usrUserService.exportToExcel(request, response);
