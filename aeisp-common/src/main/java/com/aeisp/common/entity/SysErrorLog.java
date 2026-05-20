@@ -1,4 +1,4 @@
-package com.aeisp.system.entity;
+package com.aeisp.common.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;

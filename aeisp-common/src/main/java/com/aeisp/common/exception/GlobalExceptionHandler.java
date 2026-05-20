@@ -2,15 +2,26 @@ package com.aeisp.common.exception;
 
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.entity.SysErrorLog;
+import com.aeisp.common.mapper.SysErrorLogMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,7 +35,10 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final SysErrorLogMapper sysErrorLogMapper;
 
     /**
      * 处理业务异常。
@@ -35,6 +49,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BizException.class)
     public Result<Void> handleBizException(BizException e) {
         log.warn("业务异常: {}", e.getMessage());
+        saveErrorLog(e, 2);
         return Result.error(e.getCode(), e.getMessage());
     }
 
@@ -47,6 +62,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SysException.class)
     public Result<Void> handleSysException(SysException e) {
         log.error("系统异常: {}", e.getMessage(), e);
+        saveErrorLog(e, 3);
         return Result.error(ResultCode.INTERNAL_ERROR, e.getMessage());
     }
 
@@ -99,6 +115,30 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理权限不足异常。
+     *
+     * @param e 权限不足异常
+     * @return 标准错误响应
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public Result<Void> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException e) {
+        log.warn("权限不足: {}", e.getMessage());
+        return Result.error(ResultCode.FORBIDDEN, "权限不足，无法访问该资源");
+    }
+
+    /**
+     * 处理请求参数缺失异常。
+     *
+     * @param e 请求参数缺失异常
+     * @return 标准错误响应
+     */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public Result<Void> handleMissingServletRequestParameterException(org.springframework.web.bind.MissingServletRequestParameterException e) {
+        log.warn("请求参数缺失: {}", e.getMessage());
+        return Result.error(ResultCode.BAD_REQUEST, "请求参数缺失: " + e.getParameterName());
+    }
+
+    /**
      * 处理其他未知异常。
      *
      * @param e 未知异常
@@ -107,6 +147,44 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("未知异常: {}", e.getMessage(), e);
+        saveErrorLog(e, 3);
         return Result.error(ResultCode.INTERNAL_ERROR, "系统繁忙，请稍后重试");
+    }
+
+    private void saveErrorLog(Exception e, int severity) {
+        try {
+            SysErrorLog errorLog = new SysErrorLog();
+            errorLog.setErrorType(e.getClass().getName());
+            errorLog.setErrorMessage(e.getMessage());
+            errorLog.setStackTrace(getStackTrace(e));
+            errorLog.setSeverity(severity);
+            errorLog.setCreatedAt(LocalDateTime.now());
+
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                errorLog.setRequestUrl(request.getRequestURI());
+                errorLog.setRequestParams(request.getQueryString());
+            }
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
+                try {
+                    errorLog.setUserId(Long.valueOf(userDetails.getUsername()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+
+            sysErrorLogMapper.insert(errorLog);
+        } catch (Exception ex) {
+            log.error("保存异常日志失败", ex);
+        }
+    }
+
+    private static String getStackTrace(Throwable e) {
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        String trace = sw.toString();
+        return trace.length() > 4000 ? trace.substring(0, 4000) : trace;
     }
 }

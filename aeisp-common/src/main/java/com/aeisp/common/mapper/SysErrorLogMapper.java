@@ -1,6 +1,6 @@
-package com.aeisp.system.mapper;
+package com.aeisp.common.mapper;
 
-import com.aeisp.system.entity.SysErrorLog;
+import com.aeisp.common.entity.SysErrorLog;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
