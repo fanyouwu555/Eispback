@@ -69,6 +69,17 @@ CREATE TABLE IF NOT EXISTS sys_permission (
     KEY idx_sys_permission_resource_type (resource_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统权限点表';
 
+-- 扩展权限表：菜单管理相关字段
+ALTER TABLE sys_permission
+    ADD COLUMN parent_id BIGINT DEFAULT 0 COMMENT '父菜单ID，0表示根节点' AFTER description,
+    ADD COLUMN menu_type TINYINT DEFAULT 0 COMMENT '类型：0-目录，1-菜单，2-按钮，3-外链' AFTER parent_id,
+    ADD COLUMN sort_order INT DEFAULT 0 COMMENT '排序号' AFTER menu_type,
+    ADD COLUMN icon VARCHAR(100) DEFAULT NULL COMMENT '菜单图标' AFTER sort_order,
+    ADD COLUMN route_path VARCHAR(200) DEFAULT NULL COMMENT '路由路径' AFTER icon,
+    ADD COLUMN component VARCHAR(255) DEFAULT NULL COMMENT '组件路径' AFTER route_path,
+    ADD COLUMN is_visible TINYINT DEFAULT 1 COMMENT '是否可见：0-隐藏，1-显示' AFTER component,
+    ADD COLUMN is_cache TINYINT DEFAULT 1 COMMENT '是否缓存：0-否，1-是' AFTER is_visible;
+
 -- 用户角色关联表
 CREATE TABLE IF NOT EXISTS sys_user_role (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
@@ -171,6 +182,44 @@ CREATE TABLE IF NOT EXISTS sys_error_log (
     KEY idx_sys_error_log_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='异常报错日志表';
 
+-- 字典类型表
+CREATE TABLE IF NOT EXISTS sys_dict_type (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    dict_name VARCHAR(100) NOT NULL COMMENT '字典名称（如"用户状态"）',
+    dict_code VARCHAR(100) NOT NULL COMMENT '字典标识（如 user_status）',
+    description VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-停用，1-启用',
+    is_system TINYINT NOT NULL DEFAULT 0 COMMENT '是否系统内置：0-非系统，1-系统（禁止删除）',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
+    updated_by BIGINT DEFAULT NULL COMMENT '更新人 ID',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_sys_dict_type_code (dict_code),
+    KEY idx_sys_dict_type_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典类型表';
+
+-- 字典数据表
+CREATE TABLE IF NOT EXISTS sys_dict_data (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    dict_code VARCHAR(100) NOT NULL COMMENT '关联 sys_dict_type.dict_code',
+    item_label VARCHAR(100) NOT NULL COMMENT '展示标签',
+    item_value VARCHAR(100) NOT NULL COMMENT '实际值',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '排序',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-停用，1-启用',
+    color VARCHAR(50) DEFAULT NULL COMMENT '标签颜色（如 success/warning/info/danger）',
+    is_default TINYINT NOT NULL DEFAULT 0 COMMENT '是否默认：0-否，1-是',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
+    updated_by BIGINT DEFAULT NULL COMMENT '更新人 ID',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    KEY idx_sys_dict_data_dict_code (dict_code),
+    KEY idx_sys_dict_data_sort_order (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典数据表';
+
 -- --------------------------------------------------------
 -- 2. 用户管理模块 (aeisp-user)
 -- --------------------------------------------------------
@@ -195,6 +244,7 @@ CREATE TABLE IF NOT EXISTS usr_user (
     register_device_info JSON DEFAULT NULL COMMENT '注册设备信息JSON，包含设备类型、操作系统、浏览器、设备ID',
     register_time DATETIME DEFAULT NULL COMMENT '注册时间',
     invitation_code_used VARCHAR(10) DEFAULT NULL COMMENT '注册时使用的邀请码',
+    is_competition TINYINT NOT NULL DEFAULT 0 COMMENT '是否比赛用户：0-否，1-是',
     created_at DATETIME DEFAULT NULL COMMENT '创建时间',
     updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
     created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
@@ -240,6 +290,24 @@ CREATE TABLE IF NOT EXISTS usr_user_role (
     UNIQUE KEY uk_usr_user_role (user_id, role_id),
     KEY idx_usr_user_role_role_id (role_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='前端用户角色关联表';
+
+-- 用户业务权限表
+CREATE TABLE IF NOT EXISTS usr_user_permission (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    perm_key VARCHAR(100) NOT NULL COMMENT '权限键（如 ai_dialog_enabled）',
+    perm_value VARCHAR(500) NOT NULL DEFAULT '' COMMENT '权限值（如 true/10/配额值）',
+    effective_at DATETIME DEFAULT NULL COMMENT '生效时间',
+    expire_at DATETIME DEFAULT NULL COMMENT '过期时间',
+    created_at DATETIME DEFAULT NULL COMMENT '创建时间',
+    updated_at DATETIME DEFAULT NULL COMMENT '更新时间',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人 ID',
+    updated_by BIGINT DEFAULT NULL COMMENT '更新人 ID',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_usr_user_perm (user_id, perm_key),
+    KEY idx_usr_user_permission_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户业务权限表';
 
 -- 用户时长表
 CREATE TABLE IF NOT EXISTS usr_user_duration (

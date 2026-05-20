@@ -205,6 +205,7 @@ CREATE TABLE IF NOT EXISTS usr_user (
     register_device_info JSONB DEFAULT NULL,
     register_time TIMESTAMP DEFAULT NULL,
     invitation_code_used VARCHAR(10) DEFAULT NULL,
+    is_competition SMALLINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
