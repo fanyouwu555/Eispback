@@ -5,6 +5,7 @@ import com.aeisp.system.entity.SysPermission;
 import com.aeisp.system.service.SysPermissionService;
 import com.aeisp.system.vo.SysPermissionVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +31,7 @@ public class SysPermissionController {
      *
      * @return 权限点列表
      */
+    @PreAuthorize("hasAuthority('system:permission:read')")
     @GetMapping
     public Result<List<SysPermissionVO>> listAll() {
         List<SysPermission> permissions = sysPermissionService.listAll();

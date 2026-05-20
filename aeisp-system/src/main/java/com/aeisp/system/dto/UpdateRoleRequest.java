@@ -1,6 +1,5 @@
 package com.aeisp.system.dto;
 
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -20,7 +19,6 @@ public class UpdateRoleRequest implements Serializable {
     /**
      * 角色 ID。
      */
-    @NotNull(message = "角色 ID 不能为空")
     private Long id;
 
     /**
@@ -45,6 +43,11 @@ public class UpdateRoleRequest implements Serializable {
      * 账号状态：0-禁用，1-正常。
      */
     private Integer status;
+
+    /**
+     * 是否系统内置角色：0-自定义，1-系统内置。
+     */
+    private Integer isSystem;
 
     /**
      * 权限 ID 列表。

@@ -2,6 +2,7 @@ package com.aeisp.system.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.constant.CommonConstants;
+import com.aeisp.common.exception.BizException;
 import com.aeisp.system.dto.UserQueryRequest;
 import com.aeisp.system.entity.SysUser;
 import com.aeisp.system.mapper.SysUserMapper;
@@ -28,6 +29,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class SysUserServiceImpl implements SysUserService {
+
+    private static final Long SUPER_ADMIN_ROLE_ID = 1L;
 
     private final SysUserMapper sysUserMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
@@ -71,6 +74,12 @@ public class SysUserServiceImpl implements SysUserService {
         } else {
             user.setPassword(null);
         }
+        // 防止降级最后一个超级管理员
+        if (roleIds != null && !roleIds.contains(SUPER_ADMIN_ROLE_ID)) {
+            if (hasSuperAdminRole(user.getId()) && isLastSuperAdmin(user.getId())) {
+                throw new BizException("系统中至少保留一个超级管理员，无法降级");
+            }
+        }
         int rows = sysUserMapper.updateById(user);
         if (rows <= 0) {
             return false;
@@ -88,11 +97,27 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteUser(Long userId) {
+        // 防止删除最后一个超级管理员
+        if (hasSuperAdminRole(userId) && isLastSuperAdmin(userId)) {
+            throw new BizException("系统中至少保留一个超级管理员，无法删除");
+        }
         int rows = sysUserMapper.deleteById(userId);
         if (rows > 0) {
             sysUserRoleMapper.deleteByUserId(userId);
         }
         return rows > 0;
+    }
+
+    private boolean hasSuperAdminRole(Long userId) {
+        List<com.aeisp.system.entity.SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.system.entity.SysUserRole>()
+                        .eq(com.aeisp.system.entity.SysUserRole::getUserId, userId));
+        return userRoles.stream().anyMatch(ur -> SUPER_ADMIN_ROLE_ID.equals(ur.getRoleId()));
+    }
+
+    private boolean isLastSuperAdmin(Long userId) {
+        long count = sysUserRoleMapper.countUsersByRoleId(SUPER_ADMIN_ROLE_ID);
+        return count <= 1;
     }
 
     @Override

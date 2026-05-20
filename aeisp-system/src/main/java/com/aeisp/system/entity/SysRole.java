@@ -39,4 +39,9 @@ public class SysRole extends BaseEntity {
      * 角色状态：{@link CommonConstants#STATUS_DISABLED} 禁用，{@link CommonConstants#STATUS_ENABLED} 正常。
      */
     private Integer status;
+
+    /**
+     * 是否系统内置角色：0-自定义，1-系统内置（不可删除）。
+     */
+    private Integer isSystem;
 }

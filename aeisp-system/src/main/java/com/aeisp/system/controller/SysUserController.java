@@ -3,6 +3,7 @@ package com.aeisp.system.controller;
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.ResultCode;
+import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.dto.CreateUserRequest;
 import com.aeisp.system.dto.UpdateUserRequest;
 import com.aeisp.system.dto.UserQueryRequest;
@@ -11,6 +12,7 @@ import com.aeisp.system.service.SysUserService;
 import com.aeisp.system.vo.SysUserVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -35,6 +37,7 @@ public class SysUserController {
      * @param request 查询条件
      * @return 分页结果
      */
+    @PreAuthorize("hasAuthority('system:user:manage')")
     @GetMapping
     public Result<PageResult<SysUserVO>> listUsers(UserQueryRequest request) {
         PageResult<SysUserVO> result = sysUserService.listUsers(request);
@@ -47,6 +50,7 @@ public class SysUserController {
      * @param id 用户 ID
      * @return 用户信息
      */
+    @PreAuthorize("hasAuthority('system:user:manage')")
     @GetMapping("/{id}")
     public Result<SysUserVO> getUserById(@PathVariable Long id) {
         SysUser user = sysUserService.getById(id);
@@ -71,6 +75,8 @@ public class SysUserController {
      * @param request 创建参数
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('system:user:manage')")
+    @OperationLog(module = "用户管理", operation = "新增")
     @PostMapping
     public Result<Void> createUser(@Valid @RequestBody CreateUserRequest request) {
         SysUser user = new SysUser();
@@ -89,6 +95,8 @@ public class SysUserController {
      * @param request 更新参数
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('system:user:manage')")
+    @OperationLog(module = "用户管理", operation = "修改", sensitivity = 2)
     @PutMapping("/{id}")
     public Result<Void> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
         request.setId(id);
@@ -109,6 +117,8 @@ public class SysUserController {
      * @param id 用户 ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('system:user:manage')")
+    @OperationLog(module = "用户管理", operation = "删除")
     @DeleteMapping("/{id}")
     public Result<Void> deleteUser(@PathVariable Long id) {
         boolean success = sysUserService.deleteUser(id);

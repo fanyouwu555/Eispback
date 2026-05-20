@@ -45,6 +45,11 @@ public class SysRoleVO implements Serializable {
     private Integer status;
 
     /**
+     * 是否系统内置角色：0-自定义，1-系统内置。
+     */
+    private Integer isSystem;
+
+    /**
      * 创建时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

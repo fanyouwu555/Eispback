@@ -2,6 +2,7 @@ package com.aeisp.system.controller;
 
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.ResultCode;
+import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.dto.CreateRoleRequest;
 import com.aeisp.system.dto.UpdateRoleRequest;
 import com.aeisp.system.entity.SysRole;
@@ -9,6 +10,7 @@ import com.aeisp.system.service.SysRoleService;
 import com.aeisp.system.vo.SysRoleVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +34,7 @@ public class SysRoleController {
      *
      * @return 角色列表
      */
+    @PreAuthorize("hasAuthority('system:role:manage')")
     @GetMapping
     public Result<List<SysRoleVO>> listAll() {
         List<SysRole> roles = sysRoleService.listAll();
@@ -47,12 +50,15 @@ public class SysRoleController {
      * @param request 创建参数
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('system:role:manage')")
+    @OperationLog(module = "角色管理", operation = "新增")
     @PostMapping
     public Result<Void> createRole(@Valid @RequestBody CreateRoleRequest request) {
         SysRole role = new SysRole();
         role.setRoleName(request.getRoleName());
         role.setRoleCode(request.getRoleCode());
         role.setDescription(request.getDescription());
+        role.setIsSystem(request.getIsSystem() != null ? request.getIsSystem() : 0);
         boolean success = sysRoleService.createRole(role, request.getPermissionIds());
         return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "创建角色失败");
     }
@@ -64,6 +70,8 @@ public class SysRoleController {
      * @param request 更新参数
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('system:role:manage')")
+    @OperationLog(module = "角色管理", operation = "修改", sensitivity = 2)
     @PutMapping("/{id}")
     public Result<Void> updateRole(@PathVariable Long id, @Valid @RequestBody UpdateRoleRequest request) {
         request.setId(id);
@@ -73,6 +81,7 @@ public class SysRoleController {
         role.setRoleCode(request.getRoleCode());
         role.setDescription(request.getDescription());
         role.setStatus(request.getStatus());
+        role.setIsSystem(request.getIsSystem());
         boolean success = sysRoleService.updateRole(role, request.getPermissionIds());
         return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新角色失败");
     }
@@ -83,6 +92,8 @@ public class SysRoleController {
      * @param id 角色 ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('system:role:manage')")
+    @OperationLog(module = "角色管理", operation = "删除")
     @DeleteMapping("/{id}")
     public Result<Void> deleteRole(@PathVariable Long id) {
         boolean success = sysRoleService.deleteRole(id);
@@ -96,6 +107,7 @@ public class SysRoleController {
         vo.setRoleCode(role.getRoleCode());
         vo.setDescription(role.getDescription());
         vo.setStatus(role.getStatus());
+        vo.setIsSystem(role.getIsSystem());
         vo.setCreatedAt(role.getCreatedAt());
         vo.setUpdatedAt(role.getUpdatedAt());
         return vo;

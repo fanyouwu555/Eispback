@@ -1,6 +1,7 @@
 package com.aeisp.system.service.impl;
 
 import com.aeisp.common.constant.CommonConstants;
+import com.aeisp.common.exception.BizException;
 import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysRolePermissionMapper;
@@ -57,6 +58,19 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateRole(SysRole role, List<Long> permissionIds) {
+        SysRole existing = sysRoleMapper.selectById(role.getId());
+        if (existing == null) {
+            throw new BizException("角色不存在");
+        }
+        if (Integer.valueOf(1).equals(existing.getIsSystem())) {
+            // 系统内置角色禁止修改编码和内置标识
+            if (role.getRoleCode() != null && !role.getRoleCode().equals(existing.getRoleCode())) {
+                throw new BizException("系统内置角色的编码不允许修改");
+            }
+            if (role.getIsSystem() != null && !Integer.valueOf(1).equals(role.getIsSystem())) {
+                throw new BizException("系统内置角色不允许改为自定义角色");
+            }
+        }
         int rows = sysRoleMapper.updateById(role);
         if (rows <= 0) {
             return false;
@@ -73,6 +87,13 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteRole(Long roleId) {
+        SysRole role = sysRoleMapper.selectById(roleId);
+        if (role == null) {
+            throw new BizException("角色不存在");
+        }
+        if (Integer.valueOf(1).equals(role.getIsSystem())) {
+            throw new BizException("系统内置角色不可删除");
+        }
         sysRolePermissionMapper.deleteByRoleId(roleId);
         return sysRoleMapper.deleteById(roleId) > 0;
     }

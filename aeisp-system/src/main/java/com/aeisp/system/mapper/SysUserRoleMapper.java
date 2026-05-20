@@ -29,4 +29,13 @@ public interface SysUserRoleMapper extends BaseMapper<SysUserRole> {
      * @return 影响行数
      */
     int batchInsert(@Param("userId") Long userId, @Param("roleIds") List<Long> roleIds);
+
+    /**
+     * 根据角色 ID 统计拥有该角色的用户数量。
+     *
+     * @param roleId 角色 ID
+     * @return 用户数量
+     */
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(DISTINCT user_id) FROM sys_user_role WHERE role_id = #{roleId}")
+    long countUsersByRoleId(@Param("roleId") Long roleId);
 }

@@ -38,6 +38,11 @@ public class CreateRoleRequest implements Serializable {
     private String description;
 
     /**
+     * 是否系统内置角色：0-自定义，1-系统内置。
+     */
+    private Integer isSystem;
+
+    /**
      * 权限 ID 列表。
      */
     private List<Long> permissionIds;
