@@ -216,7 +216,7 @@ class UsrUserServiceImplTest {
     }
 
     @Test
-    void testUpdateStatus() {
+    void testUpdateStatusNormalToDisabled() {
         UsrUser existing = new UsrUser();
         existing.setId(1L);
         existing.setStatus(CommonConstants.USER_STATUS_NORMAL);
@@ -226,12 +226,176 @@ class UsrUserServiceImplTest {
     }
 
     @Test
+    void testUpdateStatusNormalToFrozen() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_NORMAL);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+        assertTrue(usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_FROZEN, "异常调查"));
+    }
+
+    @Test
+    void testUpdateStatusDisabledToNormal() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_DISABLED);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+        assertTrue(usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_NORMAL, "解除禁用"));
+    }
+
+    @Test
+    void testUpdateStatusFrozenToNormal() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_FROZEN);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+        assertTrue(usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_NORMAL, "解除冻结"));
+    }
+
+    @Test
+    void testUpdateStatusLockedToNormal() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_LOCKED);
+        existing.setLockedUntil(java.time.LocalDateTime.now().plusMinutes(10));
+        existing.setFailedLoginAttempts(5);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+        assertTrue(usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_NORMAL, "管理员解锁"));
+        verify(usrUserMapper).updateById(argThat((UsrUser u) ->
+                u.getLockedUntil() == null && u.getFailedLoginAttempts() == 0));
+    }
+
+    @Test
+    void testUpdateStatusInvalidTransitionDisabledToFrozen() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_DISABLED);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_FROZEN, "尝试非法转换"));
+        assertEquals("非法的状态转换", ex.getMessage());
+    }
+
+    @Test
+    void testUpdateStatusInvalidTransitionFrozenToDisabled() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_FROZEN);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_DISABLED, "尝试非法转换"));
+        assertEquals("非法的状态转换", ex.getMessage());
+    }
+
+    @Test
+    void testUpdateStatusInvalidTransitionLockedToDisabled() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_LOCKED);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_DISABLED, "尝试非法转换"));
+        assertEquals("非法的状态转换", ex.getMessage());
+    }
+
+    @Test
+    void testUpdateStatusInvalidTransitionNormalToNormal() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setStatus(CommonConstants.USER_STATUS_NORMAL);
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> usrUserService.updateStatus(1L, CommonConstants.USER_STATUS_NORMAL, "无意义转换"));
+        assertEquals("非法的状态转换", ex.getMessage());
+    }
+
+    @Test
     void testResetPassword() {
         when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
         when(passwordEncoder.encode("newpassword")).thenReturn("encoded_newpassword");
 
         assertTrue(usrUserService.resetPassword(1L, "newpassword"));
         verify(passwordEncoder).encode("newpassword");
+    }
+
+    @Test
+    void testHandleLoginFailure4AttemptsNotLocked() {
+        UsrUser user = new UsrUser();
+        user.setId(1L);
+        user.setStatus(CommonConstants.USER_STATUS_NORMAL);
+        user.setFailedLoginAttempts(3);
+        when(usrUserMapper.selectById(1L)).thenReturn(user);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+
+        usrUserService.handleLoginFailure(1L);
+        verify(usrUserMapper).updateById(argThat((UsrUser u) -> u.getFailedLoginAttempts() == 4 && u.getStatus() == null));
+    }
+
+    @Test
+    void testHandleLoginFailure5AttemptsLocked() {
+        UsrUser user = new UsrUser();
+        user.setId(1L);
+        user.setStatus(CommonConstants.USER_STATUS_NORMAL);
+        user.setFailedLoginAttempts(4);
+        when(usrUserMapper.selectById(1L)).thenReturn(user);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+
+        usrUserService.handleLoginFailure(1L);
+        verify(usrUserMapper).updateById(argThat((UsrUser u) ->
+                u.getFailedLoginAttempts() == 5
+                        && u.getStatus() != null
+                        && u.getStatus() == CommonConstants.USER_STATUS_LOCKED
+                        && u.getLockedUntil() != null));
+    }
+
+    @Test
+    void testHandleLoginFailureNonNormalStatusNotCounted() {
+        UsrUser user = new UsrUser();
+        user.setId(1L);
+        user.setStatus(CommonConstants.USER_STATUS_DISABLED);
+        when(usrUserMapper.selectById(1L)).thenReturn(user);
+
+        usrUserService.handleLoginFailure(1L);
+        verify(usrUserMapper, never()).updateById(any(UsrUser.class));
+    }
+
+    @Test
+    void testCheckAccountLockAutoUnlockAfterExpiry() {
+        UsrUser user = new UsrUser();
+        user.setId(1L);
+        user.setStatus(CommonConstants.USER_STATUS_LOCKED);
+        user.setLockedUntil(java.time.LocalDateTime.now().minusMinutes(1));
+        user.setFailedLoginAttempts(5);
+        when(usrUserMapper.selectById(1L)).thenReturn(user);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+
+        String result = usrUserService.checkAccountLock(1L);
+        assertNull(result); // 锁定期满自动恢复
+        verify(usrUserMapper).updateById(argThat((UsrUser u) ->
+                u.getStatus() == CommonConstants.USER_STATUS_NORMAL
+                        && u.getLockedUntil() == null
+                        && u.getFailedLoginAttempts() == 0));
+    }
+
+    @Test
+    void testCheckAccountLockStillLocked() {
+        UsrUser user = new UsrUser();
+        user.setId(1L);
+        user.setStatus(CommonConstants.USER_STATUS_LOCKED);
+        user.setLockedUntil(java.time.LocalDateTime.now().plusMinutes(15));
+        when(usrUserMapper.selectById(1L)).thenReturn(user);
+
+        String result = usrUserService.checkAccountLock(1L);
+        assertNotNull(result);
+        assertTrue(result.contains("账号已锁定"));
     }
 
     @Test
@@ -304,6 +468,69 @@ class UsrUserServiceImplTest {
 
         BizException ex = assertThrows(BizException.class, () -> usrUserService.adjustDuration(request));
         assertEquals("用户时长记录不存在", ex.getMessage());
+    }
+
+    @Test
+    void testAdjustDurationDeductExactlyAll() {
+        UsrUserDuration duration = new UsrUserDuration();
+        duration.setId(1L);
+        duration.setUserId(1L);
+        duration.setRemainingMinutes(100);
+        duration.setTotalGrantedMinutes(200);
+        duration.setTotalConsumedMinutes(100);
+        when(usrUserDurationMapper.selectByUserId(1L)).thenReturn(duration);
+        when(usrUserDurationMapper.updateById(any(UsrUserDuration.class))).thenReturn(1);
+        when(usrDurationChangeLogMapper.insert(any(UsrDurationChangeLog.class))).thenReturn(1);
+
+        AdjustDurationRequest request = new AdjustDurationRequest();
+        request.setUserId(1L);
+        request.setDeltaMinutes(-100);
+        request.setReason("精确扣完");
+
+        assertTrue(usrUserService.adjustDuration(request));
+        verify(usrUserDurationMapper).updateById(argThat((UsrUserDuration d) -> d.getRemainingMinutes() == 0));
+    }
+
+    @Test
+    void testAdjustDurationSetToZero() {
+        UsrUserDuration duration = new UsrUserDuration();
+        duration.setId(1L);
+        duration.setUserId(1L);
+        duration.setRemainingMinutes(100);
+        duration.setTotalGrantedMinutes(200);
+        duration.setTotalConsumedMinutes(100);
+        when(usrUserDurationMapper.selectByUserId(1L)).thenReturn(duration);
+        when(usrUserDurationMapper.updateById(any(UsrUserDuration.class))).thenReturn(1);
+        when(usrDurationChangeLogMapper.insert(any(UsrDurationChangeLog.class))).thenReturn(1);
+
+        AdjustDurationRequest request = new AdjustDurationRequest();
+        request.setUserId(1L);
+        request.setAdjustType(3);
+        request.setDeltaMinutes(0);
+        request.setReason("清零");
+
+        assertTrue(usrUserService.adjustDuration(request));
+        verify(usrUserDurationMapper).updateById(argThat((UsrUserDuration d) -> d.getRemainingMinutes() == 0));
+        verify(usrDurationChangeLogMapper).insert(argThat((UsrDurationChangeLog l) ->
+                l.getChangeMinutes() == -100 && "ADMIN_SET".equals(l.getOperationType())));
+    }
+
+    @Test
+    void testAdjustDurationSetNegative() {
+        UsrUserDuration duration = new UsrUserDuration();
+        duration.setId(1L);
+        duration.setUserId(1L);
+        duration.setRemainingMinutes(100);
+        when(usrUserDurationMapper.selectByUserId(1L)).thenReturn(duration);
+
+        AdjustDurationRequest request = new AdjustDurationRequest();
+        request.setUserId(1L);
+        request.setAdjustType(3);
+        request.setDeltaMinutes(-1);
+        request.setReason("非法设定");
+
+        BizException ex = assertThrows(BizException.class, () -> usrUserService.adjustDuration(request));
+        assertEquals("设定时长不能为负数", ex.getMessage());
     }
 
     @Test
