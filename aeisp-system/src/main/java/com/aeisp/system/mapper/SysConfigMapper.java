@@ -18,6 +18,6 @@ public interface SysConfigMapper extends BaseMapper<SysConfig> {
      * @param configKey 配置键
      * @return 配置实体，不存在则返回 {@code null}
      */
-    @Select("SELECT * FROM sys_config WHERE config_key = #{configKey} AND deleted = 0 LIMIT 1")
-    SysConfig selectByConfigKey(@Param("configKey") String configKey);
+    @Select("SELECT * FROM sys_config WHERE config_key = #{configKey} AND deleted = 0 AND (environment = #{environment} OR environment = 'all') ORDER BY environment DESC LIMIT 1")
+    SysConfig selectByConfigKey(@Param("configKey") String configKey, @Param("environment") String environment);
 }

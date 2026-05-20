@@ -36,4 +36,9 @@ public @interface OperationLog {
      * 是否记录响应数据。
      */
     boolean recordResponse() default false;
+
+    /**
+     * 敏感度：1=普通，2=敏感（涉及资金/权限变更）
+     */
+    int sensitivity() default 1;
 }

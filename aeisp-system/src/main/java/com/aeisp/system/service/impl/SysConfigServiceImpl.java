@@ -24,14 +24,14 @@ public class SysConfigServiceImpl implements SysConfigService {
     private final SysConfigMapper sysConfigMapper;
 
     @Override
-    public String getConfigValue(String key) {
-        SysConfig config = sysConfigMapper.selectByConfigKey(key);
+    public String getConfigValue(String key, String environment) {
+        SysConfig config = sysConfigMapper.selectByConfigKey(key, environment);
         return config != null ? config.getConfigValue() : null;
     }
 
     @Override
-    public boolean updateConfig(String key, String value) {
-        SysConfig config = sysConfigMapper.selectByConfigKey(key);
+    public boolean updateConfig(String key, String value, String environment) {
+        SysConfig config = sysConfigMapper.selectByConfigKey(key, environment);
         if (config == null) {
             return false;
         }

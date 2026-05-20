@@ -71,6 +71,7 @@ public class OperationLogAspect {
             SysOperationLog logEntity = new SysOperationLog();
             logEntity.setOperationType(operationLog.module());
             logEntity.setOperationTypeLabel(operationLog.operation());
+            logEntity.setSensitivity(operationLog.sensitivity());
             logEntity.setDuration(duration);
             logEntity.setCreatedAt(LocalDateTime.now());
 
@@ -129,7 +130,8 @@ public class OperationLogAspect {
             // 状态与错误信息
             if (exception != null) {
                 logEntity.setStatus(CommonConstants.STATUS_DISABLED);
-                logEntity.setErrorMsg(exception.getMessage());
+                String msg = exception.getMessage();
+                logEntity.setErrorMsg(msg != null && msg.length() > 512 ? msg.substring(0, 512) : msg);
             } else {
                 logEntity.setStatus(CommonConstants.STATUS_ENABLED);
             }
