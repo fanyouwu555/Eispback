@@ -43,4 +43,44 @@ public class SysPermission extends BaseEntity {
      * 权限描述。
      */
     private String description;
+
+    /**
+     * 父菜单 ID，0 表示根节点。
+     */
+    private Long parentId;
+
+    /**
+     * 类型：0-目录，1-菜单，2-按钮，3-外链。
+     */
+    private Integer menuType;
+
+    /**
+     * 排序号。
+     */
+    private Integer sortOrder;
+
+    /**
+     * 菜单图标。
+     */
+    private String icon;
+
+    /**
+     * 路由路径。
+     */
+    private String routePath;
+
+    /**
+     * 组件路径。
+     */
+    private String component;
+
+    /**
+     * 是否可见：0-隐藏，1-显示。
+     */
+    private Integer isVisible;
+
+    /**
+     * 是否缓存：0-否，1-是。
+     */
+    private Integer isCache;
 }
