@@ -1,9 +1,12 @@
 package com.aeisp.boot.security;
 
 import com.aeisp.common.Result;
+import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.constant.ResultCode;
 import com.aeisp.common.util.JwtUtil;
 import com.aeisp.common.util.TokenBlacklistUtil;
+import com.aeisp.user.entity.UsrUser;
+import com.aeisp.user.mapper.UsrUserMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -40,6 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final ObjectMapper objectMapper;
     private final TokenBlacklistUtil tokenBlacklistUtil;
+    private final UsrUserMapper usrUserMapper;
 
     /**
      * Authorization 请求头名称。
@@ -85,6 +89,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
                 String username = claims.get("username", String.class);
                 if (StringUtils.hasText(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    // 检查用户状态（仅前端用户），非正常状态拒绝访问
+                    if (StringUtils.hasText(userIdStr)) {
+                        try {
+                            Long uid = Long.parseLong(userIdStr);
+                            UsrUser usrUser = usrUserMapper.selectById(uid);
+                            if (usrUser != null && usrUser.getStatus() != CommonConstants.USER_STATUS_NORMAL) {
+                                String label = switch (usrUser.getStatus()) {
+                                    case 2 -> "禁用";
+                                    case 3 -> "冻结";
+                                    case 4 -> "锁定";
+                                    default -> "异常";
+                                };
+                                writeUnauthorized(response, "账号已被" + label);
+                                return;
+                            }
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(

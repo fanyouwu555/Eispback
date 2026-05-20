@@ -9,9 +9,11 @@ import com.aeisp.user.entity.*;
 import com.aeisp.user.mapper.*;
 import com.aeisp.user.request.*;
 import com.aeisp.user.vo.UsrUserVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -71,6 +73,8 @@ class UsrUserServiceImplTest {
         verify(passwordEncoder).encode("password123");
         verify(usrUserDurationMapper).insert(isA(UsrUserDuration.class));
         verify(usrUserBalanceMapper).insert(isA(UsrUserBalance.class));
+        verify(usrUserRoleMapper).batchInsert(argThat((List<UsrUserRole> list) ->
+                list.size() == 1 && list.get(0).getRoleId() == 7L));
     }
 
     @Test
@@ -103,7 +107,8 @@ class UsrUserServiceImplTest {
         request.setPassword("password123");
         request.setRemainingMinutes(100);
 
-        assertTrue(usrUserService.createByAdmin(request));
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("password123", password);
         verify(usrUserDurationMapper).insert(argThat((UsrUserDuration d) -> d.getRemainingMinutes() == 100));
     }
 
@@ -127,7 +132,8 @@ class UsrUserServiceImplTest {
         request.setPassword("password123");
         request.setRoleIds(List.of(1L, 2L));
 
-        assertTrue(usrUserService.createByAdmin(request));
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("password123", password);
         verify(usrUserRoleMapper).batchInsert(anyList());
     }
 
@@ -531,6 +537,106 @@ class UsrUserServiceImplTest {
 
         BizException ex = assertThrows(BizException.class, () -> usrUserService.adjustDuration(request));
         assertEquals("设定时长不能为负数", ex.getMessage());
+    }
+
+    @Test
+    void testCreateByAdminWithCompetition() {
+        when(usrUserMapper.selectByUsername("comp_user")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("password123")).thenReturn("encoded_password");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("comp_user");
+        request.setPhone("13900139001");
+        request.setEmail("comp@example.com");
+        request.setPassword("password123");
+        request.setIsCompetition(1);
+
+        usrUserService.createByAdmin(request);
+        verify(usrUserMapper).insert(argThat((UsrUser u) ->
+                u.getIsCompetition() != null && u.getIsCompetition() == 1));
+    }
+
+    @Test
+    void testCreateByAdminWithoutCompetition() {
+        when(usrUserMapper.selectByUsername("normal_user")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(2L);
+            return 1;
+        });
+        when(passwordEncoder.encode("pass123")).thenReturn("encoded");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("normal_user");
+        request.setPhone("13900139002");
+        request.setEmail("normal@example.com");
+        request.setPassword("pass123");
+        request.setIsCompetition(null);
+
+        usrUserService.createByAdmin(request);
+        verify(usrUserMapper).insert(argThat((UsrUser u) ->
+                u.getIsCompetition() != null && u.getIsCompetition() == 0));
+    }
+
+    @Test
+    void testCreateByAdminCompetitionDefaultsToZero() {
+        when(usrUserMapper.selectByUsername("default_user")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(3L);
+            return 1;
+        });
+        when(passwordEncoder.encode("default123")).thenReturn("encoded");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("default_user");
+        request.setPhone("13900139003");
+        request.setEmail("default@example.com");
+        request.setPassword("default123");
+        request.setIsCompetition(null);
+
+        usrUserService.createByAdmin(request);
+        verify(usrUserMapper).insert(argThat((UsrUser u) ->
+                u.getIsCompetition() != null && u.getIsCompetition() == 0));
+    }
+
+    @Test
+    void testListUsersCompetitionFilter() {
+        Page<UsrUser> emptyPage = new Page<>(1, 10);
+        emptyPage.setRecords(List.of());
+        emptyPage.setTotal(0);
+        when(usrUserMapper.selectPage(any(Page.class), any())).thenReturn(emptyPage);
+
+        UserQueryRequest request = new UserQueryRequest();
+        request.setPageNum(1L);
+        request.setPageSize(10L);
+        request.setIsCompetition(1);
+
+        PageResult<UsrUserVO> result = usrUserService.listUsers(request);
+        assertNotNull(result);
+        assertEquals(0, result.getTotal());
+    }
+
+    @Test
+    void testListUsersCompetitionFilterNotSet() {
+        Page<UsrUser> emptyPage = new Page<>(1, 10);
+        emptyPage.setRecords(List.of());
+        emptyPage.setTotal(0);
+        when(usrUserMapper.selectPage(any(Page.class), any())).thenReturn(emptyPage);
+
+        UserQueryRequest request = new UserQueryRequest();
+        request.setPageNum(1L);
+        request.setPageSize(10L);
+        request.setIsCompetition(null);
+
+        PageResult<UsrUserVO> result = usrUserService.listUsers(request);
+        assertNotNull(result);
+        assertEquals(0, result.getTotal());
     }
 
     @Test

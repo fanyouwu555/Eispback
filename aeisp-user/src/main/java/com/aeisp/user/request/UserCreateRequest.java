@@ -63,4 +63,9 @@ public class UserCreateRequest {
      * 角色ID列表。
      */
     private List<Long> roleIds;
+
+    /**
+     * 是否比赛用户：0-否，1-是。
+     */
+    private Integer isCompetition;
 }

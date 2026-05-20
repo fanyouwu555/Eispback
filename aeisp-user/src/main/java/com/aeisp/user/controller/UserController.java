@@ -69,9 +69,9 @@ public class UserController {
      */
     @PreAuthorize("hasAuthority('user:create')")
     @PostMapping
-    public Result<Void> createUser(@Valid @RequestBody UserCreateRequest request) {
-        boolean success = usrUserService.createByAdmin(request);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "创建失败");
+    public Result<String> createUser(@Valid @RequestBody UserCreateRequest request) {
+        String password = usrUserService.createByAdmin(request);
+        return password != null ? Result.success(password, "创建成功") : Result.error(ResultCode.INTERNAL_ERROR, "创建失败");
     }
 
     /**
@@ -117,7 +117,7 @@ public class UserController {
         boolean success = usrUserService.resetPassword(id, newPassword);
         if (success) {
             tokenBlacklistUtil.addUserToBlacklist(id,
-                    new java.util.Date(System.currentTimeMillis() + 7200000L));
+                    new java.util.Date(System.currentTimeMillis() + 86400000L));
         }
         return success ? Result.success(newPassword, "密码已重置，请通知用户尽快修改") :
                 Result.error(ResultCode.INTERNAL_ERROR, "密码重置失败");

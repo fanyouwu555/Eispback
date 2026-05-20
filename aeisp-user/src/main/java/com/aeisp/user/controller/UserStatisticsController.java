@@ -86,34 +86,35 @@ public class UserStatisticsController {
     /**
      * 用户增长趋势。
      *
-     * @param period 周期：day / week / month
-     * @return 趋势数据列表
+     * @param days 最近天数，默认30
+     * @return 趋势数据，包含 dates/newUsers/activeUsers 三个数组
      */
     @GetMapping("/trend")
-    public Result<List<Map<String, Object>>> getTrend(@RequestParam(defaultValue = "day") String period) {
-        List<Map<String, Object>> result = new ArrayList<>();
+    public Result<Map<String, Object>> getTrend(@RequestParam(defaultValue = "30") int days) {
+        List<String> dates = new ArrayList<>();
+        List<Long> newUsers = new ArrayList<>();
+        List<Long> activeUsers = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
-        int points = switch (period) {
-            case "week" -> 7;
-            case "month" -> 30;
-            default -> 7;
-        };
-
-        for (int i = points - 1; i >= 0; i--) {
+        for (int i = days - 1; i >= 0; i--) {
             LocalDateTime dayStart = now.minusDays(i).with(LocalTime.MIN);
             LocalDateTime dayEnd = now.minusDays(i).with(LocalTime.MAX);
-            long count = usrUserMapper.selectCount(
+            dates.add(dayStart.toLocalDate().toString());
+
+            long newCount = usrUserMapper.selectCount(
                     Wrappers.<UsrUser>lambdaQuery()
                             .ge(UsrUser::getRegisterTime, dayStart)
                             .le(UsrUser::getRegisterTime, dayEnd));
+            newUsers.add(newCount);
 
-            Map<String, Object> item = new HashMap<>();
-            item.put("date", dayStart.toLocalDate().toString());
-            item.put("count", count);
-            result.add(item);
+            Long activeCount = usrLoginLogMapper.countActiveUsers(dayStart, dayEnd);
+            activeUsers.add(activeCount != null ? activeCount : 0L);
         }
 
+        Map<String, Object> result = new HashMap<>();
+        result.put("dates", dates);
+        result.put("newUsers", newUsers);
+        result.put("activeUsers", activeUsers);
         return Result.success(result);
     }
 }

@@ -66,4 +66,9 @@ public class UserQueryRequest {
      * 剩余时长上限（分钟，含）。
      */
     private Integer remainingMinutesMax;
+
+    /**
+     * 是否比赛用户：0-否，1-是。
+     */
+    private Integer isCompetition;
 }

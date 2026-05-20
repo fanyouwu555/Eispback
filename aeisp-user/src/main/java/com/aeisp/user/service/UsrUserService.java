@@ -31,9 +31,9 @@ public interface UsrUserService {
      * 后台手动创建用户。
      *
      * @param request 创建请求
-     * @return true 表示创建成功
+     * @return 创建成功返回明文密码，失败返回null
      */
-    boolean createByAdmin(UserCreateRequest request);
+    String createByAdmin(UserCreateRequest request);
 
     /**
      * 批量导入用户。

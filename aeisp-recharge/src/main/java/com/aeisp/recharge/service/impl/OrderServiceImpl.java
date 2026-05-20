@@ -104,10 +104,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public PageResult<OrderVO> listOrders(OrderQueryRequest request) {
         Page<RechargeOrder> page = new Page<>(request.getPageNum(), request.getPageSize());
+        Integer dbStatus = request.getStatus() != null ? request.getStatus() + 1 : null;
         LambdaQueryWrapper<RechargeOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(request.getUserId() != null, RechargeOrder::getUserId, request.getUserId())
                 .eq(StringUtils.hasText(request.getOrderNo()), RechargeOrder::getOrderNo, request.getOrderNo())
-                .eq(request.getStatus() != null, RechargeOrder::getStatus, request.getStatus() + 1)
+                .eq(request.getStatus() != null, RechargeOrder::getStatus, dbStatus)
                 .orderByDesc(RechargeOrder::getCreatedAt);
         Page<RechargeOrder> resultPage = orderMapper.selectPage(page, wrapper);
 

@@ -103,6 +103,11 @@ public class UsrUserVO {
     private String invitationCodeUsed;
 
     /**
+     * 是否比赛用户：0-否，1-是。
+     */
+    private Integer isCompetition;
+
+    /**
      * 角色编码列表。
      */
     private List<String> roleCodes;

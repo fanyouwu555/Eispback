@@ -111,4 +111,9 @@ public class UsrUser extends BaseEntity {
      * 注册时使用的邀请码。
      */
     private String invitationCodeUsed;
+
+    /**
+     * 是否比赛用户：0-否，1-是。
+     */
+    private Integer isCompetition;
 }

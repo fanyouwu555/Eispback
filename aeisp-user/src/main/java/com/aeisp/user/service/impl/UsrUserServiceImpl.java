@@ -51,6 +51,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UsrUserServiceImpl implements UsrUserService {
 
+    private static final Long DEFAULT_USER_ROLE_ID = 7L;
+
     private final UsrUserMapper usrUserMapper;
     private final UsrUserRoleMapper usrUserRoleMapper;
     private final UsrUserDurationMapper usrUserDurationMapper;
@@ -91,13 +93,15 @@ public class UsrUserServiceImpl implements UsrUserService {
         createDefaultDuration(user.getId());
         // 同步创建余额记录
         createDefaultBalance(user.getId());
+        // 分配默认角色（普通用户）
+        bindUserRoles(user.getId(), List.of(DEFAULT_USER_ROLE_ID), null);
 
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean createByAdmin(UserCreateRequest request) {
+    public String createByAdmin(UserCreateRequest request) {
         // 校验唯一性
         if (usrUserMapper.selectByUsername(request.getUsername()) != null) {
             throw new BizException("用户名已存在");
@@ -109,21 +113,23 @@ public class UsrUserServiceImpl implements UsrUserService {
             throw new BizException("邮箱已存在");
         }
 
+        String rawPassword = request.getPassword();
         UsrUser user = new UsrUser();
         user.setUsername(request.getUsername());
         user.setPhone(request.getPhone());
         user.setEmail(request.getEmail());
         user.setNickname(request.getNickname());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setStatus(request.getStatus() != null ? request.getStatus() : CommonConstants.USER_STATUS_NORMAL);
-        user.setNeedChangePassword(0);
+        user.setNeedChangePassword(1);
         user.setFailedLoginAttempts(0);
         user.setRegisterTime(LocalDateTime.now());
+        user.setIsCompetition(request.getIsCompetition() != null ? request.getIsCompetition() : 0);
         user.setDeleted(CommonConstants.DELETED_NO);
 
         int rows = usrUserMapper.insert(user);
         if (rows <= 0) {
-            return false;
+            return null;
         }
 
         Long userId = user.getId();
@@ -145,7 +151,7 @@ public class UsrUserServiceImpl implements UsrUserService {
             bindUserRoles(userId, request.getRoleIds(), null);
         }
 
-        return true;
+        return rawPassword;
     }
 
     @Override
@@ -468,6 +474,9 @@ public class UsrUserServiceImpl implements UsrUserService {
         if (request.getRegisterTimeEnd() != null) {
             wrapper.le(UsrUser::getRegisterTime, request.getRegisterTimeEnd());
         }
+        if (request.getIsCompetition() != null) {
+            wrapper.eq(UsrUser::getIsCompetition, request.getIsCompetition());
+        }
 
         // 角色筛选
         if (!CollectionUtils.isEmpty(request.getRoleIds())) {
@@ -534,6 +543,10 @@ public class UsrUserServiceImpl implements UsrUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public UserImportResultVO importFromExcel(MultipartFile file) {
+        String filename = file.getOriginalFilename();
+        if (filename == null || !(filename.endsWith(".xlsx") || filename.endsWith(".xls"))) {
+            throw new BizException("仅支持 .xlsx 或 .xls 格式的 Excel 文件");
+        }
         List<UserImportRow> rows;
         try {
             rows = EasyExcel.read(file.getInputStream()).head(UserImportRow.class).sheet().doReadSync();
@@ -874,6 +887,7 @@ public class UsrUserServiceImpl implements UsrUserService {
         vo.setRegisterDeviceInfo(user.getRegisterDeviceInfo());
         vo.setRegisterTime(user.getRegisterTime());
         vo.setInvitationCodeUsed(user.getInvitationCodeUsed());
+        vo.setIsCompetition(user.getIsCompetition());
         vo.setRoleCodes(roleCodes);
         vo.setRemainingMinutes(duration != null ? duration.getRemainingMinutes() : 0);
         vo.setBalanceCents(balance != null ? balance.getBalanceCents() : 0);
