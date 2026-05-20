@@ -84,6 +84,13 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         notification.setIsTop(CommonConstants.STATUS_DISABLED);
         notification.setReadCount(0L);
         notification.setTotalCount(0L);
+
+        // 记录创建人
+        Long adminId = getCurrentAdminId();
+        if (adminId != null) {
+            notification.setCreatedBy(adminId);
+        }
+
         return save(notification);
     }
 
@@ -207,6 +214,8 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         return updated;
     }
 
+    private static final int STATUS_ARCHIVED = 5;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean archiveNotification(Long notificationId) {
@@ -214,7 +223,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         if (notification == null) {
             throw new BizException("消息不存在");
         }
-        notification.setStatus(STATUS_SENT);
+        notification.setStatus(STATUS_ARCHIVED);
         return updateById(notification);
     }
 
@@ -403,7 +412,30 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
             case STATUS_SENT -> "已发送";
             case STATUS_REVOKED -> "已撤回";
             case STATUS_SCHEDULED -> "定时发送";
+            case STATUS_ARCHIVED -> "已归档";
             default -> "";
         };
+    }
+
+    /**
+     * 从 SecurityContext 获取当前登录管理员 ID。
+     */
+    private static Long getCurrentAdminId() {
+        try {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated()) {
+                return null;
+            }
+            Object principal = auth.getPrincipal();
+            if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                java.lang.reflect.Method method = principal.getClass().getMethod("getUserId");
+                Object userId = method.invoke(principal);
+                return userId instanceof Number ? ((Number) userId).longValue() : null;
+            }
+        } catch (Exception e) {
+            // 忽略，未获取到用户信息
+        }
+        return null;
     }
 }

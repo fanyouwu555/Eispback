@@ -83,4 +83,14 @@ public class TplTemplate extends BaseEntity {
      * 难度系数。
      */
     private Integer difficulty;
+
+    /**
+     * 创建人 ID。
+     */
+    private Long createdBy;
+
+    /**
+     * 更新人 ID。
+     */
+    private Long updatedBy;
 }

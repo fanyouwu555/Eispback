@@ -26,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +59,10 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setSortWeight(request.getSortWeight());
         template.setStatus(TemplateStatusEnum.OFFLINE.getCode());
         template.setUsageCount(0L);
+        Long adminId = getCurrentAdminId();
+        if (adminId != null) {
+            template.setCreatedBy(adminId);
+        }
         templateMapper.insert(template);
 
         // 存储 ZIP 文件（非事务操作，失败不会导致 DB 回滚）
@@ -67,6 +74,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         version.setVersionNo(request.getVersionNo());
         version.setFilePath(relativePath);
         version.setChangelog(request.getChangelog());
+        version.setFileSize(request.getZipFile().getSize());
+        version.setFileHash(calcFileHash(request.getZipFile()));
         versionMapper.insert(version);
 
         // 更新当前版本
@@ -121,6 +130,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         version.setVersionNo(versionNo);
         version.setFilePath(relativePath);
         version.setChangelog(changelog);
+        version.setFileSize(zipFile.getSize());
+        version.setFileHash(calcFileHash(zipFile));
         versionMapper.insert(version);
 
         // 更新当前版本
@@ -259,6 +270,53 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         return voList;
     }
 
+    @Override
+    public Map<String, Object> getStatistics() {
+        Map<String, Object> result = new HashMap<>();
+
+        long total = templateMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>());
+        long online = templateMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TplTemplate>()
+                        .eq(TplTemplate::getStatus, TemplateStatusEnum.ACTIVE.getCode()));
+        long offline = templateMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TplTemplate>()
+                        .eq(TplTemplate::getStatus, TemplateStatusEnum.OFFLINE.getCode()));
+
+        result.put("total", total);
+        result.put("online", online);
+        result.put("offline", offline);
+
+        // 场景分布
+        List<TplTemplate> allTemplates = templateMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>());
+        Map<String, Long> scenarioMap = allTemplates.stream()
+                .filter(t -> t.getScenario() != null)
+                .collect(java.util.stream.Collectors.groupingBy(TplTemplate::getScenario, java.util.stream.Collectors.counting()));
+        List<Map<String, Object>> scenarioList = scenarioMap.entrySet().stream()
+                .map(e -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("scenario", e.getKey());
+                    m.put("count", e.getValue());
+                    return m;
+                }).toList();
+        result.put("scenarioDistribution", scenarioList);
+
+        // 热门模板（按使用次数排序前10）
+        List<TplTemplate> hotList = templateMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TplTemplate>()
+                        .orderByDesc(TplTemplate::getUsageCount)
+                        .last("LIMIT 10"));
+        result.put("hotTemplates", hotList.stream().map(t -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", t.getId());
+            m.put("templateName", t.getTemplateName());
+            m.put("usageCount", t.getUsageCount());
+            m.put("projectCount", t.getProjectCount());
+            return m;
+        }).toList());
+
+        return result;
+    }
+
     private TplTemplateVO convertToVO(TplTemplate template) {
         TplTemplateVO vo = new TplTemplateVO();
         BeanUtils.copyProperties(template, vo);
@@ -310,5 +368,50 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             }
         }
         return root;
+    }
+
+    /**
+     * 计算文件的 SHA-256 哈希值。
+     */
+    private static String calcFileHash(org.springframework.web.multipart.MultipartFile file) {
+        try (java.io.InputStream is = file.getInputStream()) {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = is.read(buf)) != -1) {
+                digest.update(buf, 0, len);
+            }
+            byte[] hash = digest.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (IOException | NoSuchAlgorithmException e) {
+            log.warn("计算文件哈希失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 从 SecurityContext 获取当前登录管理员 ID。
+     */
+    private static Long getCurrentAdminId() {
+        try {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated()) {
+                return null;
+            }
+            Object principal = auth.getPrincipal();
+            if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                java.lang.reflect.Method method = principal.getClass().getMethod("getUserId");
+                Object userId = method.invoke(principal);
+                return userId instanceof Number ? ((Number) userId).longValue() : null;
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
     }
 }

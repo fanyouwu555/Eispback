@@ -43,4 +43,11 @@ public interface TplTemplateService {
      * @throws com.aeisp.common.exception.BizException 模板不存在或未上线时抛出
      */
     TplTemplateDetailVO getPublicDetail(Long templateId);
+
+    /**
+     * 获取模板使用统计数据。
+     *
+     * @return 统计结果
+     */
+    java.util.Map<String, Object> getStatistics();
 }

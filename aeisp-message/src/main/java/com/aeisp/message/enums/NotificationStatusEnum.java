@@ -30,7 +30,12 @@ public enum NotificationStatusEnum {
     /**
      * 定时发送。
      */
-    SCHEDULED(4, "定时发送");
+    SCHEDULED(4, "定时发送"),
+
+    /**
+     * 已归档。
+     */
+    ARCHIVED(5, "已归档");
 
     /**
      * 枚举值。

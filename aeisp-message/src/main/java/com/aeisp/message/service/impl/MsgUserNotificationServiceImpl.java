@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -41,6 +42,8 @@ public class MsgUserNotificationServiceImpl extends ServiceImpl<MsgUserNotificat
         Page<MsgUserNotification> page = new Page<>(request.getPageNum(), request.getPageSize());
         LambdaQueryWrapper<MsgUserNotification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MsgUserNotification::getUserId, userId);
+        // 消息铃铛默认展示最近 90 天内的消息记录
+        wrapper.ge(MsgUserNotification::getCreatedAt, LocalDateTime.now().minusDays(90));
         wrapper.orderByDesc(MsgUserNotification::getCreatedAt);
         IPage<MsgUserNotification> resultPage = msgUserNotificationMapper.selectPage(page, wrapper);
 

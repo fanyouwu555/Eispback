@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +42,7 @@ public class MsgNotificationController {
      * @param request 创建请求
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('notification:create')")
     @Operation(summary = "创建消息", description = "创建新的消息通知，初始状态为草稿")
     @PostMapping
     public Result<Boolean> create(@Valid @RequestBody CreateNotificationRequest request) {
@@ -54,6 +56,7 @@ public class MsgNotificationController {
      * @param id 消息 ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('notification:send')")
     @Operation(summary = "执行推送", description = "对草稿状态的消息执行推送")
     @PostMapping("/{id}/push")
     public Result<Boolean> push(
@@ -68,6 +71,7 @@ public class MsgNotificationController {
      * @param id 消息 ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('notification:update')")
     @Operation(summary = "撤回消息", description = "撤回已推送的消息")
     @PostMapping("/{id}/revoke")
     public Result<Boolean> revoke(
@@ -82,6 +86,7 @@ public class MsgNotificationController {
      * @param id 消息 ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('notification:update')")
     @Operation(summary = "归档消息", description = "将消息归档")
     @PostMapping("/{id}/archive")
     public Result<Boolean> archive(
@@ -97,6 +102,7 @@ public class MsgNotificationController {
      * @param isTop 是否置顶：0-正常，1-置顶
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('notification:update')")
     @Operation(summary = "置顶/取消置顶", description = "设置消息置顶状态")
     @PostMapping("/{id}/top")
     public Result<Boolean> toggleTop(
@@ -112,6 +118,7 @@ public class MsgNotificationController {
      * @param request 查询条件
      * @return 分页结果
      */
+    @PreAuthorize("hasAuthority('notification:read')")
     @Operation(summary = "消息列表", description = "分页查询消息通知列表")
     @GetMapping
     public Result<PageResult<MsgNotificationVO>> list(NotificationQueryRequest request) {
@@ -125,6 +132,7 @@ public class MsgNotificationController {
      * @param id 消息 ID
      * @return 消息详情
      */
+    @PreAuthorize("hasAuthority('notification:read')")
     @Operation(summary = "消息详情", description = "获取消息通知详情")
     @GetMapping("/{id}")
     public Result<MsgNotificationDetailVO> getDetail(

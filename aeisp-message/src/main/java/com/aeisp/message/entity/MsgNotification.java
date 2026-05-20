@@ -146,4 +146,14 @@ public class MsgNotification extends BaseEntity {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime revokedAt;
+
+    /**
+     * 创建人 ID。
+     */
+    private Long createdBy;
+
+    /**
+     * 更新人 ID。
+     */
+    private Long updatedBy;
 }

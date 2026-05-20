@@ -34,7 +34,7 @@ public class NotificationQueryRequest implements Serializable {
     private Integer msgType;
 
     /**
-     * 状态：0-草稿，1-已推送，2-已撤回，3-已归档。
+     * 状态：1-草稿，2-已发送，3-已撤回，4-定时发送，5-已归档。
      */
     private Integer status;
 
