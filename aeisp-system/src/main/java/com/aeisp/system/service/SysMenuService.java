@@ -1,6 +1,7 @@
 package com.aeisp.system.service;
 
 import com.aeisp.system.entity.SysPermission;
+import com.aeisp.system.vo.MenuRoutesVO;
 import com.aeisp.system.vo.MenuVO;
 
 import java.util.List;
@@ -18,4 +19,7 @@ public interface SysMenuService {
     boolean updateMenu(SysPermission permission);
 
     boolean deleteMenu(Long id);
+
+    // 新增
+    MenuRoutesVO getUserRoutes(Long userId);
 }
