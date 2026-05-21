@@ -31,7 +31,7 @@
     <el-table v-loading="loading" :data="userList" border>
       <el-table-column type="index" width="50" />
       <el-table-column label="用户名" prop="username" />
-      <el-table-column label="昵称" prop="nickname" />
+      <el-table-column label="昵称" prop="realName" />
       <el-table-column label="手机号" prop="phone" />
       <el-table-column label="邮箱" prop="email" />
       <el-table-column label="绑定角色" width="180">
@@ -45,6 +45,11 @@
         </template>
       </el-table-column>
       <el-table-column label="创建时间" prop="createdAt" width="180" />
+      <el-table-column label="登录信息" width="160">
+        <template #default="{ row }">
+          <span>{{ row.lastLoginIp || '-' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" width="280">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">编辑</el-button>
@@ -66,7 +71,7 @@
         <el-form-item label="密码" prop="password" v-if="!form.id">
           <el-input v-model="form.password" type="password" show-password />
         </el-form-item>
-        <el-form-item label="昵称" prop="nickname">
+        <el-form-item label="真实姓名" prop="nickname">
           <el-input v-model="form.nickname" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
@@ -286,7 +291,7 @@ async function submitForm() {
 
 onMounted(() => {
   getList()
-  listRoles().then(res => { roleOptions.value = res.list || [] }).catch(() => {})
+  listRoles().then(res => { roleOptions.value = Array.isArray(res) ? res : (res.list || []) }).catch(() => {})
 })
 </script>
 

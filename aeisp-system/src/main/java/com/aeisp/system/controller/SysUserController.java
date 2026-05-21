@@ -7,13 +7,21 @@ import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.dto.CreateUserRequest;
 import com.aeisp.system.dto.UpdateUserRequest;
 import com.aeisp.system.dto.UserQueryRequest;
+import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.entity.SysUser;
+import com.aeisp.system.entity.SysUserRole;
+import com.aeisp.system.mapper.SysRoleMapper;
+import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.system.service.SysUserService;
+import com.aeisp.system.vo.SysRoleVO;
 import com.aeisp.system.vo.SysUserVO;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 后台管理员账号管理控制器。
@@ -30,6 +38,8 @@ import org.springframework.web.bind.annotation.*;
 public class SysUserController {
 
     private final SysUserService sysUserService;
+    private final SysUserRoleMapper sysUserRoleMapper;
+    private final SysRoleMapper sysRoleMapper;
 
     /**
      * 分页查询用户列表。
@@ -66,6 +76,24 @@ public class SysUserController {
         vo.setStatus(user.getStatus());
         vo.setCreatedAt(user.getCreatedAt());
         vo.setUpdatedAt(user.getUpdatedAt());
+        vo.setLastLoginIp(user.getLastLoginIp());
+        vo.setLastLoginAt(user.getLastLoginAt());
+        // 填充角色信息
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                Wrappers.<SysUserRole>lambdaQuery().eq(SysUserRole::getUserId, id));
+        if (!userRoles.isEmpty()) {
+            List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).toList();
+            List<SysRole> roles = sysRoleMapper.selectList(
+                    Wrappers.<SysRole>lambdaQuery().in(SysRole::getId, roleIds));
+            List<SysRoleVO> roleVOs = roles.stream().map(r -> {
+                SysRoleVO rvo = new SysRoleVO();
+                rvo.setId(r.getId());
+                rvo.setRoleName(r.getRoleName());
+                rvo.setRoleCode(r.getRoleCode());
+                return rvo;
+            }).toList();
+            vo.setRoles(roleVOs);
+        }
         return Result.success(vo);
     }
 

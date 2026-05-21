@@ -57,6 +57,12 @@
             <el-radio :value="0">停用</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="数据权限" prop="dataScope">
+          <el-radio-group v-model="form.dataScope">
+            <el-radio value="ALL">全部数据</el-radio>
+            <el-radio value="SELF">仅本人数据</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="form.description" type="textarea" />
         </el-form-item>
@@ -106,7 +112,7 @@ const queryParams = reactive({
   roleName: undefined
 })
 
-const form = reactive({ id: undefined, roleName: '', roleCode: '', status: 1, description: '' })
+const form = reactive({ id: undefined, roleName: '', roleCode: '', status: 1, dataScope: 'ALL', description: '' })
 const rules = {
   roleName: [{ required: true, message: '角色名称不能为空', trigger: 'blur' }],
   roleCode: [{ required: true, message: '角色编码不能为空', trigger: 'blur' }]
@@ -116,7 +122,7 @@ async function getList() {
   loading.value = true
   try {
     const res = await listRoles(queryParams)
-    roleList.value = res.list || []
+    roleList.value = Array.isArray(res) ? res : (res.list || [])
   } finally {
     loading.value = false
   }
@@ -129,13 +135,13 @@ function resetQuery() {
 }
 
 function handleAdd() {
-  Object.assign(form, { id: undefined, roleName: '', roleCode: '', status: 1, description: '' })
+  Object.assign(form, { id: undefined, roleName: '', roleCode: '', status: 1, dataScope: 'ALL', description: '' })
   open.value = true
   title.value = '新增角色'
 }
 
 function handleUpdate(row) {
-  Object.assign(form, { id: row.id, roleName: row.roleName, roleCode: row.roleCode, status: row.status ?? 1, description: row.description })
+  Object.assign(form, { id: row.id, roleName: row.roleName, roleCode: row.roleCode, status: row.status ?? 1, dataScope: row.dataScope || 'ALL', description: row.description })
   open.value = true
   title.value = '编辑角色'
 }

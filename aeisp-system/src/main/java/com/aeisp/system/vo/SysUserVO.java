@@ -62,6 +62,17 @@ public class SysUserVO implements Serializable {
     private LocalDateTime updatedAt;
 
     /**
+     * 最后登录 IP。
+     */
+    private String lastLoginIp;
+
+    /**
+     * 最后登录时间。
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLoginAt;
+
+    /**
      * 角色列表。
      */
     private List<SysRoleVO> roles;

@@ -55,6 +55,7 @@ public class AuthController {
     private final TokenBlacklistUtil tokenBlacklistUtil;
     private final com.aeisp.boot.security.CustomUserDetailsService customUserDetailsService;
     private final UsrUserService usrUserService;
+    private final com.aeisp.system.service.SysUserService sysUserService;
     private final SysUserBehaviorLogMapper sysUserBehaviorLogMapper;
 
     /**
@@ -312,6 +313,11 @@ public class AuthController {
             log.setSensitivity(1);
             log.setCreatedAt(LocalDateTime.now());
             sysOperationLogService.saveLog(log);
+
+            // 更新管理员最后登录 IP 和时间
+            if (success) {
+                sysUserService.updateLastLoginInfo(userDetails.getUserId(), ip, LocalDateTime.now());
+            }
         }
     }
 

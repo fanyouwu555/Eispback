@@ -14,9 +14,10 @@ public interface SysRoleService {
     /**
      * 查询所有角色列表。
      *
+     * @param roleName 角色名称（可选，模糊查询）
      * @return 角色列表
      */
-    List<SysRole> listAll();
+    List<SysRole> listAll(String roleName);
 
     /**
      * 根据用户 ID 查询角色编码列表。

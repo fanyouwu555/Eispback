@@ -1,7 +1,6 @@
 package com.aeisp.system.dto;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -19,9 +18,8 @@ public class UpdateUserRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 用户 ID。
+     * 用户 ID（由路径变量传入，无需前端传递）。
      */
-    @NotNull(message = "用户 ID 不能为空")
     private Long id;
 
     /**

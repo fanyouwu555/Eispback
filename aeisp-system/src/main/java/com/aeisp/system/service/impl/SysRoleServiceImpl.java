@@ -5,6 +5,7 @@ import com.aeisp.common.exception.BizException;
 import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysRolePermissionMapper;
+import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.system.service.SysRoleService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -26,12 +28,15 @@ public class SysRoleServiceImpl implements SysRoleService {
 
     private final SysRoleMapper sysRoleMapper;
     private final SysRolePermissionMapper sysRolePermissionMapper;
+    private final SysUserRoleMapper sysUserRoleMapper;
 
     @Override
-    public List<SysRole> listAll() {
+    public List<SysRole> listAll(String roleName) {
         LambdaQueryWrapper<SysRole> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(SysRole::getDeleted, CommonConstants.DELETED_NO);
-        wrapper.eq(SysRole::getStatus, CommonConstants.STATUS_ENABLED);
+        if (StringUtils.hasText(roleName)) {
+            wrapper.like(SysRole::getRoleName, roleName);
+        }
         wrapper.orderByAsc(SysRole::getId);
         return sysRoleMapper.selectList(wrapper);
     }
@@ -93,6 +98,11 @@ public class SysRoleServiceImpl implements SysRoleService {
         }
         if (Integer.valueOf(1).equals(role.getIsSystem())) {
             throw new BizException("系统内置角色不可删除");
+        }
+        // 检查是否有管理员绑定该角色
+        long userCount = sysUserRoleMapper.countUsersByRoleId(roleId);
+        if (userCount > 0) {
+            throw new BizException("该角色已绑定 " + userCount + " 个管理员，请先解除绑定后再删除");
         }
         sysRolePermissionMapper.deleteByRoleId(roleId);
         return sysRoleMapper.deleteById(roleId) > 0;

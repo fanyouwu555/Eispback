@@ -44,4 +44,9 @@ public class SysRole extends BaseEntity {
      * 是否系统内置角色：0-自定义，1-系统内置（不可删除）。
      */
     private Integer isSystem;
+
+    /**
+     * 数据权限范围：ALL-全部数据，SELF-仅本人数据。
+     */
+    private String dataScope;
 }

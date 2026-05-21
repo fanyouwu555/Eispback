@@ -4,12 +4,17 @@ import com.aeisp.common.PageResult;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.exception.BizException;
 import com.aeisp.system.dto.UserQueryRequest;
+import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.entity.SysUser;
+import com.aeisp.system.entity.SysUserRole;
+import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.system.service.SysUserService;
+import com.aeisp.system.vo.SysRoleVO;
 import com.aeisp.system.vo.SysUserVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 后台管理员账号 Service 实现类。
@@ -34,6 +43,7 @@ public class SysUserServiceImpl implements SysUserService {
 
     private final SysUserMapper sysUserMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
+    private final SysRoleMapper sysRoleMapper;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -108,6 +118,15 @@ public class SysUserServiceImpl implements SysUserService {
         return rows > 0;
     }
 
+    @Override
+    public void updateLastLoginInfo(Long userId, String lastLoginIp, LocalDateTime lastLoginAt) {
+        LambdaUpdateWrapper<SysUser> wrapper = Wrappers.<SysUser>lambdaUpdate()
+                .set(SysUser::getLastLoginIp, lastLoginIp)
+                .set(SysUser::getLastLoginAt, lastLoginAt)
+                .eq(SysUser::getId, userId);
+        sysUserMapper.update(null, wrapper);
+    }
+
     private boolean hasSuperAdminRole(Long userId) {
         List<com.aeisp.system.entity.SysUserRole> userRoles = sysUserRoleMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.system.entity.SysUserRole>()
@@ -130,6 +149,9 @@ public class SysUserServiceImpl implements SysUserService {
         if (StringUtils.hasText(request.getRealName())) {
             wrapper.like(SysUser::getRealName, request.getRealName());
         }
+        if (StringUtils.hasText(request.getPhone())) {
+            wrapper.like(SysUser::getPhone, request.getPhone());
+        }
         if (request.getStatus() != null) {
             wrapper.eq(SysUser::getStatus, request.getStatus());
         }
@@ -138,13 +160,43 @@ public class SysUserServiceImpl implements SysUserService {
         Page<SysUser> page = new Page<>(request.getPageNum(), request.getPageSize());
         Page<SysUser> resultPage = sysUserMapper.selectPage(page, wrapper);
 
-        List<SysUserVO> voList = resultPage.getRecords().stream()
-                .map(SysUserServiceImpl::convertToVO)
+        // 批量查询所有用户的角色信息
+        List<SysUser> records = resultPage.getRecords();
+        Map<Long, List<SysRoleVO>> userRolesMap = buildUserRolesMap(records);
+
+        List<SysUserVO> voList = records.stream()
+                .map(user -> convertToVO(user, userRolesMap.getOrDefault(user.getId(), Collections.emptyList())))
                 .toList();
         return PageResult.of(resultPage, voList);
     }
 
-    private static SysUserVO convertToVO(SysUser user) {
+    private Map<Long, List<SysRoleVO>> buildUserRolesMap(List<SysUser> users) {
+        if (users.isEmpty()) return Collections.emptyMap();
+        List<Long> userIds = users.stream().map(SysUser::getId).toList();
+        // 查询所有用户-角色关联
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                Wrappers.<SysUserRole>lambdaQuery().in(SysUserRole::getUserId, userIds));
+        if (userRoles.isEmpty()) return Collections.emptyMap();
+        // 查询关联的角色信息
+        List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).distinct().toList();
+        List<SysRole> roles = sysRoleMapper.selectList(
+                Wrappers.<SysRole>lambdaQuery().in(SysRole::getId, roleIds));
+        Map<Long, SysRole> roleMap = roles.stream().collect(Collectors.toMap(SysRole::getId, r -> r, (a, b) -> a));
+        // 组装每个用户的角色列表
+        return userRoles.stream().collect(Collectors.groupingBy(
+                SysUserRole::getUserId,
+                Collectors.mapping(ur -> {
+                    SysRole role = roleMap.get(ur.getRoleId());
+                    if (role == null) return null;
+                    SysRoleVO rvo = new SysRoleVO();
+                    rvo.setId(role.getId());
+                    rvo.setRoleName(role.getRoleName());
+                    rvo.setRoleCode(role.getRoleCode());
+                    return rvo;
+                }, Collectors.toList())));
+    }
+
+    private static SysUserVO convertToVO(SysUser user, List<SysRoleVO> roles) {
         SysUserVO vo = new SysUserVO();
         vo.setId(user.getId());
         vo.setUsername(user.getUsername());
@@ -154,6 +206,9 @@ public class SysUserServiceImpl implements SysUserService {
         vo.setStatus(user.getStatus());
         vo.setCreatedAt(user.getCreatedAt());
         vo.setUpdatedAt(user.getUpdatedAt());
+        vo.setLastLoginIp(user.getLastLoginIp());
+        vo.setLastLoginAt(user.getLastLoginAt());
+        vo.setRoles(roles);
         return vo;
     }
 }

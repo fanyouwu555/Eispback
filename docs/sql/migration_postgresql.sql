@@ -253,6 +253,25 @@ SELECT setval('sys_permission_id_seq', 78);
 SELECT setval('sys_role_permission_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM sys_role_permission));
 
 -- ========================================================
+-- 2g. 为 sys_user 添加登录 IP 和登录时间字段
+-- ========================================================
+ALTER TABLE sys_user
+    ADD COLUMN IF NOT EXISTS last_login_ip VARCHAR(64) DEFAULT NULL;
+ALTER TABLE sys_user
+    ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP DEFAULT NULL;
+
+COMMENT ON COLUMN sys_user.last_login_ip IS '最后登录 IP';
+COMMENT ON COLUMN sys_user.last_login_at IS '最后登录时间';
+
+-- ========================================================
+-- 2h. 为 sys_role 添加数据权限字段
+-- ========================================================
+ALTER TABLE sys_role
+    ADD COLUMN IF NOT EXISTS data_scope VARCHAR(32) DEFAULT 'ALL';
+
+COMMENT ON COLUMN sys_role.data_scope IS '数据权限范围：ALL-全部数据，SELF-仅本人';
+
+-- ========================================================
 -- 3. 字典类型表
 -- ========================================================
 CREATE TABLE IF NOT EXISTS sys_dict_type (

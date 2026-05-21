@@ -3,8 +3,11 @@ package com.aeisp.system.entity;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.entity.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.time.LocalDateTime;
 
 /**
  * 后台管理员账号实体。
@@ -49,4 +52,15 @@ public class SysUser extends BaseEntity {
      * 账号状态：{@link CommonConstants#STATUS_DISABLED} 禁用，{@link CommonConstants#STATUS_ENABLED} 正常。
      */
     private Integer status;
+
+    /**
+     * 最后登录 IP。
+     */
+    private String lastLoginIp;
+
+    /**
+     * 最后登录时间。
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLoginAt;
 }

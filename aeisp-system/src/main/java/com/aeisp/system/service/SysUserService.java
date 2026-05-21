@@ -5,6 +5,7 @@ import com.aeisp.system.dto.UserQueryRequest;
 import com.aeisp.system.entity.SysUser;
 import com.aeisp.system.vo.SysUserVO;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -63,4 +64,13 @@ public interface SysUserService {
      * @return 分页结果
      */
     PageResult<SysUserVO> listUsers(UserQueryRequest request);
+
+    /**
+     * 更新管理员最后登录信息。
+     *
+     * @param userId      用户 ID
+     * @param lastLoginIp 最后登录 IP
+     * @param lastLoginAt 最后登录时间
+     */
+    void updateLastLoginInfo(Long userId, String lastLoginIp, LocalDateTime lastLoginAt);
 }

@@ -50,6 +50,11 @@ public class UpdateRoleRequest implements Serializable {
     private Integer isSystem;
 
     /**
+     * 数据权限范围：ALL-全部数据，SELF-仅本人数据。
+     */
+    private String dataScope;
+
+    /**
      * 权限 ID 列表。
      */
     private List<Long> permissionIds;

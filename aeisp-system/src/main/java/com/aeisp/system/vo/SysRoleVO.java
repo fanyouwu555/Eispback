@@ -50,6 +50,11 @@ public class SysRoleVO implements Serializable {
     private Integer isSystem;
 
     /**
+     * 数据权限范围：ALL-全部数据，SELF-仅本人数据。
+     */
+    private String dataScope;
+
+    /**
      * 创建时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

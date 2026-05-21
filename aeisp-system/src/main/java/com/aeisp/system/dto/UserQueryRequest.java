@@ -25,6 +25,11 @@ public class UserQueryRequest extends PageParam {
     private String realName;
 
     /**
+     * 手机号码（模糊查询）。
+     */
+    private String phone;
+
+    /**
      * 账号状态：0-禁用，1-正常。
      */
     private Integer status;
