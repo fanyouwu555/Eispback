@@ -30,11 +30,13 @@ function convertMenu(menu) {
   if (menuType === 0) {
     // 目录 → 用 Layout 包裹，递归子菜单
     route.component = Layout
-    route.redirect = 'noRedirect'
     route.name = `MenuDir_${id}`
+    route.meta.alwaysShow = true
     const subItems = (children || []).map(c => convertMenu(c)).filter(Boolean)
     if (subItems.length === 0) return null
     route.children = subItems
+    // 重定向到第一个子菜单，避免 Vue Router 4 处理 'noRedirect' 时产生无匹配错误
+    route.redirect = subItems[0].path
   } else if (menuType === 1) {
     // 菜单 → 从 import.meta.glob 查找组件
     route.component = resolveComponent(component)

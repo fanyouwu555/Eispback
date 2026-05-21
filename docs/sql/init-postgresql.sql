@@ -751,8 +751,8 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 (6, '项目管理', 'project', 'project', 'manage', NULL, 0, 0, 6, 'Management', '/project', NULL, 1, 1, NOW(), NOW(), 1, 1),
 (7, '模板资源', 'template', 'template', 'manage', NULL, 0, 0, 7, 'Files', '/template', NULL, 1, 1, NOW(), NOW(), 1, 1),
 (8, 'AI对话模块', 'ai', 'model', 'manage', NULL, 0, 0, 8, 'Cpu', '/ai', NULL, 1, 1, NOW(), NOW(), 1, 1),
-(9, '运营统计模块', 'operations', 'system', 'manage', NULL, 0, 0, 9, 'DataBoard', '/operations', NULL, 1, 1, NOW(), NOW(), 1, 1),
-(10, '系统配置模块', 'sysconfig', 'system', 'manage', NULL, 0, 0, 10, 'Operation', '/sysconfig', NULL, 1, 1, NOW(), NOW(), 1, 1),
+(9, '运营统计模块', 'operations', 'system', 'manage', NULL, 0, 0, 10, 'DataBoard', '/operations', NULL, 1, 1, NOW(), NOW(), 1, 1),
+(10, '系统配置模块', 'sysconfig', 'system', 'manage', NULL, 0, 0, 9, 'Operation', '/sysconfig', NULL, 1, 1, NOW(), NOW(), 1, 1),
 -- 仪表盘 -> 菜单
 (11, '数据大盘', 'dashboard:overview', 'dashboard', 'read', NULL, 1, 1, 1, 'DataLine', '/dashboard', 'dashboard/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 -- 系统管理 -> 菜单
