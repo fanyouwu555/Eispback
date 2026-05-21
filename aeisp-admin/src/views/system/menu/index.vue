@@ -7,6 +7,11 @@
 
     <el-table v-loading="loading" :data="menuList" row-key="id" default-expand-all stripe
               :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
+      <el-table-column label="排序" width="50" align="center">
+        <template #default>
+          <el-icon class="drag-handle" style="cursor: grab;"><Rank /></el-icon>
+        </template>
+      </el-table-column>
       <el-table-column label="菜单名称" prop="permissionName" min-width="180" />
       <el-table-column label="图标" width="60" align="center">
         <template #default="scope">
@@ -89,9 +94,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Rank } from '@element-plus/icons-vue'
 import { getMenuTree, createMenu, updateMenu, deleteMenu, getMenu } from '@/api/system/menu'
+import Sortable from 'sortablejs'
 
 const loading = ref(false)
 const menuList = ref([])
@@ -170,8 +177,52 @@ function handleDelete(row) {
   }).catch(() => {})
 }
 
+let sortable = null
+
+function initDrag() {
+  const el = document.querySelector('.el-table__body-wrapper tbody')
+  if (!el || sortable) return
+  sortable = Sortable.create(el, {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: async ({ newIndex, oldIndex }) => {
+      if (newIndex === oldIndex) return
+      const flatRows = getFlatRows(menuList.value)
+      if (oldIndex < flatRows.length && newIndex < flatRows.length) {
+        const movedItem = flatRows[oldIndex]
+        const targetItem = flatRows[newIndex]
+        const newSortOrder = targetItem.sortOrder
+        try {
+          await updateMenu(movedItem.id, { ...movedItem, sortOrder: newSortOrder })
+          ElMessage.success('排序更新成功')
+          getTree()
+        } catch (e) {
+          ElMessage.error('排序更新失败')
+        }
+      }
+    }
+  })
+}
+
+function getFlatRows(tree) {
+  const result = []
+  function walk(nodes) {
+    for (const node of nodes) {
+      result.push(node)
+      if (node.children && node.children.length > 0) {
+        walk(node.children)
+      }
+    }
+  }
+  walk(tree)
+  return result
+}
+
 onMounted(() => {
   getTree()
+  nextTick(() => {
+    initDrag()
+  })
 })
 </script>
 
