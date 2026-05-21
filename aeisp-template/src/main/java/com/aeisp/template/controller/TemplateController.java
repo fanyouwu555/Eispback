@@ -7,6 +7,9 @@ import com.aeisp.template.dto.request.TemplateQueryRequest;
 import com.aeisp.template.dto.request.UpdateTemplateRequest;
 import com.aeisp.template.dto.vo.TplTemplateDetailVO;
 import com.aeisp.template.dto.vo.TplTemplateVO;
+import com.aeisp.common.PageResult;
+import com.aeisp.template.entity.TplTemplateUsageLog;
+import com.aeisp.template.mapper.TplTemplateUsageLogMapper;
 import com.aeisp.template.service.TemplateStorageService;
 import com.aeisp.template.service.TplTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,10 +23,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +50,7 @@ public class TemplateController {
 
     private final TplTemplateService templateService;
     private final TemplateStorageService templateStorageService;
+    private final TplTemplateUsageLogMapper tplTemplateUsageLogMapper;
 
     /**
      * 创建模板（含首个版本 ZIP）。
@@ -178,10 +186,49 @@ public class TemplateController {
         }
         File file = new File(zipPath);
         Resource resource = new FileSystemResource(file);
+
+        // 记录模板下载日志
+        recordUsageLog(id, detail.getTemplateName(), targetVersion, "download");
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
+    }
+
+    private void recordUsageLog(Long templateId, String templateName, String versionNo, String actionType) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+                Object principal = auth.getPrincipal();
+                Long userId = extractUserId(principal);
+                if (userId != null) {
+                    TplTemplateUsageLog usageLog = new TplTemplateUsageLog();
+                    usageLog.setUserId(userId);
+                    usageLog.setTemplateId(templateId);
+                    usageLog.setTemplateName(templateName);
+                    usageLog.setVersionNo(versionNo);
+                    usageLog.setActionType(actionType);
+                    usageLog.setCreatedAt(LocalDateTime.now());
+                    tplTemplateUsageLogMapper.insert(usageLog);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("记录模板使用日志失败: {}", e.getMessage());
+        }
+    }
+
+    private Long extractUserId(Object principal) {
+        if (principal == null) {
+            return null;
+        }
+        try {
+            java.lang.reflect.Method getUserIdMethod = principal.getClass().getMethod("getUserId");
+            Object result = getUserIdMethod.invoke(principal);
+            return result instanceof Long ? (Long) result : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // ==================== 用户端接口 ====================
@@ -213,5 +260,15 @@ public class TemplateController {
     @Operation(summary = "上线模板详情", description = "查询上线模板详情（前端使用）")
     public Result<TplTemplateDetailVO> getPublicDetail(@PathVariable Long id) {
         return Result.success(templateService.getPublicDetail(id));
+    }
+
+    /**
+     * 查询指定用户的模板使用记录。
+     */
+    @PreAuthorize("hasAuthority('user:permission:read')")
+    @GetMapping("/usage-logs/{userId}")
+    @Operation(summary = "用户模板使用记录", description = "查询指定用户的模板下载/使用记录")
+    public Result<List<TplTemplateUsageLog>> getUserTemplateUsageLogs(@PathVariable Long userId) {
+        return Result.success(tplTemplateUsageLogMapper.selectByUserId(userId));
     }
 }

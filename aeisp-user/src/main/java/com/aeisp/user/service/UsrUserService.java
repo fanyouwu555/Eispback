@@ -100,6 +100,14 @@ public interface UsrUserService {
     void resetFailedAttempts(Long userId);
 
     /**
+     * 记录登录成功，更新登录次数和异地登录标记。
+     *
+     * @param userId 用户 ID
+     * @param loginIp 当前登录 IP
+     */
+    void recordLoginSuccess(Long userId, String loginIp);
+
+    /**
      * 根据用户名查找用户。
      *
      * @param username 用户名

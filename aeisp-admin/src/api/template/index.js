@@ -62,6 +62,10 @@ export function getTemplateStatistics() {
   return request.get('/templates/statistics')
 }
 
+export function getUserTemplateUsageLogs(userId) {
+  return request.get(`/templates/usage-logs/${userId}`)
+}
+
 // ===== 预览图片 =====
 export function listPreviewImages(templateId) {
   return request.get(`/templates/${templateId}/preview-images`)

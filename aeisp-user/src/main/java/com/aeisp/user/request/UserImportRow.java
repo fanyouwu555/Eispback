@@ -35,6 +35,12 @@ public class UserImportRow {
     private String roleNames;
 
     /**
+     * 是否比赛用户：0-否，1-是。
+     */
+    @ExcelProperty("比赛用户")
+    private Integer isCompetition;
+
+    /**
      * 备注（可选）。
      */
     @ExcelProperty("备注")

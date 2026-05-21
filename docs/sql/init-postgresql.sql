@@ -225,6 +225,8 @@ CREATE TABLE IF NOT EXISTS usr_user (
     register_device_info JSONB DEFAULT NULL,
     register_time TIMESTAMP DEFAULT NULL,
     invitation_code_used VARCHAR(10) DEFAULT NULL,
+    login_count INT NOT NULL DEFAULT 0,
+    abnormal_login SMALLINT NOT NULL DEFAULT 0,
     is_competition SMALLINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
@@ -291,6 +293,56 @@ CREATE TABLE IF NOT EXISTS usr_user_role (
 );
 CREATE INDEX IF NOT EXISTS idx_usr_user_role_role_id ON usr_user_role (role_id);
 COMMENT ON TABLE usr_user_role IS '前端用户角色关联表';
+
+-- 用户业务权限表
+CREATE TABLE IF NOT EXISTS usr_user_permission (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    perm_key VARCHAR(100) NOT NULL,
+    perm_value VARCHAR(500) NOT NULL DEFAULT '',
+    effective_at TIMESTAMP DEFAULT NULL,
+    expire_at TIMESTAMP DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT NULL,
+    created_by BIGINT DEFAULT NULL,
+    updated_by BIGINT DEFAULT NULL,
+    deleted SMALLINT NOT NULL DEFAULT 0,
+    CONSTRAINT uk_usr_user_perm UNIQUE (user_id, perm_key)
+);
+CREATE INDEX IF NOT EXISTS idx_usr_user_permission_user_id ON usr_user_permission (user_id);
+COMMENT ON TABLE usr_user_permission IS '用户业务权限表';
+
+-- 用户权限变更日志表
+CREATE TABLE IF NOT EXISTS usr_user_permission_log (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    perm_key VARCHAR(100) DEFAULT NULL,
+    perm_key_label VARCHAR(100) DEFAULT NULL,
+    old_value VARCHAR(500) DEFAULT NULL,
+    new_value VARCHAR(500) DEFAULT NULL,
+    operation_type VARCHAR(20) NOT NULL,
+    operator_id BIGINT DEFAULT NULL,
+    operator_name VARCHAR(50) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_usr_user_perm_log_user_id ON usr_user_permission_log (user_id);
+CREATE INDEX IF NOT EXISTS idx_usr_user_perm_log_created ON usr_user_permission_log (created_at);
+COMMENT ON TABLE usr_user_permission_log IS '用户权限变更日志表';
+
+-- 模板使用记录表
+CREATE TABLE IF NOT EXISTS usr_template_usage_log (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
+    template_name VARCHAR(100) DEFAULT NULL,
+    version_no VARCHAR(50) DEFAULT NULL,
+    action_type VARCHAR(20) NOT NULL,
+    ip_address VARCHAR(64) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_usr_tpl_usage_user_id ON usr_template_usage_log (user_id);
+CREATE INDEX IF NOT EXISTS idx_usr_tpl_usage_created ON usr_template_usage_log (created_at);
+COMMENT ON TABLE usr_template_usage_log IS '模板使用记录表';
 
 -- 用户时长表
 CREATE TABLE IF NOT EXISTS usr_user_duration (

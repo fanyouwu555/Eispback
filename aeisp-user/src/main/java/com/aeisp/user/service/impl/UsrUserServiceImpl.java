@@ -171,7 +171,10 @@ public class UsrUserServiceImpl implements UsrUserService {
             user.setStatus(req.getStatus() != null ? req.getStatus() : CommonConstants.USER_STATUS_NORMAL);
             user.setNeedChangePassword(0);
             user.setFailedLoginAttempts(0);
+            user.setLoginCount(0);
+            user.setAbnormalLogin(0);
             user.setRegisterTime(now);
+            user.setIsCompetition(req.getIsCompetition() != null ? req.getIsCompetition() : 0);
             user.setDeleted(CommonConstants.DELETED_NO);
             return user;
         }).toList();
@@ -368,6 +371,25 @@ public class UsrUserServiceImpl implements UsrUserService {
         UsrUser user = new UsrUser();
         user.setId(userId);
         user.setFailedLoginAttempts(0);
+        usrUserMapper.updateById(user);
+    }
+
+    @Override
+    public void recordLoginSuccess(Long userId, String loginIp) {
+        UsrUser existing = usrUserMapper.selectById(userId);
+        if (existing == null) {
+            return;
+        }
+        UsrUser user = new UsrUser();
+        user.setId(userId);
+        user.setLoginCount((existing.getLoginCount() != null ? existing.getLoginCount() : 0) + 1);
+        user.setLastLoginTime(LocalDateTime.now());
+        user.setLastLoginIp(loginIp);
+        // 异地登录检测：当前IP与上次登录IP不同（且不为空）
+        String lastIp = existing.getLastLoginIp();
+        if (StringUtils.hasText(lastIp) && !lastIp.equals(loginIp)) {
+            user.setAbnormalLogin(1);
+        }
         usrUserMapper.updateById(user);
     }
 
@@ -628,7 +650,10 @@ public class UsrUserServiceImpl implements UsrUserService {
             user.setStatus(CommonConstants.USER_STATUS_NORMAL);
             user.setNeedChangePassword(0);
             user.setFailedLoginAttempts(0);
+            user.setLoginCount(0);
+            user.setAbnormalLogin(0);
             user.setRegisterTime(now);
+            user.setIsCompetition(row.getIsCompetition() != null ? row.getIsCompetition() : 0);
             user.setDeleted(CommonConstants.DELETED_NO);
             usrUserMapper.insert(user);
 
@@ -881,6 +906,8 @@ public class UsrUserServiceImpl implements UsrUserService {
         vo.setLockedUntil(user.getLockedUntil());
         vo.setNeedChangePassword(user.getNeedChangePassword());
         vo.setFailedLoginAttempts(user.getFailedLoginAttempts());
+        vo.setLoginCount(user.getLoginCount());
+        vo.setAbnormalLogin(user.getAbnormalLogin());
         vo.setLastLoginTime(user.getLastLoginTime());
         vo.setLastLoginIp(user.getLastLoginIp());
         vo.setRegisterIp(user.getRegisterIp());

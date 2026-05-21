@@ -4,6 +4,7 @@ import com.aeisp.boot.request.LoginRequest;
 import com.aeisp.boot.security.CustomUserDetails;
 import com.aeisp.boot.vo.LoginResponse;
 import com.aeisp.boot.vo.UserInfoVO;
+import com.aeisp.boot.util.UserAgentUtil;
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.constant.ResultCode;
@@ -80,10 +81,12 @@ public class AuthController {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             List<String> roles = userDetails.getRoles();
 
-            // 前端用户：检查并自动解除过期锁定，清零失败次数
+            // 前端用户：检查并自动解除过期锁定，清零失败次数，更新登录统计
             if ("user".equals(userDetails.getUserType())) {
                 usrUserService.checkAccountLock(userDetails.getUserId());
                 usrUserService.resetFailedAttempts(userDetails.getUserId());
+                String ip = getClientIp(httpRequest);
+                usrUserService.recordLoginSuccess(userDetails.getUserId(), ip);
             }
 
             String accessToken = jwtUtil.generateToken(
@@ -113,7 +116,9 @@ public class AuthController {
         } catch (BadCredentialsException e) {
             log.warn("登录失败，用户名或密码错误: {}", request.getUsername());
             // 尝试查找用户并记录失败次数
-            handleFrontendLoginFailure(request.getUsername());
+            String ip = getClientIp(httpRequest);
+            String device = httpRequest.getHeader("User-Agent");
+            handleFrontendLoginFailure(request.getUsername(), ip, device);
             return Result.error(ResultCode.UNAUTHORIZED, "用户名或密码错误");
         } catch (DisabledException e) {
             log.warn("登录失败，账号已禁用: {}", request.getUsername());
@@ -241,14 +246,36 @@ public class AuthController {
     /**
      * 处理前端用户登录失败（记录失败次数）。
      */
-    private void handleFrontendLoginFailure(String username) {
+    private void handleFrontendLoginFailure(String username, String ip, String device) {
         try {
             UsrUser user = usrUserService.findByUsername(username);
             if (user != null) {
                 usrUserService.handleLoginFailure(user.getId());
             }
+            recordFailedLoginLog(username, ip, device);
         } catch (Exception ex) {
-            log.debug("记录登录失败次数时异常: {}", ex.getMessage());
+            log.debug("记录登录失败时异常: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * 记录失败登录日志（未经过认证，只有用户名）。
+     */
+    private void recordFailedLoginLog(String username, String ip, String device) {
+        try {
+            UsrLoginLog log = new UsrLoginLog();
+            log.setLoginAccount(username);
+            log.setLoginType(1);
+            log.setLoginResult(2); // 密码错误
+            log.setIpAddress(ip);
+            log.setDeviceType(UserAgentUtil.parseDeviceType(device));
+            log.setOsInfo(UserAgentUtil.parseOs(device));
+            String browser = UserAgentUtil.parseBrowser(device);
+            log.setBrowserInfo(browser != null ? browser : device);
+            log.setCreatedAt(LocalDateTime.now());
+            usrLoginLogService.saveLog(log);
+        } catch (Exception e) {
+            log.debug("记录失败登录日志异常: {}", e.getMessage());
         }
     }
 
@@ -280,8 +307,10 @@ public class AuthController {
             log.setLoginType(1);
             log.setLoginResult(success ? 1 : 2);
             log.setIpAddress(ip);
-            log.setDeviceType("unknown");
-            log.setBrowserInfo(device);
+            log.setDeviceType(UserAgentUtil.parseDeviceType(device));
+            log.setOsInfo(UserAgentUtil.parseOs(device));
+            String browser = UserAgentUtil.parseBrowser(device);
+            log.setBrowserInfo(browser != null ? browser : device);
             log.setCreatedAt(LocalDateTime.now());
             usrLoginLogService.saveLog(log);
 

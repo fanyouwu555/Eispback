@@ -81,6 +81,16 @@ public class UsrUser extends BaseEntity {
     private Integer failedLoginAttempts;
 
     /**
+     * 累计登录次数。
+     */
+    private Integer loginCount;
+
+    /**
+     * 是否异地登录：0-否，1-是。
+     */
+    private Integer abnormalLogin;
+
+    /**
      * 最后登录时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

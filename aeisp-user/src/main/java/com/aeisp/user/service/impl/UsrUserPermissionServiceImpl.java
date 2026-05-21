@@ -43,4 +43,13 @@ public class UsrUserPermissionServiceImpl implements UsrUserPermissionService {
     public UsrUserPermission getByUserIdAndKey(Long userId, String permKey) {
         return usrUserPermissionMapper.selectByUserIdAndKey(userId, permKey);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean clearPermissions(Long userId) {
+        LambdaQueryWrapper<UsrUserPermission> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(UsrUserPermission::getUserId, userId);
+        usrUserPermissionMapper.delete(wrapper);
+        return true;
+    }
 }

@@ -307,6 +307,8 @@ CREATE TABLE IF NOT EXISTS usr_user (
     locked_until DATETIME DEFAULT NULL COMMENT '账号锁定到期时间，仅在锁定状态时有效',
     need_change_password TINYINT NOT NULL DEFAULT 0 COMMENT '下次登录是否需要修改密码：0-否，1-是',
     failed_login_attempts TINYINT NOT NULL DEFAULT 0 COMMENT '连续登录失败次数，登录成功后清零',
+    login_count INT NOT NULL DEFAULT 0 COMMENT '累计登录次数',
+    abnormal_login TINYINT NOT NULL DEFAULT 0 COMMENT '是否异地登录：0-否，1-是',
     last_login_time DATETIME DEFAULT NULL COMMENT '最后登录时间',
     last_login_ip VARCHAR(64) DEFAULT NULL COMMENT '最后登录IP地址（支持IPv6）',
     register_ip VARCHAR(64) NOT NULL COMMENT '注册时IP地址',
@@ -377,6 +379,38 @@ CREATE TABLE IF NOT EXISTS usr_user_permission (
     UNIQUE KEY uk_usr_user_perm (user_id, perm_key),
     KEY idx_usr_user_permission_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户业务权限表';
+
+-- 用户权限变更日志表
+CREATE TABLE IF NOT EXISTS usr_user_permission_log (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    perm_key VARCHAR(100) DEFAULT NULL COMMENT '权限键',
+    perm_key_label VARCHAR(100) DEFAULT NULL COMMENT '权限键中文标签',
+    old_value VARCHAR(500) DEFAULT NULL COMMENT '变更前值',
+    new_value VARCHAR(500) DEFAULT NULL COMMENT '变更后值',
+    operation_type VARCHAR(20) NOT NULL COMMENT '操作类型：UPDATE-修改，RESET-重置',
+    operator_id BIGINT DEFAULT NULL COMMENT '操作人ID',
+    operator_name VARCHAR(50) DEFAULT NULL COMMENT '操作人用户名',
+    created_at DATETIME DEFAULT NULL COMMENT '变更时间',
+    PRIMARY KEY (id),
+    KEY idx_usr_user_perm_log_user_id (user_id),
+    KEY idx_usr_user_perm_log_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户权限变更日志表';
+
+-- 模板使用记录表
+CREATE TABLE IF NOT EXISTS usr_template_usage_log (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    template_id BIGINT NOT NULL COMMENT '模板ID',
+    template_name VARCHAR(100) DEFAULT NULL COMMENT '模板名称',
+    version_no VARCHAR(50) DEFAULT NULL COMMENT '使用版本号',
+    action_type VARCHAR(20) NOT NULL COMMENT '操作类型：download-下载，use-使用',
+    ip_address VARCHAR(64) DEFAULT NULL COMMENT '操作IP',
+    created_at DATETIME DEFAULT NULL COMMENT '操作时间',
+    PRIMARY KEY (id),
+    KEY idx_usr_tpl_usage_user_id (user_id),
+    KEY idx_usr_tpl_usage_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='模板使用记录表';
 
 -- 用户时长表
 CREATE TABLE IF NOT EXISTS usr_user_duration (

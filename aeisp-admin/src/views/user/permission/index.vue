@@ -57,9 +57,28 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Check" @click="handleSave" :loading="saving">保存权限</el-button>
-          <el-button icon="Refresh" @click="handleReset">重置</el-button>
+          <el-button icon="Refresh" @click="handleReset">恢复</el-button>
+          <el-button type="danger" icon="Delete" @click="handleClear">重置为默认</el-button>
         </el-form-item>
       </el-form>
+    </el-card>
+
+    <!-- 权限变更日志 -->
+    <el-card v-if="queried && permLogs.length > 0" class="mb-4">
+      <template #header>权限变更日志</template>
+      <el-table :data="permLogs" stripe border size="small">
+        <el-table-column prop="createdAt" label="时间" width="170" />
+        <el-table-column prop="permKey" label="权限键" width="180" />
+        <el-table-column prop="oldValue" label="变更前" width="120" />
+        <el-table-column prop="newValue" label="变更后" width="120" />
+        <el-table-column prop="operationType" label="操作类型" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="row.operationType === 'UPDATE'" size="small">修改</el-tag>
+            <el-tag v-else-if="row.operationType === 'RESET'" size="small" type="danger">重置</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="operatorName" label="操作人" width="120" />
+      </el-table>
     </el-card>
 
     <el-empty v-if="queried && permissionKeys.length === 0" description="未加载到权限定义" />
@@ -69,7 +88,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getUserPermissions, updateUserPermissions, getPermissionKeys } from '@/api/user/permission'
+import { getUserPermissions, updateUserPermissions, resetUserPermissions, getPermissionLogs, getPermissionKeys } from '@/api/user/permission'
 
 const userId = ref('')
 const queried = ref(false)
@@ -78,6 +97,7 @@ const saving = ref(false)
 const permissionKeys = ref([])
 const permForm = reactive({})
 const originalForm = reactive({})
+const permLogs = ref([])
 
 onMounted(() => {
   getPermissionKeys().then(res => {
@@ -89,14 +109,17 @@ function handleQuery() {
   if (!userId.value) return
   loading.value = true
   queried.value = true
-  getUserPermissions(userId.value).then(res => {
-    const perms = res || []
-    // Reset form from permission key defaults
+  Promise.all([
+    getUserPermissions(userId.value),
+    getPermissionLogs(userId.value)
+  ]).then(([permsRes, logsRes]) => {
+    const perms = permsRes || []
     permissionKeys.value.forEach(k => {
       const existing = perms.find(p => p.permKey === k.key)
       permForm[k.key] = existing ? existing.permValue : k.defaultValue
       originalForm[k.key] = permForm[k.key]
     })
+    permLogs.value = logsRes || []
   }).finally(() => {
     loading.value = false
   })
@@ -124,6 +147,19 @@ function handleSave() {
 function handleReset() {
   permissionKeys.value.forEach(k => {
     permForm[k.key] = originalForm[k.key]
+  })
+}
+
+function handleClear() {
+  resetUserPermissions(userId.value).then(() => {
+    ElMessage.success('权限已重置为默认值')
+    permissionKeys.value.forEach(k => {
+      permForm[k.key] = k.defaultValue
+      originalForm[k.key] = k.defaultValue
+    })
+    return getPermissionLogs(userId.value)
+  }).then(logs => {
+    permLogs.value = logs || []
   })
 }
 </script>

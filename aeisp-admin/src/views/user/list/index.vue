@@ -86,6 +86,13 @@
       </el-table-column>
       <el-table-column label="剩余时长(分)" prop="remainingMinutes" width="110" />
       <el-table-column label="余额(分)" prop="balanceCents" width="100" />
+      <el-table-column label="登录次数" prop="loginCount" width="90" />
+      <el-table-column label="异地登录" align="center" width="90">
+        <template #default="{ row }">
+          <el-tag v-if="row.abnormalLogin === 1" type="danger" size="small">是</el-tag>
+          <span v-else>否</span>
+        </template>
+      </el-table-column>
       <el-table-column label="最后登录" prop="lastLoginTime" width="180" />
       <el-table-column label="注册时间" prop="registerTime" width="180" />
       <el-table-column label="操作" align="center" width="280">
@@ -186,7 +193,7 @@
         <el-icon class="el-icon--upload"><upload-filled /></el-icon>
         <div class="el-upload__text">将Excel文件拖到此处，或<em>点击选择</em></div>
         <template #tip>
-          <div class="el-upload__tip">仅支持 .xlsx / .xls 格式，列头：用户名、初始密码、角色、备注</div>
+          <div class="el-upload__tip">仅支持 .xlsx / .xls 格式，列头：用户名、初始密码、角色、比赛用户、备注</div>
         </template>
       </el-upload>
       <div style="margin-top: 15px;" v-if="importResult">
@@ -279,6 +286,7 @@
       <el-empty v-else description="暂无权限配置" />
       <template #footer>
         <el-button @click="permOpen = false">取 消</el-button>
+        <el-button type="danger" @click="submitResetPermission">重置为默认</el-button>
         <el-button type="primary" :disabled="permKeys.length === 0" @click="submitPermission">保存</el-button>
       </template>
     </el-dialog>
@@ -300,6 +308,8 @@
             <el-descriptions-item label="剩余时长(分)">{{ detailUser?.remainingMinutes ?? 0 }}</el-descriptions-item>
             <el-descriptions-item label="注册时间">{{ detailUser?.registerTime || '-' }}</el-descriptions-item>
             <el-descriptions-item label="最后登录">{{ detailUser?.lastLoginTime || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="登录次数">{{ detailUser?.loginCount ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="异地登录">{{ detailUser?.abnormalLogin === 1 ? '是' : '否' }}</el-descriptions-item>
             <el-descriptions-item label="注册IP">{{ detailUser?.registerIp || '-' }}</el-descriptions-item>
             <el-descriptions-item label="比赛用户">{{ detailUser?.isCompetition === 1 ? '是' : '否' }}</el-descriptions-item>
             <el-descriptions-item label="角色">{{ detailUser?.roleCodes?.join(', ') || '-' }}</el-descriptions-item>
@@ -374,6 +384,20 @@
           </el-table>
           <Pagination :total="projectTotal" :page-num="projectQuery.pageNum" :page-size="projectQuery.pageSize" @pagination="loadProjects" />
         </el-tab-pane>
+        <el-tab-pane label="模板使用" name="templateUsage">
+          <el-table v-loading="templateUsageLoading" :data="templateUsageList" border size="small">
+            <el-table-column label="模板ID" prop="templateId" width="80" />
+            <el-table-column label="模板名称" prop="templateName" />
+            <el-table-column label="版本号" prop="versionNo" width="100" />
+            <el-table-column label="操作类型" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.actionType === 'download'" size="small">下载</el-tag>
+                <el-tag v-else size="small" type="info">{{ row.actionType }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="使用时间" prop="createdAt" width="170" />
+          </el-table>
+        </el-tab-pane>
         <el-tab-pane label="AI对话" name="aiSessions">
           <el-table v-loading="sessionLoading" :data="sessionList" border size="small">
             <el-table-column label="会话标题" prop="title" />
@@ -396,10 +420,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, UploadFilled, Plus } from '@element-plus/icons-vue'
 import { listUsers, getUser, updateUser, updateUserStatus, resetUserPassword, adjustDuration, importUsers, createUser, listLoginLogs, listDurationLogs } from '@/api/user'
-import { getUserPermissions, updateUserPermissions, getPermissionKeys } from '@/api/user/permission'
+import { getUserPermissions, updateUserPermissions, resetUserPermissions, getPermissionKeys } from '@/api/user/permission'
 import { listOrders } from '@/api/recharge'
 import { listProjects } from '@/api/project'
 import { listAiSessions } from '@/api/ai'
+import { getUserTemplateUsageLogs } from '@/api/template'
 import { useDict } from '@/composables/useDict'
 import { useDictStore } from '@/stores/dict'
 import Pagination from '@/components/Pagination.vue'
@@ -446,6 +471,8 @@ const sessionList = ref([])
 const sessionTotal = ref(0)
 const sessionLoading = ref(false)
 const sessionQuery = reactive({ pageNum: 1, pageSize: 5 })
+const templateUsageList = ref([])
+const templateUsageLoading = ref(false)
 
 const createForm = reactive({
   username: '', password: '', phone: '', email: '', nickname: '',
@@ -626,6 +653,16 @@ async function submitPermission() {
   permOpen.value = false
 }
 
+async function submitResetPermission() {
+  if (!currentPermUser.value?.id) return
+  await resetUserPermissions(currentPermUser.value.id)
+  ElMessage.success('权限已重置为默认值')
+  permKeys.value.forEach(k => {
+    permValues[k.key] = k.defaultValue
+  })
+  permExpireAt.value = null
+}
+
 function handleCreate() {
   createForm.username = ''; createForm.password = ''; createForm.phone = ''
   createForm.email = ''; createForm.nickname = ''
@@ -706,12 +743,14 @@ function onDetailClose() {
   orderList.value = []
   projectList.value = []
   sessionList.value = []
+  templateUsageList.value = []
 }
 
 function onDetailTabChange(tab) {
   if (tab === 'loginLogs') loadLoginLogs()
   else if (tab === 'assetFlows') { loadOrders(); loadDurationLogs() }
   else if (tab === 'projects') loadProjects()
+  else if (tab === 'templateUsage') loadTemplateUsage()
   else if (tab === 'aiSessions') loadSessions()
 }
 
@@ -764,6 +803,15 @@ async function loadSessions(pagination) {
     sessionList.value = res.list || []
     sessionTotal.value = res.total || 0
   } finally { sessionLoading.value = false }
+}
+
+async function loadTemplateUsage() {
+  if (!detailUser.value?.id) return
+  templateUsageLoading.value = true
+  try {
+    const res = await getUserTemplateUsageLogs(detailUser.value.id)
+    templateUsageList.value = res || []
+  } finally { templateUsageLoading.value = false }
 }
 
 onMounted(getList)
