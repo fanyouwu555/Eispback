@@ -3,8 +3,11 @@ package com.aeisp.system.service.impl;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.entity.SysPermission;
 import com.aeisp.system.entity.SysRolePermission;
+import com.aeisp.system.entity.SysUserRole;
 import com.aeisp.system.mapper.SysPermissionMapper;
 import com.aeisp.system.mapper.SysRolePermissionMapper;
+import com.aeisp.system.mapper.SysUserRoleMapper;
+import com.aeisp.system.vo.MenuRoutesVO;
 import com.aeisp.system.vo.MenuVO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +28,8 @@ class SysMenuServiceImplTest {
     private SysPermissionMapper sysPermissionMapper;
     @Mock
     private SysRolePermissionMapper sysRolePermissionMapper;
+    @Mock
+    private SysUserRoleMapper sysUserRoleMapper;
 
     @InjectMocks
     private SysMenuServiceImpl sysMenuService;
@@ -134,5 +139,117 @@ class SysMenuServiceImplTest {
         when(sysPermissionMapper.deleteById(1L)).thenReturn(1);
 
         assertTrue(sysMenuService.deleteMenu(1L));
+    }
+
+    @Test
+    void getUserRoutes_shouldReturnMenuTreeAndPermissions() {
+        Long userId = 1L;
+        SysUserRole userRole = new SysUserRole();
+        userRole.setUserId(1L);
+        userRole.setRoleId(1L);
+        when(sysUserRoleMapper.selectList(any())).thenReturn(List.of(userRole));
+
+        when(sysPermissionMapper.selectPermissionCodesByRoleIds(List.of(1L)))
+                .thenReturn(List.of("system:menu:list", "system:menu:manage"));
+
+        SysPermission dir = new SysPermission();
+        dir.setId(1L);
+        dir.setPermissionName("系统管理");
+        dir.setPermissionCode("system:admin");
+        dir.setParentId(0L);
+        dir.setMenuType(0);
+        dir.setSortOrder(1);
+        dir.setRoutePath("/system");
+        dir.setIcon("Setting");
+        dir.setIsVisible(1);
+
+        SysPermission menu = new SysPermission();
+        menu.setId(2L);
+        menu.setPermissionName("菜单管理");
+        menu.setPermissionCode("system:menu:list");
+        menu.setParentId(1L);
+        menu.setMenuType(1);
+        menu.setSortOrder(1);
+        menu.setRoutePath("/system/menu");
+        menu.setComponent("system/menu/index.vue");
+        menu.setIsVisible(1);
+
+        when(sysPermissionMapper.selectList(any())).thenReturn(List.of(dir, menu));
+
+        MenuRoutesVO result = sysMenuService.getUserRoutes(userId);
+
+        assertNotNull(result);
+        assertNotNull(result.getMenus());
+        assertEquals(1, result.getMenus().size());
+        assertEquals("系统管理", result.getMenus().get(0).getPermissionName());
+        assertEquals(1, result.getMenus().get(0).getChildren().size());
+        assertEquals("菜单管理", result.getMenus().get(0).getChildren().get(0).getPermissionName());
+        assertTrue(result.getPermissions().contains("system:menu:list"));
+        assertEquals(2, result.getPermissions().size());
+    }
+
+    @Test
+    void getUserRoutes_shouldFilterMenuWithoutPermission() {
+        Long userId = 1L;
+        SysUserRole userRole = new SysUserRole();
+        userRole.setUserId(1L);
+        userRole.setRoleId(1L);
+        when(sysUserRoleMapper.selectList(any())).thenReturn(List.of(userRole));
+        when(sysPermissionMapper.selectPermissionCodesByRoleIds(List.of(1L)))
+                .thenReturn(List.of("system:menu:list"));
+
+        SysPermission dir = new SysPermission();
+        dir.setId(1L);
+        dir.setPermissionName("系统管理");
+        dir.setPermissionCode("system:admin");
+        dir.setParentId(0L);
+        dir.setMenuType(0);
+        dir.setSortOrder(1);
+        dir.setIsVisible(1);
+
+        SysPermission menu = new SysPermission();
+        menu.setId(2L);
+        menu.setPermissionName("菜单管理");
+        menu.setPermissionCode("system:menu:list");
+        menu.setParentId(1L);
+        menu.setMenuType(1);
+        menu.setSortOrder(1);
+        menu.setIsVisible(1);
+
+        SysPermission noPermMenu = new SysPermission();
+        noPermMenu.setId(3L);
+        noPermMenu.setPermissionName("无权限菜单");
+        noPermMenu.setPermissionCode("test:admin");
+        noPermMenu.setParentId(1L);
+        noPermMenu.setMenuType(1);
+        noPermMenu.setSortOrder(2);
+        noPermMenu.setIsVisible(1);
+
+        when(sysPermissionMapper.selectList(any())).thenReturn(List.of(dir, menu, noPermMenu));
+
+        MenuRoutesVO result = sysMenuService.getUserRoutes(userId);
+
+        assertEquals(1, result.getMenus().size());
+        assertEquals(1, result.getMenus().get(0).getChildren().size());
+        assertEquals("菜单管理", result.getMenus().get(0).getChildren().get(0).getPermissionName());
+    }
+
+    @Test
+    void createMenu_shouldFillDefaults() {
+        SysPermission permission = new SysPermission();
+        permission.setPermissionName("测试");
+        permission.setPermissionCode("test:create");
+        permission.setParentId(0L);
+        permission.setMenuType(1);
+        // 不设 resourceType 和 action
+
+        when(sysPermissionMapper.insert(any(SysPermission.class))).thenReturn(1);
+
+        boolean result = sysMenuService.createMenu(permission);
+
+        assertTrue(result);
+        assertEquals("test", permission.getResourceType());
+        assertEquals("read", permission.getAction());
+        verify(sysPermissionMapper).insert(permission);
     }
 }
