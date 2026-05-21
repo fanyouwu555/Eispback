@@ -46,55 +46,66 @@ public class DashboardServiceImpl implements DashboardService {
     private final PrjProjectMapper prjProjectMapper;
     private final TplTemplateMapper tplTemplateMapper;
 
+    /**
+     * 根据 range 参数计算时间边界。
+     *
+     * @param range 时间范围：today/yesterday/week/month/total
+     * @param now   当前时间
+     * @return [start, end] 数组，total 模式下均为 null
+     */
+    private LocalDateTime[] computeTimeRange(String range, LocalDateTime now) {
+        return switch (range) {
+            case "today" -> new LocalDateTime[]{now.with(LocalTime.MIN), now};
+            case "yesterday" -> new LocalDateTime[]{
+                    now.minusDays(1).with(LocalTime.MIN),
+                    now.minusDays(1).with(LocalTime.MAX)};
+            case "week" -> new LocalDateTime[]{
+                    now.with(DayOfWeek.MONDAY).with(LocalTime.MIN), now};
+            case "month" -> new LocalDateTime[]{
+                    now.withDayOfMonth(1).with(LocalTime.MIN), now};
+            default -> new LocalDateTime[]{null, null};
+        };
+    }
+
     @Override
-    public DashboardSummaryVO getSummary() {
+    public DashboardSummaryVO getSummary(String range) {
         DashboardSummaryVO vo = new DashboardSummaryVO();
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime todayStart = now.with(LocalTime.MIN);
-        LocalDateTime monthStart = now.withDayOfMonth(1).with(LocalTime.MIN);
+        LocalDateTime[] timeRange = computeTimeRange(range, now);
+        LocalDateTime start = timeRange[0];
+        LocalDateTime end = timeRange[1];
+        boolean hasRange = start != null;
 
         // ===== User =====
         DashboardSummaryVO.UserStats userStats = new DashboardSummaryVO.UserStats();
         userStats.setTotalUsers(usrUserMapper.selectCount(Wrappers.lambdaQuery()));
-        userStats.setNewUsersToday(usrUserMapper.selectCount(
-                Wrappers.<UsrUser>lambdaQuery().ge(UsrUser::getRegisterTime, todayStart)));
-        userStats.setNewUsersWeek(usrUserMapper.selectCount(
-                Wrappers.<UsrUser>lambdaQuery().ge(UsrUser::getRegisterTime,
-                        now.with(DayOfWeek.MONDAY).with(LocalTime.MIN))));
-        userStats.setNewUsersMonth(usrUserMapper.selectCount(
-                Wrappers.<UsrUser>lambdaQuery().ge(UsrUser::getRegisterTime, monthStart)));
-        userStats.setMau(usrLoginLogMapper.countActiveUsers(monthStart, now));
-        Long totalActive = usrLoginLogMapper.countAllActiveUsers();
-        userStats.setTotalActiveUsers(totalActive != null ? totalActive : 0L);
+        userStats.setNewUsers(hasRange ? usrUserMapper.selectCount(
+                Wrappers.<UsrUser>lambdaQuery()
+                        .ge(UsrUser::getRegisterTime, start)
+                        .le(UsrUser::getRegisterTime, end)) : usrUserMapper.selectCount(Wrappers.lambdaQuery()));
+        userStats.setActiveUsers(hasRange ? usrLoginLogMapper.countActiveUsers(start, end) : usrLoginLogMapper.countAllActiveUsers());
+        userStats.setBannedCount(usrUserMapper.selectCount(
+                Wrappers.<UsrUser>lambdaQuery().eq(UsrUser::getStatus, 2)));
         vo.setUser(userStats);
 
         // ===== Asset =====
         DashboardSummaryVO.AssetStats assetStats = new DashboardSummaryVO.AssetStats();
         Long totalRecharge = usrUserBalanceMapper.selectTotalRechargeSum();
         assetStats.setTotalRechargeBalance(totalRecharge != null ? totalRecharge : 0L);
-        Long dailyRecharge = rechargeOrderMapper.selectDailyRechargeSum(todayStart, now);
-        assetStats.setDailyRechargeAmount(dailyRecharge != null ? dailyRecharge : 0L);
-        Long totalConsumed = usrUserBalanceMapper.selectTotalConsumedSum();
-        assetStats.setTotalConsumedAmount(totalConsumed != null ? totalConsumed : 0L);
+        assetStats.setRechargeAmount(hasRange ? rechargeOrderMapper.selectDailyRechargeSum(start, end) : rechargeOrderMapper.selectTotalRechargeSum());
+        Long totalBalance = usrUserBalanceMapper.selectTotalBalanceSum();
+        assetStats.setPendingSettlement(totalBalance != null ? totalBalance : 0L);
         Long avgBalance = usrUserBalanceMapper.selectAvgBalance();
         assetStats.setAvgBalance(avgBalance != null ? avgBalance : 0L);
-        Long totalBalance = usrUserBalanceMapper.selectTotalBalanceSum();
-        assetStats.setTotalBalance(totalBalance != null ? totalBalance : 0L);
         vo.setAsset(assetStats);
 
         // ===== Project =====
         DashboardSummaryVO.ProjectStats projectStats = new DashboardSummaryVO.ProjectStats();
-        projectStats.setTotalProjects(usrUserMapper.selectCount(
-                Wrappers.<UsrUser>lambdaQuery().eq(UsrUser::getStatus, 1))); // placeholder, will use PrjProject
-        // Use prjProjectMapper directly — BaseMapper methods
-        // Use prjProjectMapper directly — BaseMapper methods
         projectStats.setTotalProjects(prjProjectMapper.selectCount(null));
-        projectStats.setDailyNewProjects(prjProjectMapper.selectCount(
+        projectStats.setNewProjects(hasRange ? prjProjectMapper.selectCount(
                 Wrappers.<com.aeisp.project.entity.PrjProject>lambdaQuery()
-                        .ge(com.aeisp.project.entity.PrjProject::getCreatedAt, todayStart)));
-        projectStats.setMonthlyNewProjects(prjProjectMapper.selectCount(
-                Wrappers.<com.aeisp.project.entity.PrjProject>lambdaQuery()
-                        .ge(com.aeisp.project.entity.PrjProject::getCreatedAt, monthStart)));
+                        .ge(com.aeisp.project.entity.PrjProject::getCreatedAt, start)
+                        .le(com.aeisp.project.entity.PrjProject::getCreatedAt, end)) : 0L);
         Long benchmark = prjProjectMapper.countBenchmarkProjects();
         projectStats.setBenchmarkProjects(benchmark != null ? benchmark : 0L);
         vo.setProject(projectStats);
@@ -102,24 +113,30 @@ public class DashboardServiceImpl implements DashboardService {
         // ===== Template =====
         DashboardSummaryVO.TemplateStats templateStats = new DashboardSummaryVO.TemplateStats();
         templateStats.setTotalTemplates(tplTemplateMapper.selectCount(null));
-        templateStats.setTodayNewTemplates(tplTemplateMapper.selectCount(
+        templateStats.setTodayNewTemplates(hasRange ? tplTemplateMapper.selectCount(
                 Wrappers.<com.aeisp.template.entity.TplTemplate>lambdaQuery()
-                        .ge(com.aeisp.template.entity.TplTemplate::getCreatedAt, todayStart)));
+                        .ge(com.aeisp.template.entity.TplTemplate::getCreatedAt, start)
+                        .le(com.aeisp.template.entity.TplTemplate::getCreatedAt, end)) : tplTemplateMapper.selectCount(null));
         templateStats.setOnlineCount(tplTemplateMapper.selectCount(
                 Wrappers.<com.aeisp.template.entity.TplTemplate>lambdaQuery()
                         .eq(com.aeisp.template.entity.TplTemplate::getStatus, 1)));
-        templateStats.setHotTemplates(tplTemplateMapper.selectTopHotTemplates(10));
+        List<Map<String, Object>> hotTemplates = tplTemplateMapper.selectTopHotTemplates(10);
+        templateStats.setHotTemplateCount(hotTemplates != null ? hotTemplates.size() : 0);
         vo.setTemplate(templateStats);
 
         // ===== AI =====
         DashboardSummaryVO.AiStats aiStats = new DashboardSummaryVO.AiStats();
         Long totalCalls = modelCallLogMapper.countTotalCalls();
-        aiStats.setTotalCalls(totalCalls != null ? totalCalls : 0L);
+        aiStats.setCallCount(hasRange ? modelCallLogMapper.selectCount(
+                Wrappers.<com.aeisp.model.entity.ModelCallLog>lambdaQuery()
+                        .ge(com.aeisp.model.entity.ModelCallLog::getCreatedAt, start)
+                        .le(com.aeisp.model.entity.ModelCallLog::getCreatedAt, end)) : (totalCalls != null ? totalCalls : 0L));
         Long totalSessions = aiSessionMapper.selectCount(null);
         aiStats.setTotalSessions(totalSessions != null ? totalSessions : 0L);
         Long successCalls = modelCallLogMapper.countSuccessCalls();
-        if (totalCalls != null && totalCalls > 0 && successCalls != null) {
-            double rate = successCalls.doubleValue() / totalCalls.doubleValue() * 100;
+        Long effectiveTotal = totalCalls != null ? totalCalls : 0L;
+        if (effectiveTotal > 0 && successCalls != null) {
+            double rate = successCalls.doubleValue() / effectiveTotal * 100;
             aiStats.setSuccessRate(String.format("%.1f%%", rate));
         } else {
             aiStats.setSuccessRate("0.0%");

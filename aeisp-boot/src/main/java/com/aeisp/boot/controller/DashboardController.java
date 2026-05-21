@@ -29,9 +29,10 @@ public class DashboardController {
      * 获取仪表盘汇总数据。
      */
     @GetMapping("/summary")
-    @Operation(summary = "仪表盘汇总", description = "返回用户/资产/项目/模板/AI 五大类 KPI 指标")
-    public Result<DashboardSummaryVO> getSummary() {
-        return Result.success(dashboardService.getSummary());
+    @Operation(summary = "仪表盘汇总", description = "返回用户/资产/项目/模板/AI 五大类 KPI 指标，支持时间范围切换")
+    public Result<DashboardSummaryVO> getSummary(
+            @RequestParam(defaultValue = "total") String range) {
+        return Result.success(dashboardService.getSummary(range));
     }
 
     /**

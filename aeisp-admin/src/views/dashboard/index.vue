@@ -1,5 +1,17 @@
 <template>
   <div class="dashboard-container">
+    <!-- ===== 时间范围切换 ===== -->
+    <div class="range-bar">
+      <span class="range-label">时间范围：</span>
+      <el-radio-group v-model="currentRange" @change="onRangeChange">
+        <el-radio-button value="today">今日</el-radio-button>
+        <el-radio-button value="yesterday">昨日</el-radio-button>
+        <el-radio-button value="week">本周</el-radio-button>
+        <el-radio-button value="month">本月</el-radio-button>
+        <el-radio-button value="total">总计</el-radio-button>
+      </el-radio-group>
+    </div>
+
     <!-- ===== 1. 用户类指标 ===== -->
     <div class="section-label"><el-icon><UserFilled /></el-icon> 用户数据</div>
     <el-row :gutter="16" class="kpi-row">
@@ -75,7 +87,7 @@
     <!-- ===== 5. AI 类指标 ===== -->
     <div class="section-label"><el-icon><Cpu /></el-icon> AI 数据</div>
     <el-row :gutter="16" class="kpi-row">
-      <el-col :span="8" v-for="card in aiCards" :key="card.label">
+      <el-col :span="6" v-for="card in aiCards" :key="card.label">
         <el-card shadow="hover" class="kpi-card">
           <div class="kpi-inner">
             <div class="kpi-icon" :style="{ background: card.bg, color: card.color }">
@@ -144,6 +156,7 @@ import { getDashboardSummary, getDashboardTrends } from '@/api/dashboard'
 
 const router = useRouter()
 const summary = ref({})
+const currentRange = ref('total')
 
 // --- Chart configs ---
 const charts = reactive([
@@ -168,9 +181,9 @@ const userCards = computed(() => {
   const u = summary.value.user || {}
   return [
     { label: '总注册用户数', value: u.totalUsers ?? '-', icon: 'UserFilled', color: COLORS[0], bg: COLORS[0] + '18' },
-    { label: '日新增用户', value: u.newUsersToday ?? '-', icon: 'Plus', color: COLORS[1], bg: COLORS[1] + '18' },
-    { label: '月活跃用户', value: u.mau ?? '-', icon: 'TrendCharts', color: COLORS[2], bg: COLORS[2] + '18' },
-    { label: '总活跃用户', value: u.totalActiveUsers ?? '-', icon: 'Calendar', color: COLORS[3], bg: COLORS[3] + '18' }
+    { label: '新增用户', value: u.newUsers ?? '-', icon: 'Plus', color: COLORS[1], bg: COLORS[1] + '18' },
+    { label: '活跃用户数', value: u.activeUsers ?? '-', icon: 'TrendCharts', color: COLORS[2], bg: COLORS[2] + '18' },
+    { label: '封禁用户数', value: u.bannedCount ?? '-', icon: 'WarningFilled', color: COLORS[3], bg: COLORS[3] + '18' }
   ]
 })
 
@@ -178,9 +191,9 @@ const assetCards = computed(() => {
   const a = summary.value.asset || {}
   const fmt = v => v != null ? '¥' + (v / 100).toFixed(2) : '-'
   return [
-    { label: '总充值余额', value: fmt(a.totalRechargeBalance), icon: 'Coin', color: COLORS[2], bg: COLORS[2] + '18' },
-    { label: '今日充值', value: fmt(a.dailyRechargeAmount), icon: 'TopUp', color: COLORS[1], bg: COLORS[1] + '18' },
-    { label: '总消费', value: fmt(a.totalConsumedAmount), icon: 'Sell', color: COLORS[3], bg: COLORS[3] + '18' },
+    { label: '总充值金额', value: fmt(a.totalRechargeBalance), icon: 'Coin', color: COLORS[2], bg: COLORS[2] + '18' },
+    { label: '充值金额', value: fmt(a.rechargeAmount), icon: 'TopUp', color: COLORS[1], bg: COLORS[1] + '18' },
+    { label: '待结算金额', value: fmt(a.pendingSettlement), icon: 'Sell', color: COLORS[3], bg: COLORS[3] + '18' },
     { label: '平均余额', value: fmt(a.avgBalance), icon: 'DataLine', color: COLORS[0], bg: COLORS[0] + '18' }
   ]
 })
@@ -189,19 +202,18 @@ const projectCards = computed(() => {
   const p = summary.value.project || {}
   return [
     { label: '全部项目', value: p.totalProjects ?? '-', icon: 'FolderOpened', color: COLORS[0], bg: COLORS[0] + '18' },
-    { label: '今日新增', value: p.dailyNewProjects ?? '-', icon: 'FolderAdd', color: COLORS[1], bg: COLORS[1] + '18' },
-    { label: '本月新增', value: p.monthlyNewProjects ?? '-', icon: 'Calendar', color: COLORS[2], bg: COLORS[2] + '18' },
-    { label: '标杆项目', value: p.benchmarkProjects ?? '-', icon: 'Star', color: COLORS[4], bg: COLORS[4] + '18' }
+    { label: '新建项目', value: p.newProjects ?? '-', icon: 'FolderAdd', color: COLORS[1], bg: COLORS[1] + '18' },
+    { label: '星标项目', value: p.benchmarkProjects ?? '-', icon: 'Star', color: COLORS[4], bg: COLORS[4] + '18' }
   ]
 })
 
 const templateCards = computed(() => {
   const t = summary.value.template || {}
   return [
-    { label: '总模板', value: t.totalTemplates ?? '-', icon: 'Files', color: COLORS[0], bg: COLORS[0] + '18' },
-    { label: '今日新增', value: t.todayNewTemplates ?? '-', icon: 'Plus', color: COLORS[1], bg: COLORS[1] + '18' },
+    { label: '总模板数量', value: t.totalTemplates ?? '-', icon: 'Files', color: COLORS[0], bg: COLORS[0] + '18' },
     { label: '上线数量', value: t.onlineCount ?? '-', icon: 'CircleCheck', color: COLORS[2], bg: COLORS[2] + '18' },
-    { label: '热门模板', value: (t.hotTemplates && t.hotTemplates.length) || '-', icon: 'TrendCharts', color: COLORS[3], bg: COLORS[3] + '18' }
+    { label: '新增模板', value: t.todayNewTemplates ?? '-', icon: 'Plus', color: COLORS[1], bg: COLORS[1] + '18' },
+    { label: '热门模板数', value: t.hotTemplateCount ?? '-', icon: 'TrendCharts', color: COLORS[3], bg: COLORS[3] + '18' }
   ]
 })
 
@@ -209,7 +221,7 @@ const aiCards = computed(() => {
   const a = summary.value.ai || {}
   const fmtCalls = v => v != null ? (v >= 10000 ? (v / 10000).toFixed(1) + 'w' : v) : '-'
   return [
-    { label: '累计调用', value: fmtCalls(a.totalCalls), icon: 'Cpu', color: COLORS[0], bg: COLORS[0] + '18' },
+    { label: '对话次数', value: fmtCalls(a.callCount), icon: 'Cpu', color: COLORS[0], bg: COLORS[0] + '18' },
     { label: '累计会话', value: fmtCalls(a.totalSessions), icon: 'ChatDotSquare', color: COLORS[1], bg: COLORS[1] + '18' },
     { label: '调用成功率', value: a.successRate ?? '-', icon: 'CircleCheckFilled', color: COLORS[2], bg: COLORS[2] + '18' }
   ]
@@ -231,11 +243,15 @@ function goto(path) {
 // --- Load data ---
 async function loadSummary() {
   try {
-    const res = await getDashboardSummary()
+    const res = await getDashboardSummary(currentRange.value)
     summary.value = res || {}
   } catch (e) {
     console.error('Failed to load dashboard summary', e)
   }
+}
+
+function onRangeChange() {
+  loadSummary()
 }
 
 async function loadTrends(chart) {
@@ -332,6 +348,23 @@ onUnmounted(() => {
 <style scoped>
 .dashboard-container {
   padding: 16px;
+}
+
+.range-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.range-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  white-space: nowrap;
 }
 
 .section-label {

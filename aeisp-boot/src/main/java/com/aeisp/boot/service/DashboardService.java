@@ -13,8 +13,10 @@ public interface DashboardService {
 
     /**
      * 获取仪表盘汇总数据（5 大类指标）。
+     *
+     * @param range 时间范围：today/yesterday/week/month/total
      */
-    DashboardSummaryVO getSummary();
+    DashboardSummaryVO getSummary(String range);
 
     /**
      * 获取趋势数据。

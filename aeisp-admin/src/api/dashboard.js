@@ -2,10 +2,11 @@ import request from '@/utils/request'
 
 /**
  * 获取仪表盘汇总数据。
+ * @param {string} range 时间范围：today/yesterday/week/month/total，默认 total
  * @returns {Promise<{user:object, asset:object, project:object, template:object, ai:object}>}
  */
-export function getDashboardSummary() {
-  return request.get('/dashboard/summary')
+export function getDashboardSummary(range = 'total') {
+  return request.get('/dashboard/summary', { params: { range } })
 }
 
 /**
