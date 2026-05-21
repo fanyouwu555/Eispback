@@ -47,15 +47,48 @@ public class SysMenuServiceImpl implements SysMenuService {
         return sysPermissionMapper.selectById(id);
     }
 
+    private void fillMenuDefaults(SysPermission permission) {
+        // resourceType: 从 permissionCode 取第一个 : 之前的部分
+        if (permission.getResourceType() == null || permission.getResourceType().isBlank()) {
+            String code = permission.getPermissionCode();
+            if (code != null && code.contains(":")) {
+                permission.setResourceType(code.substring(0, code.indexOf(':')));
+            } else {
+                permission.setResourceType("system");
+            }
+        }
+        // action: 按 menuType 推断
+        if (permission.getAction() == null || permission.getAction().isBlank()) {
+            Integer type = permission.getMenuType();
+            if (type == null) type = 0;
+            switch (type) {
+                case 0 -> permission.setAction("manage");
+                case 1 -> permission.setAction("read");
+                case 2 -> {
+                    String code = permission.getPermissionCode();
+                    if (code != null && code.contains(":")) {
+                        permission.setAction(code.substring(code.lastIndexOf(':') + 1));
+                    } else {
+                        permission.setAction("manage");
+                    }
+                }
+                case 3 -> permission.setAction("read");
+                default -> permission.setAction("manage");
+            }
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean createMenu(SysPermission permission) {
+        fillMenuDefaults(permission);
         return sysPermissionMapper.insert(permission) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateMenu(SysPermission permission) {
+        fillMenuDefaults(permission);
         return sysPermissionMapper.updateById(permission) > 0;
     }
 
