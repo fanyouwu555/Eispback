@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" :inline="true">
+      <el-form-item label="用户ID"><el-input v-model="queryParams.userId" placeholder="请输入用户ID" clearable style="width:160px" /></el-form-item>
       <el-form-item label="登录账号"><el-input v-model="queryParams.loginAccount" clearable /></el-form-item>
       <el-form-item label="登录时间">
         <el-date-picker
@@ -115,6 +116,7 @@ const timeRange = ref(null)
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
+  userId: undefined,
   loginAccount: undefined,
   loginType: undefined,
   loginResult: undefined,
@@ -142,9 +144,10 @@ function handleDetail(row) {
 }
 
 async function getList(pagination = null) {
+  if (!queryParams.userId) return
   loading.value = true
   if (pagination) { queryParams.pageNum = pagination.page; queryParams.pageSize = pagination.limit }
-  const res = await listLoginLogs(0, queryParams)
+  const res = await listLoginLogs(queryParams.userId, queryParams)
   logList.value = res.list || []
   total.value = res.total || 0
   loading.value = false
@@ -154,6 +157,7 @@ function resetQuery() {
   timeRange.value = null
   queryParams.createdAtStart = undefined
   queryParams.createdAtEnd = undefined
+  queryParams.userId = undefined
   queryParams.loginAccount = undefined
   queryParams.loginType = undefined
   queryParams.loginResult = undefined

@@ -89,6 +89,7 @@
       <el-table-column label="操作" align="center" width="280">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">编辑</el-button>
+          <el-button link type="primary" icon="View" @click="handleDetail(row)">详情</el-button>
           <el-button link type="warning" icon="Key" @click="handleResetPwd(row)">重置密码</el-button>
           <el-button link type="success" icon="Timer" @click="handleAdjust(row)">调整时长</el-button>
           <el-button link type="primary" icon="Setting" @click="handlePermission(row)">权限</el-button>
@@ -274,6 +275,105 @@
         <el-button type="primary" :disabled="permKeys.length === 0" @click="submitPermission">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 用户详情弹窗 -->
+    <el-dialog v-model="detailOpen" title="用户详情" width="900px" @closed="onDetailClose">
+      <el-tabs v-model="detailActiveTab" @tab-change="onDetailTabChange">
+        <el-tab-pane label="基本信息" name="info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="用户ID">{{ detailUser?.id }}</el-descriptions-item>
+            <el-descriptions-item label="用户名">{{ detailUser?.username }}</el-descriptions-item>
+            <el-descriptions-item label="昵称">{{ detailUser?.nickname || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="手机号">{{ detailUser?.phone || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{ detailUser?.email || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="getStatusType(detailUser?.status)">{{ getStatusLabel(detailUser?.status) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="余额(分)">{{ detailUser?.balanceCents ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="剩余时长(分)">{{ detailUser?.remainingMinutes ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="注册时间">{{ detailUser?.registerTime || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="最后登录">{{ detailUser?.lastLoginTime || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="注册IP">{{ detailUser?.registerIp || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="比赛用户">{{ detailUser?.isCompetition === 1 ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="角色">{{ detailUser?.roleCodes?.join(', ') || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+        <el-tab-pane label="登录记录" name="loginLogs">
+          <el-table v-loading="loginLogLoading" :data="loginLogList" border size="small">
+            <el-table-column label="登录账号" prop="loginAccount" />
+            <el-table-column label="登录时间" prop="createdAt" width="170" />
+            <el-table-column label="登录类型" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.loginType === 1" size="small">密码登录</el-tag>
+                <el-tag v-else-if="row.loginType === 2" size="small" type="success">验证码登录</el-tag>
+                <el-tag v-else-if="row.loginType === 3" size="small" type="info">Token刷新</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="IP地址" prop="ipAddress" width="130" />
+            <el-table-column label="设备类型" prop="deviceType" width="120" />
+            <el-table-column label="结果" width="80">
+              <template #default="{ row }">
+                <el-tag v-if="row.loginResult === 1" size="small" type="success">成功</el-tag>
+                <el-tag v-else size="small" type="danger">失败</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+          <Pagination :total="loginLogTotal" :page-num="loginLogQuery.pageNum" :page-size="loginLogQuery.pageSize" @pagination="loadLoginLogs" />
+        </el-tab-pane>
+        <el-tab-pane label="资产流水" name="assetFlows">
+          <h4 style="margin:0 0 10px;">充值订单</h4>
+          <el-table v-loading="orderLoading" :data="orderList" border size="small">
+            <el-table-column label="订单号" prop="orderNo" width="180" />
+            <el-table-column label="金额" width="80">
+              <template #default="{ row }">¥{{ ((row.amount || 0) / 100).toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="时长(分)" prop="durationMinutes" width="80" />
+            <el-table-column label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag v-if="row.status === 0" size="small">待支付</el-tag>
+                <el-tag v-else-if="row.status === 1" size="small" type="success">已支付</el-tag>
+                <el-tag v-else-if="row.status === 2" size="small" type="warning">已退款</el-tag>
+                <el-tag v-else size="small" type="info">已取消</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="下单时间" prop="createdAt" width="170" />
+          </el-table>
+          <h4 style="margin:15px 0 10px;">时长变更</h4>
+          <el-table v-loading="durationLogLoading" :data="durationLogList" border size="small">
+            <el-table-column label="操作类型" prop="operationTypeLabel" width="100" />
+            <el-table-column label="变更时长" width="100">
+              <template #default="{ row }">
+                <span :style="{ color: row.changeMinutes > 0 ? '#67c23a' : '#f56c6c' }">
+                  {{ row.changeMinutes > 0 ? '+' : '' }}{{ row.changeMinutes }} 分
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="原因" prop="reason" />
+            <el-table-column label="变更时间" prop="createdAt" width="170" />
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="项目列表" name="projects">
+          <el-table v-loading="projectLoading" :data="projectList" border size="small">
+            <el-table-column label="项目名称" prop="name" />
+            <el-table-column label="创建时间" prop="createdAt" width="170" />
+            <el-table-column label="状态" prop="status" width="80" />
+          </el-table>
+          <Pagination :total="projectTotal" :page-num="projectQuery.pageNum" :page-size="projectQuery.pageSize" @pagination="loadProjects" />
+        </el-tab-pane>
+        <el-tab-pane label="AI对话" name="aiSessions">
+          <el-table v-loading="sessionLoading" :data="sessionList" border size="small">
+            <el-table-column label="会话标题" prop="title" />
+            <el-table-column label="消息条数" prop="messageCount" width="80" />
+            <el-table-column label="创建时间" prop="createdAt" width="170" />
+            <el-table-column label="最后对话" prop="lastMessageAt" width="170" />
+          </el-table>
+          <Pagination :total="sessionTotal" :page-num="sessionQuery.pageNum" :page-size="sessionQuery.pageSize" @pagination="loadSessions" />
+        </el-tab-pane>
+      </el-tabs>
+      <template #footer>
+        <el-button @click="detailOpen = false">关 闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -281,8 +381,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, UploadFilled, Plus } from '@element-plus/icons-vue'
-import { listUsers, updateUser, updateUserStatus, resetUserPassword, adjustDuration, importUsers, createUser } from '@/api/user'
+import { listUsers, getUser, updateUser, updateUserStatus, resetUserPassword, adjustDuration, importUsers, createUser, listLoginLogs, listDurationLogs } from '@/api/user'
 import { getUserPermissions, updateUserPermissions, getPermissionKeys } from '@/api/user/permission'
+import { listOrders } from '@/api/recharge'
+import { listProjects } from '@/api/project'
+import { listAiSessions } from '@/api/ai'
 import Pagination from '@/components/Pagination.vue'
 
 const loading = ref(false)
@@ -302,6 +405,28 @@ const importFile = ref(null)
 const importResult = ref(null)
 const createOpen = ref(false)
 const createResult = ref(null)
+
+// 详情弹窗
+const detailOpen = ref(false)
+const detailActiveTab = ref('info')
+const detailUser = ref(null)
+const loginLogList = ref([])
+const loginLogTotal = ref(0)
+const loginLogLoading = ref(false)
+const loginLogQuery = reactive({ pageNum: 1, pageSize: 5 })
+const orderList = ref([])
+const orderLoading = ref(false)
+const durationLogList = ref([])
+const durationLogLoading = ref(false)
+const projectList = ref([])
+const projectTotal = ref(0)
+const projectLoading = ref(false)
+const projectQuery = reactive({ pageNum: 1, pageSize: 5 })
+const sessionList = ref([])
+const sessionTotal = ref(0)
+const sessionLoading = ref(false)
+const sessionQuery = reactive({ pageNum: 1, pageSize: 5 })
+
 const createForm = reactive({
   username: '', password: '', phone: '', email: '', nickname: '',
   roleIds: [], remainingMinutes: 0, isCompetition: 0
@@ -549,6 +674,83 @@ function copyPassword() {
       ElMessage.warning('复制失败，请手动复制')
     })
   }
+}
+
+// ===== 用户详情 =====
+async function handleDetail(row) {
+  detailUser.value = row
+  detailOpen.value = true
+  detailActiveTab.value = 'info'
+  try {
+    const res = await getUser(row.id)
+    detailUser.value = { ...row, ...res }
+  } catch { /* use row data as fallback */ }
+}
+
+function onDetailClose() {
+  loginLogList.value = []
+  durationLogList.value = []
+  orderList.value = []
+  projectList.value = []
+  sessionList.value = []
+}
+
+function onDetailTabChange(tab) {
+  if (tab === 'loginLogs') loadLoginLogs()
+  else if (tab === 'assetFlows') { loadOrders(); loadDurationLogs() }
+  else if (tab === 'projects') loadProjects()
+  else if (tab === 'aiSessions') loadSessions()
+}
+
+async function loadLoginLogs(pagination) {
+  if (!detailUser.value?.id) return
+  loginLogLoading.value = true
+  if (pagination) { loginLogQuery.pageNum = pagination.page; loginLogQuery.pageSize = pagination.limit }
+  try {
+    const res = await listLoginLogs(detailUser.value.id, loginLogQuery)
+    loginLogList.value = res.list || []
+    loginLogTotal.value = res.total || 0
+  } finally { loginLogLoading.value = false }
+}
+
+async function loadOrders() {
+  if (!detailUser.value?.id) return
+  orderLoading.value = true
+  try {
+    const res = await listOrders({ userId: detailUser.value.id, pageNum: 1, pageSize: 5 })
+    orderList.value = res.list || []
+  } finally { orderLoading.value = false }
+}
+
+async function loadDurationLogs() {
+  if (!detailUser.value?.id) return
+  durationLogLoading.value = true
+  try {
+    const res = await listDurationLogs(detailUser.value.id, { pageNum: 1, pageSize: 5 })
+    durationLogList.value = res.list || []
+  } finally { durationLogLoading.value = false }
+}
+
+async function loadProjects(pagination) {
+  if (!detailUser.value?.id) return
+  projectLoading.value = true
+  if (pagination) { projectQuery.pageNum = pagination.page; projectQuery.pageSize = pagination.limit }
+  try {
+    const res = await listProjects({ userId: detailUser.value.id, ...projectQuery })
+    projectList.value = res.list || []
+    projectTotal.value = res.total || 0
+  } finally { projectLoading.value = false }
+}
+
+async function loadSessions(pagination) {
+  if (!detailUser.value?.id) return
+  sessionLoading.value = true
+  if (pagination) { sessionQuery.pageNum = pagination.page; sessionQuery.pageSize = pagination.limit }
+  try {
+    const res = await listAiSessions({ userId: detailUser.value.id, ...sessionQuery })
+    sessionList.value = res.list || []
+    sessionTotal.value = res.total || 0
+  } finally { sessionLoading.value = false }
 }
 
 onMounted(getList)

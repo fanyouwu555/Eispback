@@ -63,7 +63,7 @@ const activeChart = ref(null)
 const chartInstances = ref([])
 
 async function initCharts() {
-  const trendRes = await getTrend({ type: 'daily', days: 30 })
+  const trendRes = await getTrend({ days: 30 })
   const dates = trendRes?.dates || []
   const newUsers = trendRes?.newUsers || []
   const activeUsers = trendRes?.activeUsers || []
