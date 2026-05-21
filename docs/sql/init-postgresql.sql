@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS sys_operation_log (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT DEFAULT NULL,
     operator_username VARCHAR(32) DEFAULT NULL,
+    role_name VARCHAR(50) DEFAULT NULL,
     operation_type VARCHAR(30) DEFAULT NULL,
     operation_type_label VARCHAR(50) DEFAULT NULL,
     target_type VARCHAR(20) DEFAULT NULL,
@@ -137,6 +138,7 @@ CREATE INDEX IF NOT EXISTS idx_sys_operation_log_target ON sys_operation_log (ta
 CREATE INDEX IF NOT EXISTS idx_sys_operation_log_created_at ON sys_operation_log (created_at);
 CREATE INDEX IF NOT EXISTS idx_sys_operation_log_sensitivity ON sys_operation_log (sensitivity);
 COMMENT ON TABLE sys_operation_log IS '系统操作日志表';
+COMMENT ON COLUMN sys_operation_log.role_name IS '操作人角色名';
 COMMENT ON COLUMN sys_operation_log.operation_type IS '操作类型编码，如 UPDATE_USER_STATUS';
 COMMENT ON COLUMN sys_operation_log.operation_type_label IS '操作类型中文标签';
 COMMENT ON COLUMN sys_operation_log.target_type IS '操作目标类型：user/model/template/order/notification/system';
@@ -906,3 +908,75 @@ INSERT INTO sys_config (config_key, config_value, environment, description, crea
 ('model_failure_rate_threshold', '10', 'all', '模型失败率告警阈值（%）', NOW(), NOW()),
 ('notification_archive_days', '90', 'all', '消息归档天数', NOW(), NOW()),
 ('recharge_order_timeout_minutes', '30', 'all', '充值订单超时时间（分钟）', NOW(), NOW());
+
+-- --------------------------------------------------------
+-- 字典类型种子数据
+-- --------------------------------------------------------
+INSERT INTO sys_dict_type (dict_name, dict_code, description, status, is_system) VALUES
+('模型类型', 'model_type', 'AI模型分类', 1, 1),
+('用户状态', 'user_status', '前端用户账号状态', 1, 1),
+('订单状态', 'order_status', '充值订单状态', 1, 1),
+('套餐状态', 'package_status', '充值套餐上下架状态', 1, 1),
+('消耗类型', 'deduction_type', '用户时长消耗类型', 1, 1),
+('会话状态', 'session_status', 'AI会话状态', 1, 1),
+('项目状态', 'project_status', '用户项目状态', 1, 1),
+('登录类型', 'login_type', '用户登录方式', 1, 1),
+('登录结果', 'login_result', '用户登录结果', 1, 1),
+('通告状态', 'notification_status', '消息通告状态', 1, 1),
+('消息类型', 'msg_type', '通告消息类型', 1, 1),
+('推送范围', 'push_scope', '通告推送范围', 1, 1),
+('推送方式', 'push_type', '通告推送方式', 1, 1),
+('余额操作类型', 'balance_op_type', '管理员调整余额/时长操作类型', 1, 1);
+
+-- --------------------------------------------------------
+-- 字典数据种子数据
+-- --------------------------------------------------------
+INSERT INTO sys_dict_data (dict_code, item_label, item_value, sort_order, status, color, is_default) VALUES
+('model_type', '通用', 'general', 1, 1, '', 1),
+('model_type', '教学', 'teaching', 2, 1, 'success', 0),
+('model_type', '竞赛', 'competition', 3, 1, 'warning', 0),
+('user_status', '正常', '1', 1, 1, 'success', 1),
+('user_status', '禁用', '2', 2, 1, 'danger', 0),
+('user_status', '冻结', '3', 3, 1, 'warning', 0),
+('user_status', '锁定', '4', 4, 1, 'info', 0),
+('order_status', '待支付', '0', 1, 1, 'warning', 1),
+('order_status', '已支付', '1', 2, 1, 'success', 0),
+('order_status', '已退款', '2', 3, 1, 'danger', 0),
+('order_status', '已取消', '3', 4, 1, 'info', 0),
+('package_status', '上架', '1', 1, 1, 'success', 1),
+('package_status', '下架', '0', 2, 1, 'danger', 0),
+('deduction_type', '模型调用', 'model_call', 1, 1, 'primary', 1),
+('deduction_type', '仿真运行', 'sim_run', 2, 1, 'success', 0),
+('deduction_type', '编译调试', 'debug', 3, 1, 'warning', 0),
+('session_status', '进行中', '1', 1, 1, 'primary', 1),
+('session_status', '已归档', '2', 2, 1, 'info', 0),
+('project_status', '进行中', '0', 1, 1, 'primary', 1),
+('project_status', '已完成', '1', 2, 1, 'success', 0),
+('project_status', '已归档', '2', 3, 1, 'info', 0),
+('login_type', '密码登录', '1', 1, 1, '', 1),
+('login_type', '验证码登录', '2', 2, 1, 'success', 0),
+('login_type', 'Token刷新', '3', 3, 1, 'info', 0),
+('login_result', '成功', '1', 1, 1, 'success', 1),
+('login_result', '密码错误', '2', 2, 1, 'danger', 0),
+('login_result', '账号不存在', '3', 3, 1, 'warning', 0),
+('login_result', '账号禁用', '4', 4, 1, 'warning', 0),
+('login_result', '账号冻结', '5', 5, 1, 'warning', 0),
+('login_result', '账号锁定', '6', 6, 1, 'warning', 0),
+('login_result', '验证码错误', '7', 7, 1, 'danger', 0),
+('login_result', 'Token过期', '8', 8, 1, 'info', 0),
+('notification_status', '草稿', '0', 1, 1, 'info', 1),
+('notification_status', '已推送', '1', 2, 1, 'success', 0),
+('notification_status', '已撤回', '2', 3, 1, 'warning', 0),
+('notification_status', '已归档', '3', 4, 1, '', 0),
+('msg_type', '系统公告', '1', 1, 1, '', 1),
+('msg_type', '活动通知', '2', 2, 1, 'success', 0),
+('msg_type', '维护通知', '3', 3, 1, 'warning', 0),
+('msg_type', '更新通知', '4', 4, 1, 'info', 0),
+('push_scope', '全员', '1', 1, 1, '', 1),
+('push_scope', '指定用户', '2', 2, 1, 'primary', 0),
+('push_scope', '指定角色', '3', 3, 1, 'warning', 0),
+('push_type', '立即推送', '1', 1, 1, 'success', 1),
+('push_type', '定时推送', '2', 2, 1, 'warning', 0),
+('balance_op_type', '增加', '1', 1, 1, 'success', 1),
+('balance_op_type', '扣减', '2', 2, 1, 'danger', 0),
+('balance_op_type', '设定', '3', 3, 1, 'primary', 0);

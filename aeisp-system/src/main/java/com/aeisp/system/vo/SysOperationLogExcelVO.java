@@ -21,6 +21,9 @@ public class SysOperationLogExcelVO implements Serializable {
     @ExcelProperty("操作人")
     private String operatorUsername;
 
+    @ExcelProperty("角色")
+    private String roleName;
+
     @ExcelProperty("操作模块")
     private String operationType;
 

@@ -40,6 +40,11 @@ public class SysOperationLog {
     private String operatorUsername;
 
     /**
+     * 操作人角色名（冗余存储）。
+     */
+    private String roleName;
+
+    /**
      * 操作类型编码，如 {@code UPDATE_USER_STATUS}。
      */
     private String operationType;

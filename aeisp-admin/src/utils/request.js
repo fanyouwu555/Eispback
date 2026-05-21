@@ -41,6 +41,10 @@ function addRefreshSubscriber(cb) {
 
 service.interceptors.response.use(
   response => {
+    // Blob 响应直接返回数据，不按 JSON 解析
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     const res = response.data
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')

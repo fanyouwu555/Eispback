@@ -3,7 +3,12 @@ package com.aeisp.system.aspect;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.entity.SysOperationLog;
+import com.aeisp.system.entity.SysRole;
+import com.aeisp.system.entity.SysUserRole;
+import com.aeisp.system.mapper.SysRoleMapper;
+import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.system.service.SysOperationLogService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +26,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 操作日志 AOP 切面。
@@ -38,6 +45,8 @@ public class OperationLogAspect {
 
     private final SysOperationLogService sysOperationLogService;
     private final ObjectMapper objectMapper;
+    private final SysUserRoleMapper sysUserRoleMapper;
+    private final SysRoleMapper sysRoleMapper;
 
     @Pointcut("@annotation(com.aeisp.system.annotation.OperationLog)")
     public void operationLogPointcut() {
@@ -124,6 +133,25 @@ public class OperationLogAspect {
                     // principal 没有 getUserId 方法，忽略
                 } catch (Exception e) {
                     log.warn("获取 userId 失败: {}", e.getMessage());
+                }
+
+                // 查询用户角色名
+                if (logEntity.getUserId() != null) {
+                    try {
+                        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                                new LambdaQueryWrapper<SysUserRole>()
+                                        .eq(SysUserRole::getUserId, logEntity.getUserId()));
+                        if (!userRoles.isEmpty()) {
+                            List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).toList();
+                            List<SysRole> roles = sysRoleMapper.selectList(
+                                    new LambdaQueryWrapper<SysRole>()
+                                            .in(SysRole::getId, roleIds));
+                            String roleNames = roles.stream().map(SysRole::getRoleName).collect(Collectors.joining(", "));
+                            logEntity.setRoleName(roleNames);
+                        }
+                    } catch (Exception e) {
+                        log.warn("获取用户角色失败: {}", e.getMessage());
+                    }
                 }
             }
 

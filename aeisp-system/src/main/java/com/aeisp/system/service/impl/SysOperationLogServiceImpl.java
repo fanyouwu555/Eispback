@@ -76,6 +76,9 @@ public class SysOperationLogServiceImpl implements SysOperationLogService {
         if (request.getStatus() != null) {
             wrapper.eq(SysOperationLog::getStatus, request.getStatus());
         }
+        if (StringUtils.hasText(request.getOperationType())) {
+            wrapper.like(SysOperationLog::getOperationTypeLabel, request.getOperationType());
+        }
         if (request.getStartTime() != null) {
             wrapper.ge(SysOperationLog::getCreatedAt, request.getStartTime());
         }
@@ -91,6 +94,7 @@ public class SysOperationLogServiceImpl implements SysOperationLogService {
         vo.setId(log.getId());
         vo.setUserId(log.getUserId());
         vo.setOperatorUsername(log.getOperatorUsername());
+        vo.setRoleName(log.getRoleName());
         vo.setOperationType(log.getOperationType());
         vo.setOperationTypeLabel(log.getOperationTypeLabel());
         vo.setTargetType(log.getTargetType());
@@ -113,6 +117,7 @@ public class SysOperationLogServiceImpl implements SysOperationLogService {
         SysOperationLogExcelVO vo = new SysOperationLogExcelVO();
         vo.setId(log.getId());
         vo.setOperatorUsername(log.getOperatorUsername());
+        vo.setRoleName(log.getRoleName());
         vo.setOperationType(log.getOperationType());
         vo.setOperationTypeLabel(log.getOperationTypeLabel());
         vo.setRequestMethod(log.getRequestMethod());

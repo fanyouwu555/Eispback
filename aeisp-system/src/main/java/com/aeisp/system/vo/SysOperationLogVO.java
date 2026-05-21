@@ -34,6 +34,11 @@ public class SysOperationLogVO implements Serializable {
     private String operatorUsername;
 
     /**
+     * 操作人角色名。
+     */
+    private String roleName;
+
+    /**
      * 操作类型编码。
      */
     private String operationType;

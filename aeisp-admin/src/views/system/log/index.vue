@@ -7,18 +7,35 @@
       <el-form-item label="所属模块" prop="module">
         <el-input v-model="queryParams.module" placeholder="请输入模块名称" clearable />
       </el-form-item>
+      <el-form-item label="操作类型" prop="operationType">
+        <el-select v-model="queryParams.operationType" clearable placeholder="请选择">
+          <el-option label="新增" value="新增" />
+          <el-option label="编辑" value="编辑" />
+          <el-option label="删除" value="删除" />
+          <el-option label="导出" value="导出" />
+          <el-option label="配置" value="配置" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="结果" prop="status">
+        <el-select v-model="queryParams.status" clearable placeholder="请选择">
+          <el-option label="成功" :value="1" />
+          <el-option label="失败" :value="0" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="操作时间">
-        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD HH:mm:ss" />
+        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+        <el-button icon="Download" @click="handleExport">导出</el-button>
       </el-form-item>
     </el-form>
 
     <el-table v-loading="loading" :data="logList" border>
       <el-table-column type="index" width="50" />
       <el-table-column label="操作人" prop="operatorUsername" width="120" />
+      <el-table-column label="角色" prop="roleName" width="120" />
       <el-table-column label="操作对象" width="130">
         <template #default="{ row }">
           <span>{{ row.targetType ? row.targetType + (row.targetId ? '#' + row.targetId : '') : '-' }}</span>
@@ -46,6 +63,7 @@
     <el-dialog v-model="detailOpen" title="操作详情" width="650px">
       <el-form label-width="100px">
         <el-form-item label="操作人">{{ detailRow?.operatorUsername }}</el-form-item>
+        <el-form-item label="角色">{{ detailRow?.roleName || '-' }}</el-form-item>
         <el-form-item label="请求方法">
           <el-tag>{{ detailRow?.requestMethod || '-' }}</el-tag>
         </el-form-item>
@@ -73,7 +91,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { listLogs } from '@/api/system'
+import { listLogs, exportLogs } from '@/api/system'
 import Pagination from '@/components/Pagination.vue'
 
 const loading = ref(false)
@@ -88,7 +106,9 @@ const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
   username: undefined,
-  module: undefined
+  module: undefined,
+  operationType: undefined,
+  status: undefined
 })
 
 function formatJson(val) {
@@ -114,12 +134,14 @@ async function getList(pagination = null) {
     }
     const params = { ...queryParams }
     if (dateRange.value && dateRange.value.length === 2) {
-      params.startTime = dateRange.value[0]
-      params.endTime = dateRange.value[1]
+      params.startTime = dateRange.value[0] + ' 00:00:00'
+      params.endTime = dateRange.value[1] + ' 23:59:59'
     }
     const res = await listLogs(params)
     logList.value = res.list || []
     total.value = res.total || 0
+  } catch (e) {
+    console.error('获取操作日志失败:', e)
   } finally {
     loading.value = false
   }
@@ -134,6 +156,26 @@ function resetQuery() {
   queryRef.value?.resetFields()
   dateRange.value = []
   handleQuery()
+}
+
+async function handleExport() {
+  const params = { ...queryParams }
+  if (dateRange.value && dateRange.value.length === 2) {
+    params.startTime = dateRange.value[0] + ' 00:00:00'
+    params.endTime = dateRange.value[1] + ' 23:59:59'
+  }
+  try {
+    const res = await exportLogs(params)
+    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `操作日志_${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '')}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    console.error('导出失败:', e)
+  }
 }
 
 onMounted(getList)

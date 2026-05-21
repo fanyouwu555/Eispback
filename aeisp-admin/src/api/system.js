@@ -40,6 +40,9 @@ export function listPermissions(params) {
 export function listLogs(params) {
   return request.get('/system/logs', { params })
 }
+export function exportLogs(params) {
+  return request.get('/system/logs/export', { params, responseType: 'blob' })
+}
 
 // 系统配置
 export function listConfigs(params) {
