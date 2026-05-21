@@ -47,6 +47,7 @@ redis_data/
 
 # Frontend build output
 aeisp-admin/dist/
+aeisp-boot/src/main/resources/static/
 
 # Test screenshots and snapshots
 admin-*.png
