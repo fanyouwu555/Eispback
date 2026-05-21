@@ -26,8 +26,9 @@
         </el-form-item>
       </el-form>
 
-      <el-row class="mb-2">
+      <el-row class="mb-2" justify="space-between">
         <el-button type="primary" plain icon="Plus" @click="handleAddType">新增类型</el-button>
+        <el-button type="warning" plain icon="Refresh" @click="handleRefreshCache">刷新缓存</el-button>
       </el-row>
 
       <el-table v-loading="typeLoading" :data="typeList" highlight-current-row @row-click="handleRowClick" stripe>
@@ -175,7 +176,10 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listDictTypes, createDictType, updateDictType, deleteDictType, listDictData, createDictData, updateDictData, deleteDictData } from '@/api/system/dict'
+import { useDictStore } from '@/stores/dict'
 import Pagination from '@/components/Pagination.vue'
+
+const dictStore = useDictStore()
 
 // 字典类型
 const typeLoading = ref(false)
@@ -275,6 +279,18 @@ async function submitTypeForm() {
 
 function resetTypeForm() {
   typeFormRef.value?.resetFields()
+}
+
+async function handleRefreshCache() {
+  try {
+    await dictStore.refreshAll()
+    ElMessage.success('字典缓存已刷新')
+    if (currentType.value) {
+      await loadDictData(currentType.value.dictCode)
+    }
+  } catch (e) {
+    ElMessage.error('刷新失败')
+  }
 }
 
 function handleDeleteType(row) {
