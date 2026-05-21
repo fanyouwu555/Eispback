@@ -7,8 +7,12 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="套餐状态" clearable style="width: 120px">
-          <el-option label="上架" :value="1" />
-          <el-option label="下架" :value="0" />
+          <el-option
+            v-for="item in packageStatusOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="Number(item.itemValue)"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -35,8 +39,9 @@
       <el-table-column prop="sortOrder" label="排序" width="70" align="center" />
       <el-table-column prop="status" label="状态" width="80" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.status === 1" type="success" size="small">上架</el-tag>
-          <el-tag v-else type="danger" size="small">下架</el-tag>
+          <el-tag :type="packageStatusColor(row.status) || 'primary'" size="small">
+            {{ packageStatusLabel(row.status) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="160" align="center" fixed="right">
@@ -71,8 +76,9 @@
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
-            <el-radio :value="1">上架</el-radio>
-            <el-radio :value="0">下架</el-radio>
+            <el-radio v-for="item in packageStatusOptions" :key="item.itemValue" :value="Number(item.itemValue)">
+              {{ item.itemLabel }}
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="优惠活动" prop="promotion">
@@ -91,7 +97,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listPackages, getPackage, createPackage, updatePackage, deletePackage } from '@/api/recharge'
+import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: packageStatusOptions, label: packageStatusLabel, color: packageStatusColor } = useDict('package_status')
 
 const loading = ref(false)
 const packageList = ref([])

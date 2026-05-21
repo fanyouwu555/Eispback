@@ -12,10 +12,12 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="订单状态" clearable style="width: 130px">
-          <el-option label="待支付" :value="0" />
-          <el-option label="已支付" :value="1" />
-          <el-option label="已退款" :value="2" />
-          <el-option label="已取消" :value="3" />
+          <el-option
+            v-for="item in orderStatusOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="Number(item.itemValue)"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -40,10 +42,9 @@
       </el-table-column>
       <el-table-column prop="status" label="状态" width="90" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.status === 0" type="warning" size="small">待支付</el-tag>
-          <el-tag v-else-if="row.status === 1" type="success" size="small">已支付</el-tag>
-          <el-tag v-else-if="row.status === 2" type="danger" size="small">已退款</el-tag>
-          <el-tag v-else type="info" size="small">已取消</el-tag>
+          <el-tag :type="orderStatusColor(row.status) || 'primary'" size="small">
+            {{ orderStatusLabel(row.status) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="orderTime" label="购买时间" width="170" align="center" />
@@ -60,7 +61,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { listOrders } from '@/api/recharge'
+import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: orderStatusOptions, label: orderStatusLabel, color: orderStatusColor } = useDict('order_status')
 
 const loading = ref(false)
 const orderList = ref([])

@@ -10,8 +10,12 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="会话状态" clearable style="width: 130px">
-          <el-option label="进行中" :value="1" />
-          <el-option label="已归档" :value="2" />
+          <el-option
+            v-for="item in sessionStatusOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="Number(item.itemValue)"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -32,8 +36,9 @@
       <el-table-column prop="totalTokens" label="Token数" width="90" align="center" />
       <el-table-column prop="status" label="状态" width="90" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.status === 1" type="primary" size="small">进行中</el-tag>
-          <el-tag v-else type="info" size="small">已归档</el-tag>
+          <el-tag :type="sessionStatusColor(row.status) || 'primary'" size="small">
+            {{ sessionStatusLabel(row.status) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="startedAt" label="开始时间" width="170" align="center" />
@@ -65,8 +70,9 @@
           <el-descriptions-item label="用户ID">{{ currentSession.userId }}</el-descriptions-item>
           <el-descriptions-item label="模型">{{ currentSession.modelName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag v-if="currentSession.status === 1" type="primary" size="small">进行中</el-tag>
-            <el-tag v-else type="info" size="small">已归档</el-tag>
+            <el-tag :type="sessionStatusColor(currentSession.status) || 'primary'" size="small">
+              {{ sessionStatusLabel(currentSession.status) }}
+            </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="消息数">{{ currentSession.messageCount }}</el-descriptions-item>
           <el-descriptions-item label="Token总数">{{ currentSession.totalTokens }}</el-descriptions-item>
@@ -98,7 +104,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listAiSessions, getAiSession, listAiMessages, archiveAiSession, deleteAiSession } from '@/api/ai'
+import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: sessionStatusOptions, label: sessionStatusLabel, color: sessionStatusColor } = useDict('session_status')
 
 const loading = ref(false)
 const sessionList = ref([])

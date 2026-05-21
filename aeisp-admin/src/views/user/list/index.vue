@@ -10,10 +10,12 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择" clearable>
-          <el-option label="正常" :value="1" />
-          <el-option label="禁用" :value="2" />
-          <el-option label="冻结" :value="3" />
-          <el-option label="锁定" :value="4" />
+          <el-option
+            v-for="item in userStatusOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="Number(item.itemValue)"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="比赛用户" prop="isCompetition">
@@ -108,10 +110,12 @@
         <el-form-item label="邮箱"><el-input v-model="form.email" /></el-form-item>
         <el-form-item label="状态">
           <el-select v-model="form.status">
-            <el-option label="正常" :value="1" />
-            <el-option label="禁用" :value="2" />
-            <el-option label="冻结" :value="3" />
-            <el-option label="锁定" :value="4" />
+            <el-option
+              v-for="item in userStatusOptions"
+              :key="item.itemValue"
+              :label="item.itemLabel"
+              :value="Number(item.itemValue)"
+            />
           </el-select>
         </el-form-item>
         <el-form-item v-if="form.status !== form.originalStatus" label="管理员密码">
@@ -145,9 +149,12 @@
       <el-form :model="durationForm" label-width="80px">
         <el-form-item label="调整类型">
           <el-select v-model="durationForm.adjustType">
-            <el-option label="增加" :value="1" />
-            <el-option label="扣减" :value="2" />
-            <el-option label="设定" :value="3" />
+            <el-option
+              v-for="item in balanceOpOptions"
+              :key="item.itemValue"
+              :label="item.itemLabel"
+              :value="Number(item.itemValue)"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="调整数值">
@@ -311,10 +318,17 @@
             </el-table-column>
             <el-table-column label="IP地址" prop="ipAddress" width="130" />
             <el-table-column label="设备类型" prop="deviceType" width="120" />
-            <el-table-column label="结果" width="80">
+            <el-table-column label="结果" width="120">
               <template #default="{ row }">
                 <el-tag v-if="row.loginResult === 1" size="small" type="success">成功</el-tag>
-                <el-tag v-else size="small" type="danger">失败</el-tag>
+                <el-tag v-else-if="row.loginResult === 2" size="small" type="danger">密码错误</el-tag>
+                <el-tag v-else-if="row.loginResult === 3" size="small" type="warning">账号不存在</el-tag>
+                <el-tag v-else-if="row.loginResult === 4" size="small" type="warning">账号禁用</el-tag>
+                <el-tag v-else-if="row.loginResult === 5" size="small" type="warning">账号冻结</el-tag>
+                <el-tag v-else-if="row.loginResult === 6" size="small" type="warning">账号锁定</el-tag>
+                <el-tag v-else-if="row.loginResult === 7" size="small" type="danger">验证码错误</el-tag>
+                <el-tag v-else-if="row.loginResult === 8" size="small" type="info">Token过期</el-tag>
+                <el-tag v-else size="small" type="info">未知</el-tag>
               </template>
             </el-table-column>
           </el-table>
@@ -386,7 +400,13 @@ import { getUserPermissions, updateUserPermissions, getPermissionKeys } from '@/
 import { listOrders } from '@/api/recharge'
 import { listProjects } from '@/api/project'
 import { listAiSessions } from '@/api/ai'
+import { useDict } from '@/composables/useDict'
+import { useDictStore } from '@/stores/dict'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: userStatusOptions } = useDict('user_status')
+const { options: balanceOpOptions } = useDict('balance_op_type')
+const dictStore = useDictStore()
 
 const loading = ref(false)
 const userList = ref([])
@@ -454,18 +474,11 @@ const permKeys = ref([])
 const permValues = reactive({})
 const permExpireAt = ref(null)
 
-const statusMap = {
-  1: { label: '正常', type: 'success' },
-  2: { label: '禁用', type: 'danger' },
-  3: { label: '冻结', type: 'warning' },
-  4: { label: '锁定', type: 'info' }
-}
-
 function getStatusLabel(status) {
-  return statusMap[status]?.label || '未知'
+  return dictStore.getDictLabel('user_status', status) || '未知'
 }
 function getStatusType(status) {
-  return statusMap[status]?.type || 'info'
+  return dictStore.getDictColor('user_status', status) || 'info'
 }
 
 function onRegisterTimeChange(range) {

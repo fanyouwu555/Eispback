@@ -7,9 +7,12 @@
       </el-form-item>
       <el-form-item label="模型类型" prop="modelType">
         <el-select v-model="queryParams.modelType" placeholder="模型类型" clearable style="width: 140px">
-          <el-option label="通用" value="general" />
-          <el-option label="代码优化" value="code_opt" />
-          <el-option label="仿生适配" value="bio_adapt" />
+          <el-option
+            v-for="item in modelTypeOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="item.itemValue"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="status">
@@ -31,10 +34,9 @@
       <el-table-column prop="modelName" label="模型名称" min-width="130" />
       <el-table-column prop="modelType" label="类型" width="100" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.modelType === 'general'" type="primary" size="small">通用</el-tag>
-          <el-tag v-else-if="row.modelType === 'code_opt'" type="success" size="small">代码优化</el-tag>
-          <el-tag v-else-if="row.modelType === 'bio_adapt'" type="warning" size="small">仿生适配</el-tag>
-          <span v-else>{{ row.modelType }}</span>
+          <el-tag :type="modelTypeColor(row.modelType) || 'primary'" size="small">
+            {{ modelTypeLabel(row.modelType) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="80" align="center">
@@ -78,9 +80,12 @@
         </el-form-item>
         <el-form-item label="模型类型" prop="modelType">
           <el-select v-model="form.modelType" style="width: 200px">
-            <el-option label="通用" value="general" />
-            <el-option label="代码优化" value="code_opt" />
-            <el-option label="仿生适配" value="bio_adapt" />
+            <el-option
+              v-for="item in modelTypeOptions"
+              :key="item.itemValue"
+              :label="item.itemLabel"
+              :value="item.itemValue"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="API地址" prop="apiEndpoint">
@@ -139,10 +144,9 @@
           <el-descriptions-item label="ID">{{ currentDetail.id }}</el-descriptions-item>
           <el-descriptions-item label="模型名称">{{ currentDetail.modelName }}</el-descriptions-item>
           <el-descriptions-item label="模型类型">
-            <el-tag v-if="currentDetail.modelType === 'general'" type="primary" size="small">通用</el-tag>
-            <el-tag v-else-if="currentDetail.modelType === 'code_opt'" type="success" size="small">代码优化</el-tag>
-            <el-tag v-else-if="currentDetail.modelType === 'bio_adapt'" type="warning" size="small">仿生适配</el-tag>
-            <span v-else>{{ currentDetail.modelType }}</span>
+            <el-tag :type="modelTypeColor(currentDetail.modelType) || 'primary'" size="small">
+              {{ modelTypeLabel(currentDetail.modelType) }}
+            </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag v-if="currentDetail.status === 1" type="success" size="small">启用</el-tag>
@@ -183,6 +187,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listModels, getModel, createModel, updateModel, deleteModel, toggleModelStatus, testModel } from '@/api/model'
+import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
 
 const loading = ref(false)
@@ -223,6 +228,8 @@ const form = reactive({
 })
 
 const testForm = reactive({ testInput: '' })
+
+const { options: modelTypeOptions, label: modelTypeLabel, color: modelTypeColor } = useDict('model_type')
 
 const formRules = {
   modelName: [{ required: true, message: '模型名称不能为空', trigger: 'blur' }],

@@ -3,10 +3,12 @@
     <el-form :model="queryParams" ref="queryRef" :inline="true">
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" clearable placeholder="请选择">
-          <el-option label="草稿" :value="0" />
-          <el-option label="已推送" :value="1" />
-          <el-option label="已撤回" :value="2" />
-          <el-option label="已归档" :value="3" />
+          <el-option
+            v-for="item in notificationStatusOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="Number(item.itemValue)"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间">
@@ -31,7 +33,7 @@
       <el-table-column label="推送范围" prop="pushScopeLabel" width="100" />
       <el-table-column label="状态" align="center" width="80">
         <template #default="{ row }">
-          <el-tag :type="statusType(row.status)">{{ row.statusLabel }}</el-tag>
+          <el-tag :type="notificationStatusColor(row.status) || 'info'">{{ row.statusLabel }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="推送时间" prop="pushTime" width="170" />
@@ -65,17 +67,22 @@
         </el-form-item>
         <el-form-item label="消息类型" prop="msgType">
           <el-select v-model="form.msgType">
-            <el-option label="系统公告" :value="1" />
-            <el-option label="活动通知" :value="2" />
-            <el-option label="维护通知" :value="3" />
-            <el-option label="更新通知" :value="4" />
+            <el-option
+              v-for="item in msgTypeOptions"
+              :key="item.itemValue"
+              :label="item.itemLabel"
+              :value="Number(item.itemValue)"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="推送范围" prop="pushScope">
           <el-select v-model="form.pushScope">
-            <el-option label="全员" :value="1" />
-            <el-option label="指定用户" :value="2" />
-            <el-option label="指定角色" :value="3" />
+            <el-option
+              v-for="item in pushScopeOptions"
+              :key="item.itemValue"
+              :label="item.itemLabel"
+              :value="Number(item.itemValue)"
+            />
           </el-select>
         </el-form-item>
         <el-form-item v-if="form.pushScope && form.pushScope !== 1" label="推送目标">
@@ -83,8 +90,12 @@
         </el-form-item>
         <el-form-item label="推送方式" prop="pushType">
           <el-select v-model="form.pushType">
-            <el-option label="立即推送" :value="1" />
-            <el-option label="定时推送" :value="2" />
+            <el-option
+              v-for="item in pushTypeOptions"
+              :key="item.itemValue"
+              :label="item.itemLabel"
+              :value="Number(item.itemValue)"
+            />
           </el-select>
         </el-form-item>
         <el-form-item v-if="form.pushType === 2" label="定时时间" prop="pushTime">
@@ -108,7 +119,7 @@
       <el-form label-width="100px">
         <el-form-item label="标题">{{ detail?.title }}</el-form-item>
         <el-form-item label="类型">{{ detail?.msgTypeLabel }}</el-form-item>
-        <el-form-item label="状态"><el-tag :type="statusType(detail?.status)">{{ detail?.statusLabel }}</el-tag></el-form-item>
+        <el-form-item label="状态"><el-tag :type="notificationStatusColor(detail?.status) || 'info'">{{ detail?.statusLabel }}</el-tag></el-form-item>
         <el-form-item label="推送范围">{{ detail?.pushScopeLabel }}</el-form-item>
         <el-form-item label="推送方式">{{ detail?.pushTypeLabel }}</el-form-item>
         <el-form-item label="推送时间">{{ detail?.pushTime || '-' }}</el-form-item>
@@ -131,7 +142,13 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listNotifications, getNotification, createNotification, pushNotification, revokeNotification, archiveNotification, toggleTop } from '@/api/message'
+import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: notificationStatusOptions, label: notificationStatusLabel, color: notificationStatusColor } = useDict('notification_status')
+const { options: msgTypeOptions } = useDict('msg_type')
+const { options: pushScopeOptions } = useDict('push_scope')
+const { options: pushTypeOptions } = useDict('push_type')
 
 const loading = ref(false)
 const list = ref([])
@@ -166,11 +183,6 @@ const rules = {
   msgType: [{ required: true, message: '请选择消息类型', trigger: 'change' }],
   pushScope: [{ required: true, message: '请选择推送范围', trigger: 'change' }],
   pushType: [{ required: true, message: '请选择推送方式', trigger: 'change' }]
-}
-
-function statusType(status) {
-  const map = { 0: 'info', 1: 'success', 2: 'warning', 3: '' }
-  return map[status] || 'info'
 }
 
 async function getList(pagination = null) {

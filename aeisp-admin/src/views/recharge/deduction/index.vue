@@ -7,9 +7,12 @@
       </el-form-item>
       <el-form-item label="消耗类型" prop="consumeType">
         <el-select v-model="queryParams.consumeType" placeholder="消耗类型" clearable style="width: 140px">
-          <el-option label="模型调用" value="model_call" />
-          <el-option label="仿真运行" value="sim_run" />
-          <el-option label="编译调试" value="debug" />
+          <el-option
+            v-for="item in deductionTypeOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="item.itemValue"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="时间范围">
@@ -75,10 +78,9 @@
       <el-table-column prop="consumeTime" label="消耗时间" width="170" align="center" />
       <el-table-column prop="consumeType" label="消耗类型" width="110" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.consumeType === 'model_call'" type="primary" size="small">模型调用</el-tag>
-          <el-tag v-else-if="row.consumeType === 'sim_run'" type="success" size="small">仿真运行</el-tag>
-          <el-tag v-else-if="row.consumeType === 'debug'" type="warning" size="small">编译调试</el-tag>
-          <span v-else>{{ row.consumeType }}</span>
+          <el-tag :type="deductionTypeColor(row.consumeType) || 'primary'" size="small">
+            {{ deductionTypeLabel(row.consumeType) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="consumeDuration" label="消耗时长" width="100" align="center">
@@ -100,7 +102,10 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { getDurationStats, listDurationConsumes } from '@/api/recharge'
+import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: deductionTypeOptions, label: deductionTypeLabel, color: deductionTypeColor } = useDict('deduction_type')
 
 const loading = ref(false)
 const consumeList = ref([])

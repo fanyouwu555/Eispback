@@ -10,9 +10,12 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="项目状态" clearable style="width: 140px">
-          <el-option label="进行中" :value="0" />
-          <el-option label="已完成" :value="1" />
-          <el-option label="已归档" :value="2" />
+          <el-option
+            v-for="item in projectStatusOptions"
+            :key="item.itemValue"
+            :label="item.itemLabel"
+            :value="Number(item.itemValue)"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间">
@@ -50,10 +53,9 @@
       </el-table-column>
       <el-table-column prop="status" label="状态" width="100" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.status === 0" type="primary" size="small">{{ row.statusLabel }}</el-tag>
-          <el-tag v-else-if="row.status === 1" type="success" size="small">{{ row.statusLabel }}</el-tag>
-          <el-tag v-else-if="row.status === 2" type="info" size="small">{{ row.statusLabel }}</el-tag>
-          <span v-else>{{ row.statusLabel }}</span>
+          <el-tag :type="projectStatusColor(row.status) || 'primary'" size="small">
+            {{ row.statusLabel || projectStatusLabel(row.status) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="createdAt" label="创建时间" width="170" align="center" />
@@ -105,7 +107,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listProjects, getProject, archiveProject, deleteProject } from '@/api/project'
+import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: projectStatusOptions, label: projectStatusLabel, color: projectStatusColor } = useDict('project_status')
 
 const loading = ref(false)
 const projectList = ref([])
