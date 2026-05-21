@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { constantRoutes, asyncRoutes } from './routes'
+import { constantRoutes, supplementRoutes } from './routes'
 import { useUserStore } from '@/stores/user'
+import { useMenuStore } from '@/stores/menu'
 import { getToken } from '@/utils/auth'
 
 const router = createRouter({
@@ -20,12 +21,24 @@ router.beforeEach(async (to, from, next) => {
       if (!isRoutesAdded) {
         try {
           const userStore = useUserStore()
+          const menuStore = useMenuStore()
+
+          // 1. 获取用户信息
           await userStore.getInfo()
-          asyncRoutes.forEach(route => {
-            if (!router.hasRoute(route.name)) {
-              router.addRoute(route)
-            }
-          })
+
+          // 2. 获取后端菜单树并生成动态路由
+          await menuStore.fetchRoutes()
+
+          // 3. 注册动态路由
+          for (const route of menuStore.dynamicRoutes) {
+            router.addRoute(route)
+          }
+
+          // 4. 注册补充路由
+          for (const route of supplementRoutes) {
+            router.addRoute(route)
+          }
+
           isRoutesAdded = true
           next({ ...to, replace: true })
         } catch {

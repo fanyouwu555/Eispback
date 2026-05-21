@@ -24,14 +24,15 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { asyncRoutes } from '@/router/routes'
 import { useAppStore } from '@/stores/app'
+import { useMenuStore } from '@/stores/menu'
 import SidebarItem from './SidebarItem.vue'
 
 const route = useRoute()
 const appStore = useAppStore()
+const menuStore = useMenuStore()
 
-const routes = computed(() => asyncRoutes)
+const routes = computed(() => menuStore.dynamicRoutes)
 
 const activeMenu = computed(() => {
   const { meta, path } = route
