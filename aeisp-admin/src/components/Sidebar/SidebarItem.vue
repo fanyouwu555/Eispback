@@ -30,16 +30,27 @@
 <script setup>
 import { ref } from 'vue'
 import Link from './Link.vue'
+import { useUserStore } from '@/stores/user'
 
 const props = defineProps({
   item: { type: Object, required: true },
   basePath: { type: String, default: '' }
 })
 
+const userStore = useUserStore()
 const onlyOneChild = ref(null)
 
 function hasOneShowingChild(children = [], parent) {
-  const showingChildren = children.filter(item => !item.hidden)
+  const showingChildren = children.filter(item => {
+    if (item.hidden) return false
+    // 权限检查：meta.permissions 不为空时，用户必须有其一
+    const perms = item.meta?.permissions
+    if (perms && perms.length > 0) {
+      const userPermissions = userStore.permissions || []
+      if (!perms.some(p => userPermissions.includes(p))) return false
+    }
+    return true
+  })
   if (showingChildren.length === 0) {
     onlyOneChild.value = { ...parent, path: '', noShowingChildren: true }
     return true
