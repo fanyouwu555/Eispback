@@ -1,6 +1,5 @@
 package com.aeisp.system.service;
 
-import com.aeisp.system.dto.DictDataQueryRequest;
 import com.aeisp.system.entity.SysDictData;
 import com.aeisp.system.vo.DictDataVO;
 
@@ -17,6 +16,4 @@ public interface DictDataService {
     boolean updateData(SysDictData dictData);
 
     boolean deleteData(Long id);
-
-    List<DictDataVO> listByDictCodeWithPage(String dictCode);
 }

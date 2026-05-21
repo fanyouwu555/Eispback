@@ -1,5 +1,6 @@
 package com.aeisp.system.service.impl;
 
+import com.aeisp.common.constant.CacheConstants;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.entity.SysDictData;
 import com.aeisp.system.mapper.SysDictDataMapper;
@@ -7,10 +8,15 @@ import com.aeisp.system.service.DictDataService;
 import com.aeisp.system.vo.DictDataVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -18,17 +24,28 @@ import java.util.List;
 public class DictDataServiceImpl implements DictDataService {
 
     private final SysDictDataMapper sysDictDataMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final Duration CACHE_TTL = Duration.ofMinutes(30);
 
     @Override
     public List<DictDataVO> listByDictCode(String dictCode) {
+        String key = CacheConstants.CACHE_DICT + "data:" + dictCode;
+        String cached = stringRedisTemplate.opsForValue().get(key);
+        if (cached != null) {
+            return fromJson(cached);
+        }
         LambdaQueryWrapper<SysDictData> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(SysDictData::getDeleted, CommonConstants.DELETED_NO);
         wrapper.eq(SysDictData::getDictCode, dictCode);
         wrapper.orderByAsc(SysDictData::getSortOrder);
         wrapper.orderByAsc(SysDictData::getId);
-        return sysDictDataMapper.selectList(wrapper).stream()
+        List<DictDataVO> result = sysDictDataMapper.selectList(wrapper).stream()
                 .map(DictDataServiceImpl::convertToVO)
                 .toList();
+        stringRedisTemplate.opsForValue().set(key, toJson(result), CACHE_TTL);
+        return result;
     }
 
     @Override
@@ -39,24 +56,50 @@ public class DictDataServiceImpl implements DictDataService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean createData(SysDictData dictData) {
-        return sysDictDataMapper.insert(dictData) > 0;
+        boolean success = sysDictDataMapper.insert(dictData) > 0;
+        if (success && dictData.getDictCode() != null) {
+            evictDataCache(dictData.getDictCode());
+        }
+        return success;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateData(SysDictData dictData) {
-        return sysDictDataMapper.updateById(dictData) > 0;
+        SysDictData existing = sysDictDataMapper.selectById(dictData.getId());
+        boolean success = sysDictDataMapper.updateById(dictData) > 0;
+        if (success) {
+            String code = dictData.getDictCode() != null ? dictData.getDictCode() : (existing != null ? existing.getDictCode() : null);
+            if (code != null) {
+                evictDataCache(code);
+            }
+        }
+        return success;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteData(Long id) {
-        return sysDictDataMapper.deleteById(id) > 0;
+        SysDictData existing = sysDictDataMapper.selectById(id);
+        boolean success = sysDictDataMapper.deleteById(id) > 0;
+        if (success && existing != null && existing.getDictCode() != null) {
+            evictDataCache(existing.getDictCode());
+        }
+        return success;
     }
 
-    @Override
-    public List<DictDataVO> listByDictCodeWithPage(String dictCode) {
-        return listByDictCode(dictCode);
+    void evictDataCache(String dictCode) {
+        stringRedisTemplate.delete(CacheConstants.CACHE_DICT + "data:" + dictCode);
+    }
+
+    @SneakyThrows
+    private String toJson(Object obj) {
+        return objectMapper.writeValueAsString(obj);
+    }
+
+    @SneakyThrows
+    private List<DictDataVO> fromJson(String json) {
+        return objectMapper.readValue(json, new TypeReference<List<DictDataVO>>() {});
     }
 
     static DictDataVO convertToVO(SysDictData data) {

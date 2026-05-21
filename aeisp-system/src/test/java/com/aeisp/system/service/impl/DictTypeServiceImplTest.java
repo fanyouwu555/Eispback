@@ -1,19 +1,24 @@
 package com.aeisp.system.service.impl;
 
 import com.aeisp.common.PageResult;
+import com.aeisp.common.constant.CacheConstants;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.dto.DictTypeQueryRequest;
 import com.aeisp.system.entity.SysDictData;
 import com.aeisp.system.entity.SysDictType;
 import com.aeisp.system.mapper.SysDictDataMapper;
 import com.aeisp.system.mapper.SysDictTypeMapper;
+import com.aeisp.system.vo.DictDataVO;
 import com.aeisp.system.vo.DictTypeVO;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.List;
 
@@ -28,6 +33,12 @@ class DictTypeServiceImplTest {
     private SysDictTypeMapper sysDictTypeMapper;
     @Mock
     private SysDictDataMapper sysDictDataMapper;
+    @Mock
+    private StringRedisTemplate stringRedisTemplate;
+    @Mock
+    private ValueOperations<String, String> valueOperations;
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private DictTypeServiceImpl dictTypeService;
@@ -105,9 +116,12 @@ class DictTypeServiceImplTest {
         SysDictType type = new SysDictType();
         type.setId(1L);
         type.setDictName("更新后的名称");
+        type.setDictCode("user_status");
         when(sysDictTypeMapper.updateById(type)).thenReturn(1);
+        when(stringRedisTemplate.delete(anyString())).thenReturn(true);
 
         assertTrue(dictTypeService.updateType(type));
+        verify(stringRedisTemplate).delete(CacheConstants.CACHE_DICT + "type:user_status");
     }
 
     @Test
@@ -115,10 +129,14 @@ class DictTypeServiceImplTest {
         SysDictType type = new SysDictType();
         type.setId(1L);
         type.setIsSystem(0);
+        type.setDictCode("user_status");
         when(sysDictTypeMapper.selectById(1L)).thenReturn(type);
         when(sysDictTypeMapper.deleteById(1L)).thenReturn(1);
+        when(stringRedisTemplate.delete(anyString())).thenReturn(true);
 
         assertTrue(dictTypeService.deleteType(1L));
+        verify(stringRedisTemplate).delete(CacheConstants.CACHE_DICT + "type:user_status");
+        verify(stringRedisTemplate).delete(CacheConstants.CACHE_DICT + "data:user_status");
     }
 
     @Test
@@ -133,7 +151,7 @@ class DictTypeServiceImplTest {
     }
 
     @Test
-    void testGetDictData() {
+    void testGetDictDataCacheMiss() {
         SysDictData data = new SysDictData();
         data.setId(1L);
         data.setDictCode("user_status");
@@ -142,6 +160,8 @@ class DictTypeServiceImplTest {
         data.setStatus(1);
         data.setDeleted(CommonConstants.DELETED_NO);
         when(sysDictDataMapper.selectByDictCode("user_status")).thenReturn(List.of(data));
+        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(null);
 
         var result = dictTypeService.getDictData("user_status");
         assertEquals(1, result.size());

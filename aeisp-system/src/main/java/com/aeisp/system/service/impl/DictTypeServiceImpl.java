@@ -1,6 +1,7 @@
 package com.aeisp.system.service.impl;
 
 import com.aeisp.common.PageResult;
+import com.aeisp.common.constant.CacheConstants;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.dto.DictTypeQueryRequest;
 import com.aeisp.system.entity.SysDictData;
@@ -13,10 +14,15 @@ import com.aeisp.system.vo.DictTypeVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -25,6 +31,10 @@ public class DictTypeServiceImpl implements DictTypeService {
 
     private final SysDictTypeMapper sysDictTypeMapper;
     private final SysDictDataMapper sysDictDataMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final Duration CACHE_TTL = Duration.ofMinutes(30);
 
     @Override
     public PageResult<DictTypeVO> listByPage(DictTypeQueryRequest request) {
@@ -66,7 +76,11 @@ public class DictTypeServiceImpl implements DictTypeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateType(SysDictType dictType) {
-        return sysDictTypeMapper.updateById(dictType) > 0;
+        boolean success = sysDictTypeMapper.updateById(dictType) > 0;
+        if (success && dictType.getDictCode() != null) {
+            evictTypeCache(dictType.getDictCode());
+        }
+        return success;
     }
 
     @Override
@@ -76,15 +90,45 @@ public class DictTypeServiceImpl implements DictTypeService {
         if (type != null && type.getIsSystem() != null && type.getIsSystem() == 1) {
             return false;
         }
-        return sysDictTypeMapper.deleteById(id) > 0;
+        boolean success = sysDictTypeMapper.deleteById(id) > 0;
+        if (success && type != null && type.getDictCode() != null) {
+            evictTypeCache(type.getDictCode());
+            evictDataCache(type.getDictCode());
+        }
+        return success;
     }
 
     @Override
     public List<DictDataVO> getDictData(String dictCode) {
+        String key = CacheConstants.CACHE_DICT + "data:" + dictCode;
+        String cached = stringRedisTemplate.opsForValue().get(key);
+        if (cached != null) {
+            return fromJson(cached);
+        }
         List<SysDictData> list = sysDictDataMapper.selectByDictCode(dictCode);
-        return list.stream()
+        List<DictDataVO> result = list.stream()
                 .map(DictTypeServiceImpl::convertDataToVO)
                 .toList();
+        stringRedisTemplate.opsForValue().set(key, toJson(result), CACHE_TTL);
+        return result;
+    }
+
+    void evictTypeCache(String dictCode) {
+        stringRedisTemplate.delete(CacheConstants.CACHE_DICT + "type:" + dictCode);
+    }
+
+    void evictDataCache(String dictCode) {
+        stringRedisTemplate.delete(CacheConstants.CACHE_DICT + "data:" + dictCode);
+    }
+
+    @SneakyThrows
+    private String toJson(Object obj) {
+        return objectMapper.writeValueAsString(obj);
+    }
+
+    @SneakyThrows
+    private List<DictDataVO> fromJson(String json) {
+        return objectMapper.readValue(json, new TypeReference<List<DictDataVO>>() {});
     }
 
     private LambdaQueryWrapper<SysDictType> buildWrapper(DictTypeQueryRequest request) {

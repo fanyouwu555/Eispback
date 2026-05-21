@@ -41,3 +41,8 @@ export function updateDictData(id, data) {
 export function deleteDictData(id) {
   return request.delete(`/system/dict-data/${id}`)
 }
+
+// 缓存刷新
+export function refreshDictCache() {
+  return request.post('/system/dict/refresh')
+}
