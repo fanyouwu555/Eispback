@@ -23,3 +23,7 @@ export function updateMenu(id, data) {
 export function deleteMenu(id) {
   return request.delete(`/system/menus/${id}`)
 }
+
+export function getUserRoutes() {
+  return request.get('/system/menus/routes')
+}
