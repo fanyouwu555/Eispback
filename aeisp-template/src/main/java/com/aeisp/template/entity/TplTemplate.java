@@ -85,6 +85,81 @@ public class TplTemplate extends BaseEntity {
     private Integer difficulty;
 
     /**
+     * 顶级分类 ID。
+     */
+    private Long topCategoryId;
+
+    /**
+     * 一级分类 ID。
+     */
+    private Long firstCategoryId;
+
+    /**
+     * 二级分类 ID。
+     */
+    private Long secondCategoryId;
+
+    /**
+     * 是否付费：0-免费，1-付费。
+     */
+    private Integer isPaid;
+
+    /**
+     * 费用类型。
+     */
+    private String feeType;
+
+    /**
+     * 价格（元）。
+     */
+    private java.math.BigDecimal price;
+
+    /**
+     * 上线时间。
+     */
+    private java.time.LocalDateTime onlineTime;
+
+    /**
+     * 有效截止时间。
+     */
+    private java.time.LocalDateTime validTime;
+
+    /**
+     * 创作者名称。
+     */
+    private String creator;
+
+    /**
+     * 创作时间。
+     */
+    private java.time.LocalDate produceDate;
+
+    /**
+     * 下载次数。
+     */
+    private Long downloadCount;
+
+    /**
+     * 收藏数。
+     */
+    private Long favoriteCount;
+
+    /**
+     * 访问量。
+     */
+    private Long visitCount;
+
+    /**
+     * 详细描述。
+     */
+    private String detailDesc;
+
+    /**
+     * 违规原因。
+     */
+    private String violationReason;
+
+    /**
      * 创建人 ID。
      */
     private Long createdBy;

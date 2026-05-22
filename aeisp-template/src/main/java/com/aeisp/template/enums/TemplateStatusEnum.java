@@ -11,6 +11,11 @@ import lombok.Getter;
 public enum TemplateStatusEnum {
 
     /**
+     * 正常（草稿/待上架）。
+     */
+    NORMAL(0, "正常"),
+
+    /**
      * 上架状态。
      */
     ACTIVE(1, "上架"),
@@ -18,7 +23,12 @@ public enum TemplateStatusEnum {
     /**
      * 下架状态。
      */
-    OFFLINE(2, "下架");
+    OFFLINE(2, "下架"),
+
+    /**
+     * 违规下架状态。
+     */
+    VIOLATION(3, "违规");
 
     /**
      * 状态码。
