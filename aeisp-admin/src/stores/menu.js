@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { getUserRoutes } from '@/api/system/menu'
 import { buildRoutes } from '@/utils/dynamic-routes'
 
 export const useMenuStore = defineStore('menu', () => {
-  const dynamicRoutes = ref([])
+  const dynamicRoutes = shallowRef([])
   const menuTree = ref([])
   const permissions = ref([])
 

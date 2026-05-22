@@ -42,7 +42,7 @@ mybatis-plus:
 
 jwt:
   secret: YWVpc3AtZGVmYXVsdC1zZWNyZXQta2V5LTI1Ni1iaXQtc3RyaW5nLWFlaXNwLXNlcnZlcg==
-  access-expiration: 600000      # 10分钟
+  access-expiration: 7200000      # 2小时
   refresh-expiration: 604800000   # 7天
 
 logging:
