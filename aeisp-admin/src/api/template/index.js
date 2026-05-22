@@ -66,6 +66,18 @@ export function getUserTemplateUsageLogs(userId) {
   return request.get(`/templates/usage-logs/${userId}`)
 }
 
+// ===== 封面图上传 =====
+export function uploadTemplateCover(id, data) {
+  return request.post(`/templates/${id}/cover`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+// ===== 违规标记 =====
+export function markTemplateViolation(id, reason) {
+  return request.post(`/templates/${id}/violation`, null, { params: { reason } })
+}
+
 // ===== 预览图片 =====
 export function listPreviewImages(templateId) {
   return request.get(`/templates/${templateId}/preview-images`)
