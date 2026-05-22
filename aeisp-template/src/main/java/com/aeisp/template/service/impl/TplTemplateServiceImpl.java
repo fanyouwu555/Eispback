@@ -57,8 +57,22 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setDescription(request.getDescription());
         template.setPreviewImage(request.getPreviewImage());
         template.setSortWeight(request.getSortWeight());
+        template.setTopCategoryId(request.getTopCategoryId());
+        template.setFirstCategoryId(request.getFirstCategoryId());
+        template.setSecondCategoryId(request.getSecondCategoryId());
+        template.setIsPaid(request.getIsPaid() != null ? request.getIsPaid() : 0);
+        template.setFeeType(request.getFeeType());
+        template.setPrice(request.getPrice());
+        template.setOnlineTime(parseDateTime(request.getOnlineTime()));
+        template.setValidTime(parseDateTime(request.getValidTime()));
+        template.setCreator(request.getCreator());
+        template.setProduceDate(parseDate(request.getProduceDate()));
+        template.setDetailDesc(request.getDetailDesc());
         template.setStatus(TemplateStatusEnum.OFFLINE.getCode());
         template.setUsageCount(0L);
+        template.setDownloadCount(0L);
+        template.setFavoriteCount(0L);
+        template.setVisitCount(0L);
         Long adminId = getCurrentAdminId();
         if (adminId != null) {
             template.setCreatedBy(adminId);
@@ -103,6 +117,17 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setDescription(request.getDescription());
         template.setPreviewImage(request.getPreviewImage());
         template.setSortWeight(request.getSortWeight());
+        template.setTopCategoryId(request.getTopCategoryId());
+        template.setFirstCategoryId(request.getFirstCategoryId());
+        template.setSecondCategoryId(request.getSecondCategoryId());
+        template.setIsPaid(request.getIsPaid());
+        template.setFeeType(request.getFeeType());
+        template.setPrice(request.getPrice());
+        template.setOnlineTime(parseDateTime(request.getOnlineTime()));
+        template.setValidTime(parseDateTime(request.getValidTime()));
+        template.setCreator(request.getCreator());
+        template.setProduceDate(parseDate(request.getProduceDate()));
+        template.setDetailDesc(request.getDetailDesc());
         return templateMapper.updateById(template) > 0;
     }
 
@@ -197,6 +222,10 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         wrapper.like(StringUtils.hasText(request.getTemplateName()), TplTemplate::getTemplateName, request.getTemplateName())
                 .eq(StringUtils.hasText(request.getScenario()), TplTemplate::getScenario, request.getScenario())
                 .eq(request.getStatus() != null, TplTemplate::getStatus, request.getStatus())
+                .eq(request.getTopCategoryId() != null, TplTemplate::getTopCategoryId, request.getTopCategoryId())
+                .eq(request.getFirstCategoryId() != null, TplTemplate::getFirstCategoryId, request.getFirstCategoryId())
+                .eq(request.getSecondCategoryId() != null, TplTemplate::getSecondCategoryId, request.getSecondCategoryId())
+                .eq(request.getIsPaid() != null, TplTemplate::getIsPaid, request.getIsPaid())
                 .orderByDesc(TplTemplate::getSortWeight)
                 .orderByDesc(TplTemplate::getCreatedAt);
         Page<TplTemplate> resultPage = templateMapper.selectPage(page, wrapper);
@@ -271,6 +300,17 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     }
 
     @Override
+    public boolean markViolation(Long templateId, String reason) {
+        TplTemplate template = templateMapper.selectById(templateId);
+        if (template == null) {
+            throw new BizException("模板不存在");
+        }
+        template.setStatus(TemplateStatusEnum.VIOLATION.getCode());
+        template.setViolationReason(reason);
+        return templateMapper.updateById(template) > 0;
+    }
+
+    @Override
     public Map<String, Object> getStatistics() {
         Map<String, Object> result = new HashMap<>();
 
@@ -320,6 +360,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     private TplTemplateVO convertToVO(TplTemplate template) {
         TplTemplateVO vo = new TplTemplateVO();
         BeanUtils.copyProperties(template, vo);
+        copyNewFields(template, vo);
         if (template.getCurrentVersionId() != null) {
             TplTemplateVersion version = versionMapper.selectById(template.getCurrentVersionId());
             if (version != null) {
@@ -327,6 +368,24 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             }
         }
         return vo;
+    }
+
+    private static void copyNewFields(TplTemplate source, TplTemplateVO target) {
+        target.setTopCategoryId(source.getTopCategoryId());
+        target.setFirstCategoryId(source.getFirstCategoryId());
+        target.setSecondCategoryId(source.getSecondCategoryId());
+        target.setIsPaid(source.getIsPaid());
+        target.setFeeType(source.getFeeType());
+        target.setPrice(source.getPrice());
+        target.setOnlineTime(source.getOnlineTime() != null ? source.getOnlineTime().toString() : null);
+        target.setValidTime(source.getValidTime() != null ? source.getValidTime().toString() : null);
+        target.setCreator(source.getCreator());
+        target.setProduceDate(source.getProduceDate() != null ? source.getProduceDate().toString() : null);
+        target.setDownloadCount(source.getDownloadCount());
+        target.setFavoriteCount(source.getFavoriteCount());
+        target.setVisitCount(source.getVisitCount());
+        target.setDetailDesc(source.getDetailDesc());
+        target.setViolationReason(source.getViolationReason());
     }
 
     private static TplTemplateVersionVO convertToVersionVO(TplTemplateVersion version) {
@@ -389,6 +448,28 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             return sb.toString();
         } catch (IOException | NoSuchAlgorithmException e) {
             log.warn("计算文件哈希失败", e);
+            return null;
+        }
+    }
+
+    private static java.time.LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return java.time.LocalDateTime.parse(value, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static java.time.LocalDate parseDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return java.time.LocalDate.parse(value, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (Exception e) {
             return null;
         }
     }

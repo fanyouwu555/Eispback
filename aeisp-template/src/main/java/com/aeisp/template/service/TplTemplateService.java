@@ -50,4 +50,13 @@ public interface TplTemplateService {
      * @return 统计结果
      */
     java.util.Map<String, Object> getStatistics();
+
+    /**
+     * 标记模板违规并下架。
+     *
+     * @param templateId 模板 ID
+     * @param reason 违规原因
+     * @return 是否成功
+     */
+    boolean markViolation(Long templateId, String reason);
 }
