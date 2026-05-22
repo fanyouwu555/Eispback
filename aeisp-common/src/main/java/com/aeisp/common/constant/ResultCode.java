@@ -39,6 +39,11 @@ public final class ResultCode {
     public static final int NOT_FOUND = 404;
 
     /**
+     * 请求方法不支持。
+     */
+    public static final int METHOD_NOT_ALLOWED = 405;
+
+    /**
      * 请求过于频繁（限流）。
      */
     public static final int TOO_MANY_REQUESTS = 429;

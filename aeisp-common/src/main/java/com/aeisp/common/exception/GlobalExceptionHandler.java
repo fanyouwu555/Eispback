@@ -14,10 +14,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -136,6 +138,30 @@ public class GlobalExceptionHandler {
     public Result<Void> handleMissingServletRequestParameterException(org.springframework.web.bind.MissingServletRequestParameterException e) {
         log.warn("请求参数缺失: {}", e.getMessage());
         return Result.error(ResultCode.BAD_REQUEST, "请求参数缺失: " + e.getParameterName());
+    }
+
+    /**
+     * 处理请求路径不存在异常（Spring 6 / Spring Boot 3）。
+     *
+     * @param e 资源未找到异常
+     * @return 404 标准错误响应
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public Result<Void> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("请求资源不存在: {}", e.getResourcePath());
+        return Result.error(ResultCode.NOT_FOUND, "请求资源不存在");
+    }
+
+    /**
+     * 处理请求方法不支持异常。
+     *
+     * @param e 方法不支持异常
+     * @return 405 标准错误响应
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public Result<Void> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
+        log.warn("请求方法不支持: {} {}", e.getMethod(), e.getMessage());
+        return Result.error(ResultCode.METHOD_NOT_ALLOWED, "请求方法不支持: " + e.getMethod());
     }
 
     /**
