@@ -47,7 +47,7 @@
               <el-cascader
                 v-model="form.parentId"
                 :options="treeData"
-                :props="{ value: 'id', label: 'name', children: 'children', emitPath: false }"
+                :props="{ value: 'id', label: 'name', children: 'children', emitPath: false, checkStrictly: true }"
                 placeholder="顶级分类请留空"
                 clearable
                 style="width: 100%"

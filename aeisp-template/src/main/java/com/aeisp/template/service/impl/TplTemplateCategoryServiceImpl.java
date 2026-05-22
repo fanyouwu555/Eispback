@@ -80,8 +80,7 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
                         .eq(TplTemplateCategory::getParentId, id)
                         .eq(TplTemplateCategory::getDeleted, 0));
         if (childCount > 0) throw new BizException("存在子分类，无法删除");
-        entity.setDeleted(1);
-        mapper.updateById(entity);
+        mapper.deleteById(id);
         return true;
     }
 
