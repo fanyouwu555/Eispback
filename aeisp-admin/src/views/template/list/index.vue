@@ -14,8 +14,24 @@
       </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="模板状态" clearable style="width: 120px">
-          <el-option label="上架" :value="1" />
-          <el-option label="下架" :value="2" />
+          <el-option v-for="item in templateStatusOptions" :key="item.itemValue" :label="item.itemLabel" :value="Number(item.itemValue)" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="分类" prop="categoryId">
+        <el-cascader
+          v-model="categoryPath"
+          :options="categoryTreeOptions"
+          :props="{ value: 'id', label: 'name', children: 'children', emitPath: false }"
+          placeholder="选择分类"
+          clearable
+          style="width: 200px"
+          @change="handleCategoryChange"
+        />
+      </el-form-item>
+      <el-form-item label="付费类型" prop="isPaid">
+        <el-select v-model="queryParams.isPaid" placeholder="是否付费" clearable style="width: 120px">
+          <el-option label="免费" :value="0" />
+          <el-option label="付费" :value="1" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -37,13 +53,29 @@
           <span v-else>{{ row.scenario }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="80" align="center">
+      <el-table-column prop="status" label="状态" width="90" align="center">
         <template #default="{ row }">
-          <el-tag v-if="row.status === 1" type="success" size="small">上架</el-tag>
-          <el-tag v-else type="danger" size="small">下架</el-tag>
+          <el-tag :type="templateStatusColor(row.status) || 'info'" size="small">
+            {{ templateStatusLabel(row.status) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="currentVersionNo" label="当前版本" width="100" align="center" />
+      <el-table-column prop="creator" label="创作者" width="100" align="center" />
+      <el-table-column prop="price" label="价格" width="100" align="center">
+        <template #default="{ row }">
+          <span v-if="row.isPaid === 1">¥{{ row.price }}</span>
+          <el-tag v-else type="success" size="small">免费</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="feeType" label="费用类型" width="100" align="center">
+        <template #default="{ row }">
+          {{ feeTypeLabel(row.feeType) || '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="downloadCount" label="下载" width="70" align="center" />
+      <el-table-column prop="favoriteCount" label="收藏" width="70" align="center" />
+      <el-table-column prop="visitCount" label="访问" width="70" align="center" />
       <el-table-column prop="sortWeight" label="权重" width="70" align="center" />
       <el-table-column prop="usageCount" label="使用次数" width="90" align="center" />
       <el-table-column prop="createdAt" label="创建时间" width="170" align="center" />
@@ -60,6 +92,12 @@
             @click="handleToggleStatus(row)"
             v-permission="'template:update'"
           >{{ row.status === 1 ? '下架' : '上架' }}</el-button>
+          <el-button
+            v-if="row.status !== 3"
+            type="danger" link size="small" icon="Warning"
+            @click="handleMarkViolation(row)"
+            v-permission="'template:update'"
+          >违规</el-button>
           <el-button type="danger" link size="small" icon="Delete" @click="handleDelete(row)" v-permission="'template:delete'">删除</el-button>
         </template>
       </el-table-column>
@@ -89,6 +127,46 @@
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="createForm.description" type="textarea" :rows="2" placeholder="模板描述（可选）" maxlength="500" />
+        </el-form-item>
+        <el-form-item label="详细描述" prop="detailDesc">
+          <el-input v-model="createForm.detailDesc" type="textarea" :rows="3" placeholder="详细介绍详情（可选）" maxlength="2000" />
+        </el-form-item>
+        <el-form-item label="分类" prop="categoryPath">
+          <el-cascader
+            v-model="createCategoryPath"
+            :options="categoryTreeOptions"
+            :props="{ value: 'id', label: 'name', children: 'children', emitPath: true }"
+            placeholder="选择分类"
+            clearable
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="是否付费" prop="isPaid">
+          <el-radio-group v-model="createForm.isPaid">
+            <el-radio :value="0">免费</el-radio>
+            <el-radio :value="1">付费</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="createForm.isPaid === 1" label="费用类型" prop="feeType">
+          <el-select v-model="createForm.feeType" placeholder="选择费用类型" style="width: 200px">
+            <el-option v-for="item in feeTypeOptions" :key="item.itemValue" :label="item.itemLabel" :value="item.itemValue" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="createForm.isPaid === 1" label="价格" prop="price">
+          <el-input-number v-model="createForm.price" :min="0" :precision="2" :step="1" style="width: 200px" />
+          <span class="ml-2">元</span>
+        </el-form-item>
+        <el-form-item label="上线时间" prop="onlineTime">
+          <el-date-picker v-model="createForm.onlineTime" type="datetime" placeholder="选择上线时间" style="width: 200px" value-format="YYYY-MM-DDTHH:mm:ss" />
+        </el-form-item>
+        <el-form-item label="有效截止" prop="validTime">
+          <el-date-picker v-model="createForm.validTime" type="datetime" placeholder="选择有效截止时间" style="width: 200px" value-format="YYYY-MM-DDTHH:mm:ss" />
+        </el-form-item>
+        <el-form-item label="创作者" prop="creator">
+          <el-input v-model="createForm.creator" placeholder="创作者名称" maxlength="64" style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="创作时间" prop="produceDate">
+          <el-date-picker v-model="createForm.produceDate" type="date" placeholder="选择创作时间" style="width: 200px" value-format="YYYY-MM-DD" />
         </el-form-item>
         <el-divider>初始版本</el-divider>
         <el-form-item label="版本号" prop="versionNo">
@@ -132,6 +210,46 @@
         <el-form-item label="描述" prop="description">
           <el-input v-model="editForm.description" type="textarea" :rows="3" maxlength="500" />
         </el-form-item>
+        <el-form-item label="详细描述" prop="detailDesc">
+          <el-input v-model="editForm.detailDesc" type="textarea" :rows="3" placeholder="详细介绍详情（可选）" maxlength="2000" />
+        </el-form-item>
+        <el-form-item label="分类" prop="categoryPath">
+          <el-cascader
+            v-model="editCategoryPath"
+            :options="categoryTreeOptions"
+            :props="{ value: 'id', label: 'name', children: 'children', emitPath: true }"
+            placeholder="选择分类"
+            clearable
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="是否付费" prop="isPaid">
+          <el-radio-group v-model="editForm.isPaid">
+            <el-radio :value="0">免费</el-radio>
+            <el-radio :value="1">付费</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="editForm.isPaid === 1" label="费用类型" prop="feeType">
+          <el-select v-model="editForm.feeType" placeholder="选择费用类型" style="width: 200px">
+            <el-option v-for="item in feeTypeOptions" :key="item.itemValue" :label="item.itemLabel" :value="item.itemValue" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="editForm.isPaid === 1" label="价格" prop="price">
+          <el-input-number v-model="editForm.price" :min="0" :precision="2" :step="1" style="width: 200px" />
+          <span class="ml-2">元</span>
+        </el-form-item>
+        <el-form-item label="上线时间" prop="onlineTime">
+          <el-date-picker v-model="editForm.onlineTime" type="datetime" placeholder="选择上线时间" style="width: 200px" value-format="YYYY-MM-DDTHH:mm:ss" />
+        </el-form-item>
+        <el-form-item label="有效截止" prop="validTime">
+          <el-date-picker v-model="editForm.validTime" type="datetime" placeholder="选择有效截止时间" style="width: 200px" value-format="YYYY-MM-DDTHH:mm:ss" />
+        </el-form-item>
+        <el-form-item label="创作者" prop="creator">
+          <el-input v-model="editForm.creator" placeholder="创作者名称" maxlength="64" style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="创作时间" prop="produceDate">
+          <el-date-picker v-model="editForm.produceDate" type="date" placeholder="选择创作时间" style="width: 200px" value-format="YYYY-MM-DD" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
@@ -157,8 +275,22 @@
           </el-descriptions-item>
           <el-descriptions-item label="权重" :span="1">{{ currentDetail.sortWeight }}</el-descriptions-item>
           <el-descriptions-item label="使用次数" :span="1">{{ currentDetail.usageCount }}</el-descriptions-item>
+          <el-descriptions-item label="创作者" :span="1">{{ currentDetail.creator || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="创作时间" :span="1">{{ currentDetail.produceDate || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="价格" :span="1">
+            <span v-if="currentDetail.isPaid === 1">¥{{ currentDetail.price }}（{{ feeTypeLabel(currentDetail.feeType) }}）</span>
+            <el-tag v-else type="success" size="small">免费</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="下载/收藏/访问" :span="1">
+            {{ currentDetail.downloadCount }} / {{ currentDetail.favoriteCount }} / {{ currentDetail.visitCount }}
+          </el-descriptions-item>
+          <el-descriptions-item label="上线时间" :span="1">{{ currentDetail.onlineTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="有效截止" :span="1">{{ currentDetail.validTime || '-' }}</el-descriptions-item>
           <el-descriptions-item label="当前版本" :span="2">
             {{ currentDetail.currentVersion?.versionNo || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="currentDetail.status === 3" label="违规原因" :span="2">
+            <el-tag type="danger">{{ currentDetail.violationReason }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item v-if="currentDetail.description" label="描述" :span="2">{{ currentDetail.description }}</el-descriptions-item>
         </el-descriptions>
@@ -226,15 +358,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Folder, Document } from '@element-plus/icons-vue'
+import { useDict } from '@/composables/useDict'
 import {
   listTemplates, getTemplate, createTemplate, updateTemplate,
   deleteTemplate, toggleTemplateStatus,
-  uploadTemplateVersion, rollbackTemplateVersion
+  uploadTemplateVersion, rollbackTemplateVersion,
+  uploadTemplateCover, markTemplateViolation
 } from '@/api/template'
+import { getCategoryTree } from '@/api/template/category'
 import Pagination from '@/components/Pagination.vue'
+
+const { options: templateStatusOptions, label: templateStatusLabel, color: templateStatusColor } = useDict('template_status')
+const { options: feeTypeOptions, label: feeTypeLabel } = useDict('template_fee_type')
 
 const loading = ref(false)
 const templateList = ref([])
@@ -254,12 +392,19 @@ const versionTemplateId = ref(null)
 const zipFile = ref(null)
 const versionZipFile = ref(null)
 
+const categoryPath = ref(null)
+const categoryTreeOptions = ref([])
+
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
   templateName: undefined,
   scenario: undefined,
-  status: undefined
+  status: undefined,
+  topCategoryId: undefined,
+  firstCategoryId: undefined,
+  secondCategoryId: undefined,
+  isPaid: undefined
 })
 
 const createForm = reactive({
@@ -268,8 +413,19 @@ const createForm = reactive({
   sortWeight: 0,
   previewImage: '',
   description: '',
+  detailDesc: '',
   versionNo: '1.0.0',
-  changelog: ''
+  changelog: '',
+  topCategoryId: undefined,
+  firstCategoryId: undefined,
+  secondCategoryId: undefined,
+  isPaid: 0,
+  feeType: undefined,
+  price: undefined,
+  onlineTime: undefined,
+  validTime: undefined,
+  creator: '',
+  produceDate: undefined
 })
 
 const editForm = reactive({
@@ -277,13 +433,59 @@ const editForm = reactive({
   scenario: 'teaching',
   sortWeight: 0,
   previewImage: '',
-  description: ''
+  description: '',
+  detailDesc: '',
+  topCategoryId: undefined,
+  firstCategoryId: undefined,
+  secondCategoryId: undefined,
+  isPaid: 0,
+  feeType: undefined,
+  price: undefined,
+  onlineTime: undefined,
+  validTime: undefined,
+  creator: '',
+  produceDate: undefined
 })
 const editId = ref(null)
 
 const versionForm = reactive({
   versionNo: '',
   changelog: ''
+})
+
+const createCategoryPath = ref([])
+const editCategoryPath = ref([])
+
+watch(createCategoryPath, (val) => {
+  if (val && val.length > 0) {
+    const node = findNodeByPath(categoryTreeOptions.value, val)
+    if (node) {
+      const lvl = node.level !== undefined ? node.level : 0
+      createForm.topCategoryId = lvl === 0 ? node.id : undefined
+      createForm.firstCategoryId = lvl === 1 ? node.id : undefined
+      createForm.secondCategoryId = lvl === 2 ? node.id : undefined
+    }
+  } else {
+    createForm.topCategoryId = undefined
+    createForm.firstCategoryId = undefined
+    createForm.secondCategoryId = undefined
+  }
+})
+
+watch(editCategoryPath, (val) => {
+  if (val && val.length > 0) {
+    const node = findNodeByPath(categoryTreeOptions.value, val)
+    if (node) {
+      const lvl = node.level !== undefined ? node.level : 0
+      editForm.topCategoryId = lvl === 0 ? node.id : undefined
+      editForm.firstCategoryId = lvl === 1 ? node.id : undefined
+      editForm.secondCategoryId = lvl === 2 ? node.id : undefined
+    }
+  } else {
+    editForm.topCategoryId = undefined
+    editForm.firstCategoryId = undefined
+    editForm.secondCategoryId = undefined
+  }
 })
 
 const templateRules = {
@@ -322,6 +524,11 @@ function resetQuery() {
   queryParams.templateName = undefined
   queryParams.scenario = undefined
   queryParams.status = undefined
+  queryParams.topCategoryId = undefined
+  queryParams.firstCategoryId = undefined
+  queryParams.secondCategoryId = undefined
+  queryParams.isPaid = undefined
+  categoryPath.value = null
   handleQuery()
 }
 
@@ -343,8 +550,20 @@ function handleAdd() {
   createForm.sortWeight = 0
   createForm.previewImage = ''
   createForm.description = ''
+  createForm.detailDesc = ''
   createForm.versionNo = '1.0.0'
   createForm.changelog = ''
+  createForm.topCategoryId = undefined
+  createForm.firstCategoryId = undefined
+  createForm.secondCategoryId = undefined
+  createForm.isPaid = 0
+  createForm.feeType = undefined
+  createForm.price = undefined
+  createForm.onlineTime = undefined
+  createForm.validTime = undefined
+  createForm.creator = ''
+  createForm.produceDate = undefined
+  createCategoryPath.value = []
   zipFile.value = null
   createVisible.value = true
 }
@@ -363,6 +582,17 @@ function handleCreateSubmit() {
   fd.append('description', createForm.description || '')
   fd.append('versionNo', createForm.versionNo)
   fd.append('changelog', createForm.changelog || '')
+  fd.append('topCategoryId', createForm.topCategoryId || '')
+  fd.append('firstCategoryId', createForm.firstCategoryId || '')
+  fd.append('secondCategoryId', createForm.secondCategoryId || '')
+  fd.append('isPaid', createForm.isPaid)
+  fd.append('feeType', createForm.feeType || '')
+  fd.append('price', createForm.price || '')
+  fd.append('onlineTime', createForm.onlineTime || '')
+  fd.append('validTime', createForm.validTime || '')
+  fd.append('creator', createForm.creator || '')
+  fd.append('produceDate', createForm.produceDate || '')
+  fd.append('detailDesc', createForm.detailDesc || '')
   fd.append('zipFile', zipFile.value)
   createTemplate(fd).then(() => {
     ElMessage.success('创建成功')
@@ -380,6 +610,20 @@ function handleEdit(row) {
   editForm.sortWeight = row.sortWeight
   editForm.previewImage = row.previewImage || ''
   editForm.description = row.description || ''
+  editForm.detailDesc = row.detailDesc || ''
+  editForm.isPaid = row.isPaid || 0
+  editForm.feeType = row.feeType
+  editForm.price = row.price
+  editForm.onlineTime = row.onlineTime
+  editForm.validTime = row.validTime
+  editForm.creator = row.creator || ''
+  editForm.produceDate = row.produceDate
+  editForm.topCategoryId = row.topCategoryId
+  editForm.firstCategoryId = row.firstCategoryId
+  editForm.secondCategoryId = row.secondCategoryId
+  // Build cascader path from category IDs
+  const leafId = row.secondCategoryId || row.firstCategoryId || row.topCategoryId
+  editCategoryPath.value = leafId ? (findPathToNode(categoryTreeOptions.value, leafId) || []) : []
   editVisible.value = true
 }
 
@@ -390,7 +634,18 @@ function handleEditSubmit() {
     scenario: editForm.scenario,
     sortWeight: editForm.sortWeight,
     previewImage: editForm.previewImage,
-    description: editForm.description
+    description: editForm.description,
+    detailDesc: editForm.detailDesc,
+    topCategoryId: editForm.topCategoryId,
+    firstCategoryId: editForm.firstCategoryId,
+    secondCategoryId: editForm.secondCategoryId,
+    isPaid: editForm.isPaid,
+    feeType: editForm.feeType,
+    price: editForm.price,
+    onlineTime: editForm.onlineTime,
+    validTime: editForm.validTime,
+    creator: editForm.creator,
+    produceDate: editForm.produceDate
   }).then(() => {
     ElMessage.success('保存成功')
     editVisible.value = false
@@ -477,5 +732,77 @@ function handleDelete(row) {
   }).catch(() => {})
 }
 
-onMounted(() => getList())
+function loadCategories() {
+  getCategoryTree().then(res => {
+    categoryTreeOptions.value = res || []
+  })
+}
+
+function handleCategoryChange(val) {
+  queryParams.topCategoryId = undefined
+  queryParams.firstCategoryId = undefined
+  queryParams.secondCategoryId = undefined
+  if (!val) return
+  const node = findNode(categoryTreeOptions.value, val)
+  if (node) {
+    const lvl = node.level !== undefined ? node.level : 0
+    if (lvl === 0) queryParams.topCategoryId = val
+    else if (lvl === 1) queryParams.firstCategoryId = val
+    else if (lvl === 2) queryParams.secondCategoryId = val
+  }
+}
+
+function findNode(nodes, id) {
+  for (const n of nodes || []) {
+    if (n.id === id) return n
+    if (n.children) {
+      const found = findNode(n.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function findNodeByPath(nodes, path) {
+  let current = nodes
+  let node = null
+  for (const id of path) {
+    node = current.find(n => n.id === id)
+    if (!node) break
+    current = node.children || []
+  }
+  return node
+}
+
+function findPathToNode(nodes, id, path = []) {
+  for (const n of nodes || []) {
+    if (n.id === id) {
+      return [...path, n.id]
+    }
+    if (n.children) {
+      const found = findPathToNode(n.children, id, [...path, n.id])
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function handleMarkViolation(row) {
+  ElMessageBox.prompt('请输入违规原因', '标记违规', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    inputPattern: /.+/,
+    inputErrorMessage: '违规原因不能为空'
+  }).then(({ value }) => {
+    markTemplateViolation(row.id, value).then(() => {
+      ElMessage.success('已标记为违规')
+      getList()
+    })
+  }).catch(() => {})
+}
+
+onMounted(() => {
+  getList()
+  loadCategories()
+})
 </script>

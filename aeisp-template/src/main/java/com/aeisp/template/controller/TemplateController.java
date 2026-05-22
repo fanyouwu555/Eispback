@@ -8,6 +8,7 @@ import com.aeisp.template.dto.request.UpdateTemplateRequest;
 import com.aeisp.template.dto.vo.TplTemplateDetailVO;
 import com.aeisp.template.dto.vo.TplTemplateVO;
 import com.aeisp.common.PageResult;
+import com.aeisp.template.entity.TplTemplate;
 import com.aeisp.template.entity.TplTemplateUsageLog;
 import com.aeisp.template.mapper.TplTemplateUsageLogMapper;
 import com.aeisp.template.service.TemplateStorageService;
