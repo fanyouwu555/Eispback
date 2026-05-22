@@ -49,6 +49,9 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
             if (parent == null || parent.getDeleted() != 0) {
                 throw new BizException("上级分类不存在");
             }
+            if (parent.getLevel() >= 2) {
+                throw new BizException("最多支持三级分类");
+            }
             entity.setLevel(parent.getLevel() + 1);
         } else {
             entity.setLevel(0);
@@ -71,6 +74,7 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
     public Boolean delete(Long id) {
         TplTemplateCategory entity = mapper.selectById(id);
         if (entity == null) throw new BizException("分类不存在");
+        if (entity.getLevel() != 0) throw new BizException("只能从根级别删除分类");
         long childCount = mapper.selectCount(
                 new LambdaQueryWrapper<TplTemplateCategory>()
                         .eq(TplTemplateCategory::getParentId, id)

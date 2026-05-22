@@ -25,9 +25,9 @@
               <span class="tree-node">
                 <span>{{ data.name }}</span>
                 <span class="tree-actions">
-                  <el-button type="primary" link size="small" icon="Plus" @click.stop="handleAddChild(data)">子级</el-button>
+                  <el-button v-if="(data.level || 0) < 2" type="primary" link size="small" icon="Plus" @click.stop="handleAddChild(data)">子级</el-button>
                   <el-button type="primary" link size="small" icon="Edit" @click.stop="handleEdit(data)">编辑</el-button>
-                  <el-button type="danger" link size="small" icon="Delete" @click.stop="handleDelete(data)">删除</el-button>
+                  <el-button v-if="(data.level || 0) === 0" type="danger" link size="small" icon="Delete" @click.stop="handleDelete(data)">删除</el-button>
                 </span>
               </span>
             </template>
@@ -43,7 +43,7 @@
             <el-form-item label="分类名称" prop="name">
               <el-input v-model="form.name" placeholder="请输入分类名称" maxlength="50" />
             </el-form-item>
-            <el-form-item label="上级分类" prop="parentId">
+            <el-form-item v-if="!isEdit && form.level !== 0" label="上级分类" prop="parentId">
               <el-cascader
                 v-model="form.parentId"
                 :options="treeData"
@@ -130,6 +130,10 @@ function handleAddRoot() {
 }
 
 function handleAddChild(parent) {
+  if ((parent.level || 0) >= 2) {
+    ElMessage.warning('最多支持三级分类')
+    return
+  }
   isEdit.value = false
   editId.value = null
   form.name = ''
@@ -155,12 +159,14 @@ function handleNodeClick(data) {
 
 function handleSave() {
   saving.value = true
-  const payload = {
-    name: form.name,
-    parentId: form.parentId || 0,
-    level: form.level,
-    sortOrder: form.sortOrder
-  }
+  const payload = isEdit.value
+    ? { name: form.name, sortOrder: form.sortOrder }
+    : {
+        name: form.name,
+        parentId: form.parentId || 0,
+        level: form.level,
+        sortOrder: form.sortOrder
+      }
   const action = isEdit.value
     ? updateCategory(editId.value, payload)
     : createCategory(payload)
