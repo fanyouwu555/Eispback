@@ -176,7 +176,7 @@
           <el-input v-model="createForm.changelog" type="textarea" :rows="2" placeholder="更新说明（可选）" maxlength="500" />
         </el-form-item>
         <el-form-item label="模板文件(ZIP)" prop="zipFile">
-          <el-upload ref="zipUploadRef" :auto-upload="false" :limit="1" accept=".zip" @change="handleZipChange">
+          <el-upload ref="zipUploadRef" :auto-upload="false" :limit="1" accept=".zip,application/zip,application/x-zip-compressed" @change="handleZipChange">
             <el-button type="primary" icon="Upload">选择ZIP文件</el-button>
             <template #tip><span class="el-upload__tip">仅支持 .zip 格式</span></template>
           </el-upload>
@@ -344,7 +344,7 @@
           <el-input v-model="versionForm.changelog" type="textarea" :rows="2" placeholder="更新说明（可选）" maxlength="500" />
         </el-form-item>
         <el-form-item label="ZIP文件" prop="zipFile">
-          <el-upload ref="versionUploadRef" :auto-upload="false" :limit="1" accept=".zip" @change="handleVersionZipChange">
+          <el-upload ref="versionUploadRef" :auto-upload="false" :limit="1" accept=".zip,application/zip,application/x-zip-compressed" @change="handleVersionZipChange">
             <el-button type="primary" icon="Upload">选择ZIP文件</el-button>
           </el-upload>
         </el-form-item>
