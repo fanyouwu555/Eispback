@@ -33,6 +33,9 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
     @Value("${template.upload-path:./uploads/templates/}")
     private String basePath;
 
+    @Value("${template.cover-base-url:http://localhost/EISP/Resource/Template/}")
+    private String coverBaseUrl;
+
     @Override
     public String storeZip(Long templateId, String versionNo, MultipartFile file) {
         String relativeDir = templateId + "/" + versionNo + "/";
@@ -197,5 +200,28 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
             return null;
         }
         return files[0].getAbsolutePath();
+    }
+
+    @Override
+    public String storeCoverImage(Long templateId, MultipartFile file) {
+        String ext = "";
+        String original = file.getOriginalFilename();
+        if (original != null && original.contains(".")) {
+            ext = original.substring(original.lastIndexOf("."));
+        }
+        String filename = "cover_" + System.currentTimeMillis() + ext;
+        String relativeDir = "covers/" + templateId + "/";
+        String absoluteDir = FileUtil.normalize(basePath + "/" + relativeDir);
+        FileUtil.mkdir(absoluteDir);
+
+        String targetPath = absoluteDir + filename;
+        try (InputStream is = file.getInputStream()) {
+            FileUtil.writeFromStream(is, targetPath);
+        } catch (IOException e) {
+            log.error("存储封面图失败: templateId={}", templateId, e);
+            throw new RuntimeException("存储封面图失败", e);
+        }
+
+        return coverBaseUrl + relativeDir + filename;
     }
 }

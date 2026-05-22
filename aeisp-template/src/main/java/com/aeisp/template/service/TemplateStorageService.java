@@ -73,4 +73,13 @@ public interface TemplateStorageService {
      * @return ZIP 绝对路径
      */
     String getZipAbsolutePath(Long templateId, String versionNo);
+
+    /**
+     * 存储封面图片，返回可访问 URL。
+     *
+     * @param templateId 模板 ID
+     * @param file       封面图片文件
+     * @return 可访问 URL
+     */
+    String storeCoverImage(Long templateId, MultipartFile file);
 }

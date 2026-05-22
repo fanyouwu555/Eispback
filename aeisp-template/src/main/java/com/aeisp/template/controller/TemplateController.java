@@ -51,6 +51,7 @@ public class TemplateController {
     private final TplTemplateService templateService;
     private final TemplateStorageService templateStorageService;
     private final TplTemplateUsageLogMapper tplTemplateUsageLogMapper;
+    private final com.aeisp.template.mapper.TplTemplateMapper templateMapper;
 
     /**
      * 创建模板（含首个版本 ZIP）。
@@ -270,5 +271,33 @@ public class TemplateController {
     @Operation(summary = "用户模板使用记录", description = "查询指定用户的模板下载/使用记录")
     public Result<List<TplTemplateUsageLog>> getUserTemplateUsageLogs(@PathVariable Long userId) {
         return Result.success(tplTemplateUsageLogMapper.selectByUserId(userId));
+    }
+
+    /**
+     * 上传模板封面图。
+     */
+    @PreAuthorize("hasAuthority('template:update')")
+    @PostMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传封面图", description = "上传模板封面图片并返回访问 URL")
+    public Result<String> uploadCoverImage(@PathVariable Long id,
+                                            @RequestParam("file") MultipartFile file) {
+        templateService.getDetail(id);
+        String url = templateStorageService.storeCoverImage(id, file);
+        TplTemplate update = new TplTemplate();
+        update.setId(id);
+        update.setPreviewImage(url);
+        templateMapper.updateById(update);
+        return Result.success(url);
+    }
+
+    /**
+     * 标记模板违规并下架。
+     */
+    @PreAuthorize("hasAuthority('template:update')")
+    @PostMapping("/{id}/violation")
+    @Operation(summary = "标记违规", description = "将模板标记为违规状态并记录原因")
+    public Result<Boolean> markViolation(@PathVariable Long id,
+                                         @RequestParam String reason) {
+        return Result.success(templateService.markViolation(id, reason));
     }
 }
