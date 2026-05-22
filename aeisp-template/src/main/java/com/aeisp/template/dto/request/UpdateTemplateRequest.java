@@ -35,6 +35,61 @@ public class UpdateTemplateRequest {
     private String previewImage;
 
     /**
+     * 顶级分类 ID。
+     */
+    private Long topCategoryId;
+
+    /**
+     * 一级分类 ID。
+     */
+    private Long firstCategoryId;
+
+    /**
+     * 二级分类 ID。
+     */
+    private Long secondCategoryId;
+
+    /**
+     * 是否付费：0-免费，1-付费。
+     */
+    private Integer isPaid;
+
+    /**
+     * 费用类型。
+     */
+    private String feeType;
+
+    /**
+     * 价格（元）。
+     */
+    private java.math.BigDecimal price;
+
+    /**
+     * 上线时间（ISO 格式字符串）。
+     */
+    private String onlineTime;
+
+    /**
+     * 有效截止时间（ISO 格式字符串）。
+     */
+    private String validTime;
+
+    /**
+     * 创作者名称。
+     */
+    private String creator;
+
+    /**
+     * 创作时间（ISO 日期格式）。
+     */
+    private String produceDate;
+
+    /**
+     * 详细描述。
+     */
+    private String detailDesc;
+
+    /**
      * 排序权重。
      */
     @NotNull(message = "排序权重不能为空")

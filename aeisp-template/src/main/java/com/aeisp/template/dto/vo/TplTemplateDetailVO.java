@@ -69,4 +69,20 @@ public class TplTemplateDetailVO implements Serializable {
      * 文件结构。
      */
     private List<FileNodeVO> fileTree;
+
+    private Long topCategoryId;
+    private Long firstCategoryId;
+    private Long secondCategoryId;
+    private Integer isPaid;
+    private String feeType;
+    private java.math.BigDecimal price;
+    private String onlineTime;
+    private String validTime;
+    private String creator;
+    private String produceDate;
+    private Long downloadCount;
+    private Long favoriteCount;
+    private Long visitCount;
+    private String detailDesc;
+    private String violationReason;
 }

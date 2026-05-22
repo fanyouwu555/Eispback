@@ -31,7 +31,27 @@ public class TemplateQueryRequest {
     private String scenario;
 
     /**
-     * 状态：0-下线，1-上线。
+     * 状态：0-正常, 1-上架, 2-下架, 3-违规。
      */
     private Integer status;
+
+    /**
+     * 顶级分类 ID。
+     */
+    private Long topCategoryId;
+
+    /**
+     * 一级分类 ID。
+     */
+    private Long firstCategoryId;
+
+    /**
+     * 二级分类 ID。
+     */
+    private Long secondCategoryId;
+
+    /**
+     * 是否付费：0-免费，1-付费。
+     */
+    private Integer isPaid;
 }
