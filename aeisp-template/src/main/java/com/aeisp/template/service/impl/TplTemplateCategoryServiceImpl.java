@@ -74,7 +74,6 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
     public Boolean delete(Long id) {
         TplTemplateCategory entity = mapper.selectById(id);
         if (entity == null) throw new BizException("分类不存在");
-        if (entity.getLevel() != 0) throw new BizException("只能从根级别删除分类");
         long childCount = mapper.selectCount(
                 new LambdaQueryWrapper<TplTemplateCategory>()
                         .eq(TplTemplateCategory::getParentId, id)

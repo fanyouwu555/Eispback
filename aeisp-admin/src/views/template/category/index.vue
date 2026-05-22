@@ -27,7 +27,7 @@
                 <span class="tree-actions">
                   <el-button v-if="(data.level || 0) < 2" type="primary" link size="small" icon="Plus" @click.stop="handleAddChild(data)">子级</el-button>
                   <el-button type="primary" link size="small" icon="Edit" @click.stop="handleEdit(data)">编辑</el-button>
-                  <el-button v-if="(data.level || 0) === 0" type="danger" link size="small" icon="Delete" @click.stop="handleDelete(data)">删除</el-button>
+                  <el-button v-if="!data.children || data.children.length === 0" type="danger" link size="small" icon="Delete" @click.stop="handleDelete(data)">删除</el-button>
                 </span>
               </span>
             </template>
