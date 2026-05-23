@@ -98,6 +98,11 @@
             @click="handleMarkViolation(row)"
             v-permission="'template:update'"
           >违规</el-button>
+          <el-button
+            v-if="row.isPaid === 1"
+            type="warning" link size="small" icon="Money"
+            @click="handlePurchase(row)"
+          >购买</el-button>
           <el-button type="danger" link size="small" icon="Delete" @click="handleDelete(row)" v-permission="'template:delete'">删除</el-button>
         </template>
       </el-table-column>
@@ -366,7 +371,8 @@ import {
   listTemplates, getTemplate, createTemplate, updateTemplate,
   deleteTemplate, toggleTemplateStatus,
   uploadTemplateVersion, rollbackTemplateVersion,
-  uploadTemplateCover, markTemplateViolation
+  uploadTemplateCover, markTemplateViolation,
+  purchaseTemplate
 } from '@/api/template'
 import { getCategoryTree } from '@/api/template/category'
 import Pagination from '@/components/Pagination.vue'
@@ -797,6 +803,21 @@ function handleMarkViolation(row) {
     markTemplateViolation(row.id, value).then(() => {
       ElMessage.success('已标记为违规')
       getList()
+    })
+  }).catch(() => {})
+}
+
+function handlePurchase(row) {
+  ElMessageBox.confirm(`确认购买模板「${row.templateName}」？价格：¥${row.price}`, '购买确认', {
+    confirmButtonText: '确认购买',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    purchaseTemplate(row.id).then(() => {
+      ElMessage.success('购买成功')
+    }).catch(err => {
+      const msg = err?.response?.data?.message || '购买失败'
+      ElMessage.error(msg)
     })
   }).catch(() => {})
 }

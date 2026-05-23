@@ -78,6 +78,15 @@ export function markTemplateViolation(id, reason) {
   return request.post(`/templates/${id}/violation`, null, { params: { reason } })
 }
 
+// ===== 购买与权限 =====
+export function purchaseTemplate(id) {
+  return request.post(`/templates/${id}/purchase`)
+}
+
+export function checkTemplateAccess(id) {
+  return request.get(`/templates/${id}/access`)
+}
+
 // ===== 预览图片 =====
 export function listPreviewImages(templateId) {
   return request.get(`/templates/${templateId}/preview-images`)

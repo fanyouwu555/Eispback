@@ -32,6 +32,16 @@ public class TplTemplateVersionVO implements Serializable {
     private String changelog;
 
     /**
+     * 文件大小（字节）。
+     */
+    private Long fileSize;
+
+    /**
+     * 文件哈希值（SHA-256）。
+     */
+    private String fileHash;
+
+    /**
      * 创建时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

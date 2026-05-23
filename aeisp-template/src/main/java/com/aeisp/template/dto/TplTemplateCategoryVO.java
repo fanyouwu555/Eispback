@@ -1,5 +1,6 @@
 package com.aeisp.template.dto;
 
+import com.aeisp.template.dto.vo.TplTemplateVO;
 import lombok.Data;
 
 import java.util.List;
@@ -12,4 +13,5 @@ public class TplTemplateCategoryVO {
     private Integer level;
     private Integer sortOrder;
     private List<TplTemplateCategoryVO> children;
+    private List<TplTemplateVO> templates;
 }

@@ -2,6 +2,7 @@ package com.aeisp.template.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
 import com.aeisp.template.dto.request.UpdateTemplateRequest;
@@ -15,6 +16,7 @@ import com.aeisp.template.enums.TemplateStatusEnum;
 import com.aeisp.template.mapper.TplTemplateMapper;
 import com.aeisp.template.mapper.TplTemplateVersionMapper;
 import com.aeisp.template.service.TemplateStorageService;
+import com.aeisp.template.service.TplTemplateCategoryService;
 import com.aeisp.template.service.TplTemplateService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -47,6 +49,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     private final TplTemplateMapper templateMapper;
     private final TplTemplateVersionMapper versionMapper;
     private final TemplateStorageService templateStorageService;
+    private final TplTemplateCategoryService categoryService;
 
     @Override
     public boolean createTemplate(CreateTemplateRequest request) {
@@ -311,6 +314,19 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     }
 
     @Override
+    public void incrementDownloadCount(Long templateId) {
+        try {
+            TplTemplate template = templateMapper.selectById(templateId);
+            if (template != null && template.getDownloadCount() != null) {
+                template.setDownloadCount(template.getDownloadCount() + 1);
+                templateMapper.updateById(template);
+            }
+        } catch (Exception e) {
+            log.warn("下载计数失败: templateId={}", templateId, e);
+        }
+    }
+
+    @Override
     public Map<String, Object> getStatistics() {
         Map<String, Object> result = new HashMap<>();
 
@@ -391,6 +407,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     private static TplTemplateVersionVO convertToVersionVO(TplTemplateVersion version) {
         TplTemplateVersionVO vo = new TplTemplateVersionVO();
         BeanUtils.copyProperties(version, vo);
+        vo.setFileSize(version.getFileSize());
+        vo.setFileHash(version.getFileHash());
         return vo;
     }
 
@@ -472,6 +490,42 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @Override
+    public List<TplTemplateCategoryVO> listCategoryTreeWithTemplates() {
+        // 1. 获取完整分类树
+        List<TplTemplateCategoryVO> tree = categoryService.getTree();
+
+        // 2. 获取所有上架模板
+        List<TplTemplate> templates = templateMapper.selectOnlineList(null);
+
+        // 3. 按三级分类 ID 分组
+        Map<Long, List<TplTemplateVO>> templateMap = new HashMap<>();
+        for (TplTemplate t : templates) {
+            if (t.getSecondCategoryId() != null) {
+                templateMap.computeIfAbsent(t.getSecondCategoryId(), k -> new ArrayList<>())
+                        .add(convertToVO(t));
+            }
+        }
+
+        // 4. 将模板挂载到三级分类节点
+        for (TplTemplateCategoryVO level0 : tree) {
+            if (level0.getChildren() != null) {
+                for (TplTemplateCategoryVO level1 : level0.getChildren()) {
+                    if (level1.getChildren() != null) {
+                        for (TplTemplateCategoryVO level2 : level1.getChildren()) {
+                            List<TplTemplateVO> list = templateMap.get(level2.getId());
+                            if (list != null) {
+                                level2.setTemplates(list);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return tree;
     }
 
     /**

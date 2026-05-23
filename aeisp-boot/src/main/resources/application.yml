@@ -45,6 +45,10 @@ jwt:
   access-expiration: 7200000      # 2小时
   refresh-expiration: 604800000   # 7天
 
+template:
+  upload-path: ./uploads/templates/
+  resource-base-url: http://localhost/EISP/Resource/Template/
+
 logging:
   level:
     com.aeisp: debug

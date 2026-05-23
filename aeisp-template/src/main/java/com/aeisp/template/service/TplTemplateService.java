@@ -1,6 +1,7 @@
 package com.aeisp.template.service;
 
 import com.aeisp.common.PageResult;
+import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
 import com.aeisp.template.dto.request.UpdateTemplateRequest;
@@ -59,4 +60,18 @@ public interface TplTemplateService {
      * @return 是否成功
      */
     boolean markViolation(Long templateId, String reason);
+
+    /**
+     * 模板下载次数 +1。
+     *
+     * @param templateId 模板 ID
+     */
+    void incrementDownloadCount(Long templateId);
+
+    /**
+     * 查询分类树并挂载上架模板（客户端使用）。
+     *
+     * @return 分类树，三级分类节点下包含模板列表
+     */
+    List<TplTemplateCategoryVO> listCategoryTreeWithTemplates();
 }

@@ -33,8 +33,8 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
     @Value("${template.upload-path:./uploads/templates/}")
     private String basePath;
 
-    @Value("${template.cover-base-url:http://localhost/EISP/Resource/Template/}")
-    private String coverBaseUrl;
+    @Value("${template.resource-base-url:http://localhost/EISP/Resource/Template/}")
+    private String resourceBaseUrl;
 
     @Override
     public String storeZip(Long templateId, String versionNo, MultipartFile file) {
@@ -222,6 +222,15 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
             throw new RuntimeException("存储封面图失败", e);
         }
 
-        return coverBaseUrl + relativeDir + filename;
+        return resourceBaseUrl + relativeDir + filename;
+    }
+
+    @Override
+    public String getResourceUrl(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return null;
+        }
+        String normalized = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+        return resourceBaseUrl + normalized;
     }
 }

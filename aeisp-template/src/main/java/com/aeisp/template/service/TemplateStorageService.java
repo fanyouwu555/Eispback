@@ -82,4 +82,14 @@ public interface TemplateStorageService {
      * @return 可访问 URL
      */
     String storeCoverImage(Long templateId, MultipartFile file);
+
+    /**
+     * 获取资源的可访问 URL。
+     *
+     * <p>本地存储时拼接 base URL + 相对路径；OSS 存储时返回 OSS 外链。</p>
+     *
+     * @param relativePath 相对路径
+     * @return 完整可访问 URL
+     */
+    String getResourceUrl(String relativePath);
 }

@@ -2,17 +2,18 @@ package com.aeisp.template.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
+import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
 import com.aeisp.template.dto.request.UpdateTemplateRequest;
 import com.aeisp.template.dto.vo.TplTemplateDetailVO;
 import com.aeisp.template.dto.vo.TplTemplateVO;
-import com.aeisp.common.PageResult;
 import com.aeisp.template.entity.TplTemplate;
 import com.aeisp.template.entity.TplTemplateUsageLog;
 import com.aeisp.template.mapper.TplTemplateUsageLogMapper;
 import com.aeisp.template.service.TemplateStorageService;
 import com.aeisp.template.service.TplTemplateService;
+import com.aeisp.template.service.UserTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -51,6 +52,7 @@ public class TemplateController {
 
     private final TplTemplateService templateService;
     private final TemplateStorageService templateStorageService;
+    private final UserTemplateService userTemplateService;
     private final TplTemplateUsageLogMapper tplTemplateUsageLogMapper;
     private final com.aeisp.template.mapper.TplTemplateMapper templateMapper;
 
@@ -173,10 +175,25 @@ public class TemplateController {
      */
     @PreAuthorize("hasAuthority('template:read')")
     @GetMapping("/{id}/download")
-    @Operation(summary = "下载 ZIP", description = "下载模板指定版本的 ZIP 文件")
+    @Operation(summary = "下载 ZIP", description = "下载模板指定版本的 ZIP 文件（需有下载权限）")
     public ResponseEntity<Resource> downloadZip(@PathVariable Long id,
                                                 @RequestParam(value = "versionNo", required = false) String versionNo) {
         TplTemplateDetailVO detail = templateService.getDetail(id);
+        if (detail == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // 鉴权：付费模板需检查购买权限
+        Long userId = extractUserId(SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+        if (Boolean.TRUE.equals(detail.getIsPaid()) && !userTemplateService.hasAccess(userId, id)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // 免费模板自动授权
+        if (!Boolean.TRUE.equals(detail.getIsPaid())) {
+            userTemplateService.grantFreeAccess(userId, id);
+        }
+
         String targetVersion = versionNo != null ? versionNo
                 : (detail.getCurrentVersion() != null ? detail.getCurrentVersion().getVersionNo() : null);
         if (targetVersion == null) {
@@ -188,6 +205,9 @@ public class TemplateController {
         }
         File file = new File(zipPath);
         Resource resource = new FileSystemResource(file);
+
+        // 下载计数 +1
+        templateService.incrementDownloadCount(id);
 
         // 记录模板下载日志
         recordUsageLog(id, detail.getTemplateName(), targetVersion, "download");
@@ -245,6 +265,15 @@ public class TemplateController {
     }
 
     /**
+     * 查询分类树并挂载上架模板（客户端使用）。
+     */
+    @GetMapping("/public/tree")
+    @Operation(summary = "分类模板树", description = "按三级分类树形结构返回所有上架模板（客户端使用）")
+    public Result<List<TplTemplateCategoryVO>> listCategoryTreeWithTemplates() {
+        return Result.success(templateService.listCategoryTreeWithTemplates());
+    }
+
+    /**
      * 模板使用统计。
      */
     @PreAuthorize("hasAuthority('template:read')")
@@ -272,6 +301,37 @@ public class TemplateController {
     @Operation(summary = "用户模板使用记录", description = "查询指定用户的模板下载/使用记录")
     public Result<List<TplTemplateUsageLog>> getUserTemplateUsageLogs(@PathVariable Long userId) {
         return Result.success(tplTemplateUsageLogMapper.selectByUserId(userId));
+    }
+
+    /**
+     * 用户购买模板。
+     */
+    @PreAuthorize("hasAuthority('template:purchase')")
+    @PostMapping("/{id}/purchase")
+    @Operation(summary = "购买模板", description = "用户购买指定付费模板，扣减余额")
+    public Result<Boolean> purchaseTemplate(@PathVariable Long id) {
+        Long userId = extractUserId(SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+        if (userId == null) {
+            return Result.error(401, "用户未登录");
+        }
+        return Result.success(userTemplateService.purchaseTemplate(userId, id));
+    }
+
+    /**
+     * 检查当前用户是否有权下载指定模板。
+     */
+    @GetMapping("/{id}/access")
+    @Operation(summary = "检查下载权限", description = "检查当前登录用户是否有权下载该模板")
+    public Result<Boolean> checkAccess(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return Result.success(false);
+        }
+        Long userId = extractUserId(auth.getPrincipal());
+        if (userId == null) {
+            return Result.success(false);
+        }
+        return Result.success(userTemplateService.hasAccess(userId, id));
     }
 
     /**
