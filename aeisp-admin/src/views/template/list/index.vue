@@ -176,10 +176,10 @@
           <el-input v-model="createForm.changelog" type="textarea" :rows="2" placeholder="更新说明（可选）" maxlength="500" />
         </el-form-item>
         <el-form-item label="模板文件(ZIP)" prop="zipFile">
-          <input type="file" ref="zipInputRef" accept=".zip" style="display: none" @change="handleZipChangeNative" />
-          <el-button type="primary" icon="Upload" native-type="button" @click="zipInputRef?.click()">选择ZIP文件</el-button>
-          <span v-if="zipFileName" class="ml-2">{{ zipFileName }}</span>
-          <span v-else class="el-upload__tip ml-2">仅支持 .zip 格式</span>
+          <el-upload ref="zipUploadRef" :auto-upload="false" :limit="1" accept=".zip,application/zip,application/x-zip-compressed" @change="handleZipChange">
+            <el-button type="primary" icon="Upload">选择ZIP文件</el-button>
+            <template #tip><span class="el-upload__tip">仅支持 .zip 格式</span></template>
+          </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -344,9 +344,9 @@
           <el-input v-model="versionForm.changelog" type="textarea" :rows="2" placeholder="更新说明（可选）" maxlength="500" />
         </el-form-item>
         <el-form-item label="ZIP文件" prop="zipFile">
-          <input type="file" ref="versionInputRef" accept=".zip" style="display: none" @change="handleVersionZipChangeNative" />
-          <el-button type="primary" icon="Upload" native-type="button" @click="versionInputRef?.click()">选择ZIP文件</el-button>
-          <span v-if="versionZipFileName" class="ml-2">{{ versionZipFileName }}</span>
+          <el-upload ref="versionUploadRef" :auto-upload="false" :limit="1" accept=".zip,application/zip,application/x-zip-compressed" @change="handleVersionZipChange">
+            <el-button type="primary" icon="Upload">选择ZIP文件</el-button>
+          </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -391,10 +391,6 @@ const versionTemplateName = ref('')
 const versionTemplateId = ref(null)
 const zipFile = ref(null)
 const versionZipFile = ref(null)
-const zipInputRef = ref(null)
-const versionInputRef = ref(null)
-const zipFileName = ref('')
-const versionZipFileName = ref('')
 
 const categoryPath = ref(null)
 const categoryTreeOptions = ref([])
@@ -540,20 +536,12 @@ function handlePagination(pageInfo) {
   getList(pageInfo)
 }
 
-function handleZipChangeNative(e) {
-  const file = e.target.files?.[0]
-  if (file) {
-    zipFile.value = file
-    zipFileName.value = file.name
-  }
+function handleZipChange(uploadFile) {
+  zipFile.value = uploadFile.raw
 }
 
-function handleVersionZipChangeNative(e) {
-  const file = e.target.files?.[0]
-  if (file) {
-    versionZipFile.value = file
-    versionZipFileName.value = file.name
-  }
+function handleVersionZipChange(uploadFile) {
+  versionZipFile.value = uploadFile.raw
 }
 
 function handleAdd() {
@@ -577,7 +565,6 @@ function handleAdd() {
   createForm.produceDate = undefined
   createCategoryPath.value = []
   zipFile.value = null
-  zipFileName.value = ''
   createVisible.value = true
 }
 
@@ -683,7 +670,6 @@ function handleUploadVersion(row) {
   versionForm.versionNo = ''
   versionForm.changelog = ''
   versionZipFile.value = null
-  versionZipFileName.value = ''
   versionVisible.value = true
 }
 
