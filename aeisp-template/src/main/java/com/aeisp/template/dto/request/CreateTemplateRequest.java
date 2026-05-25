@@ -108,6 +108,11 @@ public class CreateTemplateRequest {
     private String detailDesc;
 
     /**
+     * 难度等级。
+     */
+    private Integer difficulty;
+
+    /**
      * ZIP 文件。
      */
     @NotNull(message = "ZIP 文件不能为空")

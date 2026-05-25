@@ -84,5 +84,11 @@ public class TplTemplateDetailVO implements Serializable {
     private Long favoriteCount;
     private Long visitCount;
     private String detailDesc;
+
+    /**
+     * 难度等级。
+     */
+    private Integer difficulty;
+
     private String violationReason;
 }

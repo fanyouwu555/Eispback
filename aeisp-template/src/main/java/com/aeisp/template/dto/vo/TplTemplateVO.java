@@ -130,6 +130,11 @@ public class TplTemplateVO implements Serializable {
     private String detailDesc;
 
     /**
+     * 难度等级。
+     */
+    private Integer difficulty;
+
+    /**
      * 违规原因。
      */
     private String violationReason;

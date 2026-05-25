@@ -22,6 +22,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,32 +50,42 @@ class TplTemplateServiceImplTest {
     private TplTemplateServiceImpl tplTemplateService;
 
     @Test
-    void testCreateTemplate() {
-        when(templateMapper.insert(any(TplTemplate.class))).thenAnswer(inv -> {
-            TplTemplate t = inv.getArgument(0);
-            t.setId(1L);
-            return 1;
-        });
-        when(templateStorageService.storeZip(anyLong(), anyString(), any())).thenReturn("templates/1/v1.0.0/template.zip");
-        when(templateStorageService.getZipAbsolutePath(anyLong(), anyString())).thenReturn("/tmp/templates/1/v1.0.0/template.zip");
-        doNothing().when(templateStorageService).extractZip(anyString(), anyString());
-        when(resourceServerService.uploadExtractedFiles(anyLong(), anyString(), any())).thenReturn(List.of());
-        when(versionMapper.insert(any(TplTemplateVersion.class))).thenAnswer(inv -> {
-            TplTemplateVersion v = inv.getArgument(0);
-            v.setId(10L);
-            return 1;
-        });
-        when(templateMapper.updateById(any(TplTemplate.class))).thenReturn(1);
+    void testCreateTemplate() throws IOException {
+        Path tempDir = Files.createTempDirectory("tpl-test-");
+        Path tempFile = tempDir.resolve("template.zip");
+        Files.write(tempFile, "dummy zip content".getBytes());
 
-        CreateTemplateRequest request = new CreateTemplateRequest();
-        request.setTemplateName("测试模板");
-        request.setScenario("simulation");
-        request.setVersionNo("v1.0.0");
-        request.setZipFile(new MockMultipartFile("file", "test.zip", "application/zip", "content".getBytes()));
+        try {
+            when(templateMapper.insert(any(TplTemplate.class))).thenAnswer(inv -> {
+                TplTemplate t = inv.getArgument(0);
+                t.setId(1L);
+                return 1;
+            });
+            when(templateStorageService.storeZip(anyLong(), anyString(), any())).thenReturn("templates/1/v1.0.0/template.zip");
+            when(templateStorageService.getZipAbsolutePath(anyLong(), anyString())).thenReturn(tempFile.toString());
+            doNothing().when(templateStorageService).extractZip(anyString(), anyString());
+            when(resourceServerService.uploadExtractedFiles(anyLong(), anyString(), any())).thenReturn(List.of());
+            when(versionMapper.insert(any(TplTemplateVersion.class))).thenAnswer(inv -> {
+                TplTemplateVersion v = inv.getArgument(0);
+                v.setId(10L);
+                return 1;
+            });
+            when(templateMapper.updateById(any(TplTemplate.class))).thenReturn(1);
 
-        assertTrue(tplTemplateService.createTemplate(request));
-        verify(templateMapper).insert(any(TplTemplate.class));
-        verify(versionMapper).insert(any(TplTemplateVersion.class));
+            CreateTemplateRequest request = new CreateTemplateRequest();
+            request.setTemplateName("测试模板");
+            request.setScenario("simulation");
+            request.setVersionNo("v1.0.0");
+            request.setDifficulty(3);
+            request.setZipFile(new MockMultipartFile("file", "test.zip", "application/zip", "content".getBytes()));
+
+            assertTrue(tplTemplateService.createTemplate(request));
+            verify(templateMapper).insert(any(TplTemplate.class));
+            verify(versionMapper).insert(any(TplTemplateVersion.class));
+        } finally {
+            Files.deleteIfExists(tempFile);
+            Files.deleteIfExists(tempDir);
+        }
     }
 
     @Test
@@ -91,6 +104,7 @@ class TplTemplateServiceImplTest {
         UpdateTemplateRequest request = new UpdateTemplateRequest();
         request.setTemplateName("新名称");
         request.setScenario("debug");
+        request.setDifficulty(3);
 
         assertTrue(tplTemplateService.updateTemplateInfo(1L, request));
         assertEquals("新名称", template.getTemplateName());

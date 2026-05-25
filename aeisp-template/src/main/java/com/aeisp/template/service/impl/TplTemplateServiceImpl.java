@@ -75,6 +75,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setCreator(request.getCreator());
         template.setProduceDate(parseDate(request.getProduceDate()));
         template.setDetailDesc(request.getDetailDesc());
+        template.setDifficulty(request.getDifficulty());
         template.setStatus(TemplateStatusEnum.OFFLINE.getCode());
         template.setUsageCount(0L);
         template.setDownloadCount(0L);
@@ -98,8 +99,10 @@ public class TplTemplateServiceImpl implements TplTemplateService {
                 storageUrl = resourceServerService.uploadFile(relativePath, zipBytes);
                 log.info("ZIP 上传到资源服务器完成: {}", storageUrl);
             } catch (IOException e) {
-                log.error("上传 ZIP 到资源服务器失败", e);
+                log.error("上传 ZIP 到资源服务器失败, zipAbsPath={}", zipAbsPath, e);
             }
+        } else {
+            log.warn("zipAbsPath 为空，跳过 NFS ZIP 上传");
         }
 
         // 3. 解压 ZIP 到本地
@@ -158,6 +161,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setCreator(request.getCreator());
         template.setProduceDate(parseDate(request.getProduceDate()));
         template.setDetailDesc(request.getDetailDesc());
+        template.setDifficulty(request.getDifficulty());
         return templateMapper.updateById(template) > 0;
     }
 

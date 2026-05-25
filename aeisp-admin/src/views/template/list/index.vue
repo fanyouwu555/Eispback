@@ -136,6 +136,15 @@
         <el-form-item label="详细描述" prop="detailDesc">
           <el-input v-model="createForm.detailDesc" type="textarea" :rows="3" placeholder="详细介绍详情（可选）" maxlength="2000" />
         </el-form-item>
+        <el-form-item label="难度等级" prop="difficulty">
+          <el-select v-model="createForm.difficulty" placeholder="选择难度等级" clearable style="width: 200px">
+            <el-option label="入门" :value="1" />
+            <el-option label="初级" :value="2" />
+            <el-option label="中级" :value="3" />
+            <el-option label="高级" :value="4" />
+            <el-option label="专家" :value="5" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="分类" prop="categoryPath">
           <el-cascader
             v-model="createCategoryPath"
@@ -218,6 +227,15 @@
         <el-form-item label="详细描述" prop="detailDesc">
           <el-input v-model="editForm.detailDesc" type="textarea" :rows="3" placeholder="详细介绍详情（可选）" maxlength="2000" />
         </el-form-item>
+        <el-form-item label="难度等级" prop="difficulty">
+          <el-select v-model="editForm.difficulty" placeholder="选择难度等级" clearable style="width: 200px">
+            <el-option label="入门" :value="1" />
+            <el-option label="初级" :value="2" />
+            <el-option label="中级" :value="3" />
+            <el-option label="高级" :value="4" />
+            <el-option label="专家" :value="5" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="分类" prop="categoryPath">
           <el-cascader
             v-model="editCategoryPath"
@@ -279,6 +297,9 @@
             <el-tag v-else type="danger" size="small">下架</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="权重" :span="1">{{ currentDetail.sortWeight }}</el-descriptions-item>
+          <el-descriptions-item label="难度等级" :span="1">
+            {{ difficultyLabel(currentDetail.difficulty) || '-' }}
+          </el-descriptions-item>
           <el-descriptions-item label="使用次数" :span="1">{{ currentDetail.usageCount }}</el-descriptions-item>
           <el-descriptions-item label="创作者" :span="1">{{ currentDetail.creator || '-' }}</el-descriptions-item>
           <el-descriptions-item label="创作时间" :span="1">{{ currentDetail.produceDate || '-' }}</el-descriptions-item>
@@ -420,6 +441,7 @@ const createForm = reactive({
   previewImage: '',
   description: '',
   detailDesc: '',
+  difficulty: undefined,
   versionNo: '1.0.0',
   changelog: '',
   topCategoryId: undefined,
@@ -441,6 +463,7 @@ const editForm = reactive({
   previewImage: '',
   description: '',
   detailDesc: '',
+  difficulty: undefined,
   topCategoryId: undefined,
   firstCategoryId: undefined,
   secondCategoryId: undefined,
@@ -506,6 +529,11 @@ const versionRules = {
 }
 
 const fileTreeProps = { children: 'children', label: 'name' }
+
+function difficultyLabel(val) {
+  const map = { 1: '入门', 2: '初级', 3: '中级', 4: '高级', 5: '专家' }
+  return map[val] || val
+}
 
 function getList(page) {
   loading.value = true
@@ -599,6 +627,7 @@ function handleCreateSubmit() {
   fd.append('creator', createForm.creator || '')
   fd.append('produceDate', createForm.produceDate || '')
   fd.append('detailDesc', createForm.detailDesc || '')
+  fd.append('difficulty', createForm.difficulty !== undefined && createForm.difficulty !== null ? createForm.difficulty : '')
   fd.append('zipFile', zipFile.value)
   createTemplate(fd).then(() => {
     ElMessage.success('创建成功')
@@ -617,6 +646,7 @@ function handleEdit(row) {
   editForm.previewImage = row.previewImage || ''
   editForm.description = row.description || ''
   editForm.detailDesc = row.detailDesc || ''
+  editForm.difficulty = row.difficulty
   editForm.isPaid = row.isPaid || 0
   editForm.feeType = row.feeType
   editForm.price = row.price
@@ -642,6 +672,7 @@ function handleEditSubmit() {
     previewImage: editForm.previewImage,
     description: editForm.description,
     detailDesc: editForm.detailDesc,
+    difficulty: editForm.difficulty,
     topCategoryId: editForm.topCategoryId,
     firstCategoryId: editForm.firstCategoryId,
     secondCategoryId: editForm.secondCategoryId,

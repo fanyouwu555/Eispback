@@ -90,6 +90,11 @@ public class UpdateTemplateRequest {
     private String detailDesc;
 
     /**
+     * 难度等级。
+     */
+    private Integer difficulty;
+
+    /**
      * 排序权重。
      */
     @NotNull(message = "排序权重不能为空")
