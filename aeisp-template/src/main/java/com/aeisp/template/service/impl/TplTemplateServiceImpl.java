@@ -304,7 +304,9 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         if (template.getCurrentVersionId() != null) {
             TplTemplateVersion current = versionMapper.selectById(template.getCurrentVersionId());
             if (current != null) {
-                vo.setCurrentVersion(convertToVersionVO(current));
+                TplTemplateVersionVO currentVo = convertToVersionVO(current);
+                currentVo.setResourceBaseUrl(resourceServerService.getBaseUrl());
+                vo.setCurrentVersion(currentVo);
             }
         }
 
@@ -313,7 +315,9 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         List<TplTemplateVersionVO> history = new ArrayList<>();
         for (TplTemplateVersion v : versions) {
             if (template.getCurrentVersionId() == null || !v.getId().equals(template.getCurrentVersionId())) {
-                history.add(convertToVersionVO(v));
+                TplTemplateVersionVO historyVo = convertToVersionVO(v);
+                historyVo.setResourceBaseUrl(resourceServerService.getBaseUrl());
+                history.add(historyVo);
             }
         }
         vo.setHistoryVersions(history);
