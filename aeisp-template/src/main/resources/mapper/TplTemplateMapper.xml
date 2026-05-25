@@ -7,6 +7,7 @@
         FROM tpl_template
         WHERE status = 1
           AND deleted = 0
+          AND (valid_time IS NULL OR valid_time > NOW())
         ORDER BY sort_weight DESC, created_at DESC
     </select>
 
