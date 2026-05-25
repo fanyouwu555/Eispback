@@ -12,6 +12,7 @@ import com.aeisp.template.entity.TplTemplateVersion;
 import com.aeisp.template.enums.TemplateStatusEnum;
 import com.aeisp.template.mapper.TplTemplateMapper;
 import com.aeisp.template.mapper.TplTemplateVersionMapper;
+import com.aeisp.template.service.ResourceServerService;
 import com.aeisp.template.service.TemplateStorageService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,8 @@ class TplTemplateServiceImplTest {
     private TplTemplateVersionMapper versionMapper;
     @Mock
     private TemplateStorageService templateStorageService;
+    @Mock
+    private ResourceServerService resourceServerService;
 
     @InjectMocks
     private TplTemplateServiceImpl tplTemplateService;
@@ -51,14 +54,15 @@ class TplTemplateServiceImplTest {
             return 1;
         });
         when(templateStorageService.storeZip(anyLong(), anyString(), any())).thenReturn("templates/1/v1.0.0/template.zip");
+        when(templateStorageService.getZipAbsolutePath(anyLong(), anyString())).thenReturn("/tmp/templates/1/v1.0.0/template.zip");
+        doNothing().when(templateStorageService).extractZip(anyString(), anyString());
+        when(resourceServerService.uploadExtractedFiles(anyLong(), anyString(), any())).thenReturn(List.of());
         when(versionMapper.insert(any(TplTemplateVersion.class))).thenAnswer(inv -> {
             TplTemplateVersion v = inv.getArgument(0);
             v.setId(10L);
             return 1;
         });
         when(templateMapper.updateById(any(TplTemplate.class))).thenReturn(1);
-        when(templateStorageService.getZipAbsolutePath(anyLong(), anyString())).thenReturn("/tmp/templates/1/v1.0.0/template.zip");
-        doNothing().when(templateStorageService).extractZip(anyString(), anyString());
 
         CreateTemplateRequest request = new CreateTemplateRequest();
         request.setTemplateName("测试模板");
@@ -133,6 +137,7 @@ class TplTemplateServiceImplTest {
         when(templateMapper.selectById(1L)).thenReturn(template);
         when(templateMapper.deleteById(1L)).thenReturn(1);
         when(versionMapper.delete(any())).thenReturn(2);
+        when(versionMapper.selectList(any())).thenReturn(List.of());
         doNothing().when(templateStorageService).deleteTemplateFiles(1L);
 
         assertTrue(tplTemplateService.deleteTemplate(1L));
@@ -194,6 +199,7 @@ class TplTemplateServiceImplTest {
         when(versionMapper.selectById(10L)).thenReturn(version);
         when(versionMapper.selectByTemplateId(1L)).thenReturn(List.of());
         when(templateStorageService.listFiles(1L, "v1.0.0")).thenReturn(List.of());
+        when(resourceServerService.getBaseUrl()).thenReturn("http://localhost/EISP/Resource/Template/");
 
         TplTemplateDetailVO vo = tplTemplateService.getPublicDetail(1L);
         assertNotNull(vo);

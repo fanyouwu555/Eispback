@@ -1,5 +1,6 @@
 package com.aeisp.template.service.impl;
 
+import com.aeisp.template.service.ResourceServerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,7 +21,16 @@ class TemplateStorageServiceImplTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        storageService = new TemplateStorageServiceImpl();
+        ResourceServerService mockResourceServerService = new ResourceServerService() {
+            @Override public String uploadFile(String relativePath, byte[] data) { return null; }
+            @Override public java.util.List<String> uploadExtractedFiles(Long templateId, String versionNo, java.io.File extractDir) { return java.util.List.of(); }
+            @Override public void deleteFile(String relativePath) { }
+            @Override public void deleteVersionFiles(Long templateId, String versionNo) { }
+            @Override public String getUrl(String relativePath) { return "http://localhost/" + relativePath; }
+            @Override public String getBaseUrl() { return "http://localhost/"; }
+            @Override public boolean fileExists(String relativePath) { return false; }
+        };
+        storageService = new TemplateStorageServiceImpl(mockResourceServerService);
     }
 
     @Test
