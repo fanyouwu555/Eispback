@@ -1,8 +1,11 @@
 package com.aeisp.boot.security;
 
+import com.aeisp.boot.code.BootErrorCode;
+import com.aeisp.boot.filter.UnityAccessLogFilter;
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,6 +45,14 @@ public class SecurityConfig {
     private final ObjectMapper objectMapper;
 
     /**
+     * Unity 客户端访问日志过滤器。
+     */
+    @Bean
+    public UnityAccessLogFilter unityAccessLogFilter() {
+        return new UnityAccessLogFilter(objectMapper);
+    }
+
+    /**
      * 白名单路径：无需认证即可访问。
      */
     private static final String[] WHITE_LIST = {
@@ -74,6 +85,8 @@ public class SecurityConfig {
                 )
                 // 添加 JWT 过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // 添加 Unity 访问日志过滤器（在 JWT 之后，可获取用户信息）
+                .addFilterAfter(unityAccessLogFilter(), JwtAuthenticationFilter.class)
                 // 异常处理
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(authenticationEntryPoint())
@@ -114,9 +127,9 @@ public class SecurityConfig {
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
-            response.setStatus(ResultCode.UNAUTHORIZED);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            Result<Void> result = Result.error(ResultCode.UNAUTHORIZED, "未登录或 Token 已过期");
+            Result<Void> result = Result.error(BootErrorCode.TOKEN_MISSING);
             response.getWriter().write(objectMapper.writeValueAsString(result));
         };
     }
@@ -129,9 +142,9 @@ public class SecurityConfig {
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) -> {
-            response.setStatus(ResultCode.FORBIDDEN);
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json;charset=UTF-8");
-            Result<Void> result = Result.error(ResultCode.FORBIDDEN, "权限不足");
+            Result<Void> result = Result.error(CommonErrorCode.ACCESS_DENIED);
             response.getWriter().write(objectMapper.writeValueAsString(result));
         };
     }

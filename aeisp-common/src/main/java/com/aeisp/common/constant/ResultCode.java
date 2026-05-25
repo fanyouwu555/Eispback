@@ -20,32 +20,44 @@ public final class ResultCode {
 
     /**
      * 请求参数错误。
+     * @deprecated 请使用 {@link com.aeisp.common.code.CommonErrorCode}
      */
+    @Deprecated
     public static final int BAD_REQUEST = 400;
 
     /**
      * 未授权（未登录或 Token 无效）。
+     * @deprecated 请使用 {@link com.aeisp.common.code.CommonErrorCode}
      */
+    @Deprecated
     public static final int UNAUTHORIZED = 401;
 
     /**
      * 禁止访问（权限不足）。
+     * @deprecated 请使用 {@link com.aeisp.common.code.CommonErrorCode}
      */
+    @Deprecated
     public static final int FORBIDDEN = 403;
 
     /**
      * 资源不存在。
+     * @deprecated 请使用 {@link com.aeisp.common.code.CommonErrorCode}
      */
+    @Deprecated
     public static final int NOT_FOUND = 404;
 
     /**
      * 请求方法不支持。
+     * @deprecated 请使用 {@link com.aeisp.common.code.CommonErrorCode}
      */
+    @Deprecated
     public static final int METHOD_NOT_ALLOWED = 405;
 
     /**
      * 请求过于频繁（限流）。
+     * @deprecated 请使用 {@link com.aeisp.common.code.CommonErrorCode}
      */
+    @Deprecated
     public static final int TOO_MANY_REQUESTS = 429;
 
     /**
