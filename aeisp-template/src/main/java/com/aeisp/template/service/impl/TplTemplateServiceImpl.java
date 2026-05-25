@@ -17,6 +17,7 @@ import com.aeisp.template.entity.TplTemplateVersion;
 import com.aeisp.template.enums.TemplateStatusEnum;
 import com.aeisp.template.mapper.TplTemplateMapper;
 import com.aeisp.template.mapper.TplTemplateVersionMapper;
+import com.aeisp.template.service.ResourceServerService;
 import com.aeisp.template.service.TemplateStorageService;
 import com.aeisp.template.service.TplTemplateCategoryService;
 import com.aeisp.template.service.TplTemplateService;
@@ -52,6 +53,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     private final TplTemplateVersionMapper versionMapper;
     private final TemplateStorageService templateStorageService;
     private final TplTemplateCategoryService categoryService;
+    private final ResourceServerService resourceServerService;
 
     @Override
     public boolean createTemplate(CreateTemplateRequest request) {
@@ -84,28 +86,51 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         }
         templateMapper.insert(template);
 
-        // 存储 ZIP 文件（非事务操作，失败不会导致 DB 回滚）
+        // 1. 暂存 ZIP 到本地临时目录
         String relativePath = templateStorageService.storeZip(template.getId(), request.getVersionNo(), request.getZipFile());
 
-        // 保存版本记录
+        // 2. 读取本地 ZIP 文件并上传到资源服务器
+        String zipAbsPath = templateStorageService.getZipAbsolutePath(template.getId(), request.getVersionNo());
+        String storageUrl = null;
+        if (zipAbsPath != null) {
+            try {
+                byte[] zipBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(zipAbsPath));
+                storageUrl = resourceServerService.uploadFile(relativePath, zipBytes);
+                log.info("ZIP 上传到资源服务器完成: {}", storageUrl);
+            } catch (IOException e) {
+                log.error("上传 ZIP 到资源服务器失败", e);
+            }
+        }
+
+        // 3. 解压 ZIP 到本地
+        String destDir = zipAbsPath != null ? zipAbsPath.substring(0, zipAbsPath.lastIndexOf('.')) : null;
+        if (zipAbsPath != null) {
+            templateStorageService.extractZip(zipAbsPath, destDir);
+        }
+
+        // 4. 上传提取的文件到资源服务器
+        if (destDir != null) {
+            resourceServerService.uploadExtractedFiles(template.getId(), request.getVersionNo(), new java.io.File(destDir));
+        }
+
+        // 5. 保存版本记录
         TplTemplateVersion version = new TplTemplateVersion();
         version.setTemplateId(template.getId());
         version.setVersionNo(request.getVersionNo());
         version.setFilePath(relativePath);
+        version.setStorageUrl(storageUrl);
         version.setChangelog(request.getChangelog());
         version.setFileSize(request.getZipFile().getSize());
         version.setFileHash(calcFileHash(request.getZipFile()));
         versionMapper.insert(version);
 
-        // 更新当前版本
+        // 6. 更新当前版本
         template.setCurrentVersionId(version.getId());
         templateMapper.updateById(template);
 
-        // 解压 ZIP
-        String zipAbsPath = templateStorageService.getZipAbsolutePath(template.getId(), request.getVersionNo());
+        // 7. 清理本地临时文件
         if (zipAbsPath != null) {
-            String destDir = zipAbsPath.substring(0, zipAbsPath.lastIndexOf('.'));
-            templateStorageService.extractZip(zipAbsPath, destDir);
+            templateStorageService.deleteVersionFiles(template.getId(), request.getVersionNo());
         }
 
         return true;
@@ -151,28 +176,51 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             throw new BizException(TemplateErrorCode.TEMPLATE_VERSION_EXISTS);
         }
 
-        // 存储 ZIP（非事务操作）
+        // 1. 暂存 ZIP 到本地临时目录
         String relativePath = templateStorageService.storeZip(templateId, versionNo, zipFile);
 
-        // 保存版本记录
+        // 2. 读取本地 ZIP 文件并上传到资源服务器
+        String zipAbsPath = templateStorageService.getZipAbsolutePath(templateId, versionNo);
+        String storageUrl = null;
+        if (zipAbsPath != null) {
+            try {
+                byte[] zipBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(zipAbsPath));
+                storageUrl = resourceServerService.uploadFile(relativePath, zipBytes);
+                log.info("ZIP 上传到资源服务器完成: {}", storageUrl);
+            } catch (IOException e) {
+                log.error("上传 ZIP 到资源服务器失败", e);
+            }
+        }
+
+        // 3. 解压 ZIP 到本地
+        String destDir = zipAbsPath != null ? zipAbsPath.substring(0, zipAbsPath.lastIndexOf('.')) : null;
+        if (zipAbsPath != null) {
+            templateStorageService.extractZip(zipAbsPath, destDir);
+        }
+
+        // 4. 上传提取的文件到资源服务器
+        if (destDir != null) {
+            resourceServerService.uploadExtractedFiles(templateId, versionNo, new java.io.File(destDir));
+        }
+
+        // 5. 保存版本记录
         TplTemplateVersion version = new TplTemplateVersion();
         version.setTemplateId(templateId);
         version.setVersionNo(versionNo);
         version.setFilePath(relativePath);
+        version.setStorageUrl(storageUrl);
         version.setChangelog(changelog);
         version.setFileSize(zipFile.getSize());
         version.setFileHash(calcFileHash(zipFile));
         versionMapper.insert(version);
 
-        // 更新当前版本
+        // 6. 更新当前版本
         template.setCurrentVersionId(version.getId());
         templateMapper.updateById(template);
 
-        // 解压
-        String zipAbsPath = templateStorageService.getZipAbsolutePath(templateId, versionNo);
+        // 7. 清理本地临时文件
         if (zipAbsPath != null) {
-            String destDir = zipAbsPath.substring(0, zipAbsPath.lastIndexOf('.'));
-            templateStorageService.extractZip(zipAbsPath, destDir);
+            templateStorageService.deleteVersionFiles(templateId, versionNo);
         }
 
         return true;
