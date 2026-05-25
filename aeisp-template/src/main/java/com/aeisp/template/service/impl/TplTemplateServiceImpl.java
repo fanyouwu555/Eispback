@@ -60,6 +60,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         // 保存模板主表
         TplTemplate template = new TplTemplate();
         template.setTemplateName(request.getTemplateName());
+        // 自动生成 template_code
+        template.setTemplateCode(generateTemplateCode());
         template.setScenario(request.getScenario());
         template.setDescription(request.getDescription());
         template.setPreviewImage(request.getPreviewImage());
@@ -284,6 +286,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         Page<TplTemplate> page = new Page<>(request.getPageNum(), request.getPageSize());
         LambdaQueryWrapper<TplTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(request.getTemplateName()), TplTemplate::getTemplateName, request.getTemplateName())
+                .eq(StringUtils.hasText(request.getTemplateCode()), TplTemplate::getTemplateCode, request.getTemplateCode())
                 .eq(StringUtils.hasText(request.getScenario()), TplTemplate::getScenario, request.getScenario())
                 .eq(request.getStatus() != null, TplTemplate::getStatus, request.getStatus())
                 .eq(request.getTopCategoryId() != null, TplTemplate::getTopCategoryId, request.getTopCategoryId())
@@ -436,6 +439,24 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         }).toList());
 
         return result;
+    }
+
+    /**
+     * 自动生成模板编码。
+     * 格式：TPL + yyyyMMdd + 4位序号，如 TPL202605250001
+     */
+    private String generateTemplateCode() {
+        String prefix = "TPL" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+        String maxCode = templateMapper.selectMaxTemplateCode(prefix);
+        int seq = 1;
+        if (maxCode != null && maxCode.length() >= 16) {
+            try {
+                seq = Integer.parseInt(maxCode.substring(12)) + 1;
+            } catch (NumberFormatException e) {
+                log.warn("解析最大模板编码序号失败: {}", maxCode);
+            }
+        }
+        return prefix + String.format("%04d", seq);
     }
 
     private TplTemplateVO convertToVO(TplTemplate template) {

@@ -20,6 +20,11 @@ public class TplTemplateVO implements Serializable {
     private Long id;
 
     /**
+     * 模板编码。
+     */
+    private String templateCode;
+
+    /**
      * 模板名称。
      */
     private String templateName;

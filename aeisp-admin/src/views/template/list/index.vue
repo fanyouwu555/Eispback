@@ -5,6 +5,9 @@
       <el-form-item label="模板名称" prop="templateName">
         <el-input v-model="queryParams.templateName" placeholder="请输入模板名称" clearable @keyup.enter="handleQuery" />
       </el-form-item>
+      <el-form-item label="模板编码" prop="templateCode">
+        <el-input v-model="queryParams.templateCode" placeholder="编码精确搜索" clearable @keyup.enter="handleQuery" style="width: 180px" />
+      </el-form-item>
       <el-form-item label="场景" prop="scenario">
         <el-select v-model="queryParams.scenario" placeholder="场景类型" clearable style="width: 130px">
           <el-option label="教学" value="teaching" />
@@ -44,6 +47,7 @@
     <!-- 数据表格 -->
     <el-table :data="templateList" v-loading="loading" stripe border style="width: 100%">
       <el-table-column prop="id" label="ID" width="70" align="center" />
+      <el-table-column prop="templateCode" label="编码" width="180" align="center" />
       <el-table-column prop="templateName" label="模板名称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="scenario" label="场景" width="90" align="center">
         <template #default="{ row }">
@@ -426,6 +430,7 @@ const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
   templateName: undefined,
+  templateCode: undefined,
   scenario: undefined,
   status: undefined,
   topCategoryId: undefined,

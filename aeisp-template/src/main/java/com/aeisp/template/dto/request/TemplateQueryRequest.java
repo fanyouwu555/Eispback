@@ -26,6 +26,11 @@ public class TemplateQueryRequest {
     private String templateName;
 
     /**
+     * 模板编码（精确匹配）。
+     */
+    private String templateCode;
+
+    /**
      * 适用场景。
      */
     private String scenario;

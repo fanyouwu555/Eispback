@@ -23,6 +23,14 @@ public interface TplTemplateMapper extends BaseMapper<TplTemplate> {
     List<TplTemplate> selectOnlineList(@Param("scenario") String scenario);
 
     /**
+     * 查询当前日期最大的模板编码。
+     *
+     * @param prefix 编码前缀，如 "TPL20260525"
+     * @return 最大的模板编码
+     */
+    String selectMaxTemplateCode(@Param("prefix") String prefix);
+
+    /**
      * 使用次数 +1。
      *
      * @param id 模板 ID

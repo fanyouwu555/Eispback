@@ -27,4 +27,10 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectMaxTemplateCode" resultType="java.lang.String">
+        SELECT MAX(template_code)
+        FROM tpl_template
+        WHERE template_code LIKE CONCAT(#{prefix}, '%')
+    </select>
+
 </mapper>

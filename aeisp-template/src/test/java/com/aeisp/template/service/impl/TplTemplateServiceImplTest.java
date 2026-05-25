@@ -70,6 +70,7 @@ class TplTemplateServiceImplTest {
                 v.setId(10L);
                 return 1;
             });
+            when(templateMapper.selectMaxTemplateCode(anyString())).thenReturn(null);
             when(templateMapper.updateById(any(TplTemplate.class))).thenReturn(1);
 
             CreateTemplateRequest request = new CreateTemplateRequest();
@@ -80,6 +81,8 @@ class TplTemplateServiceImplTest {
             request.setZipFile(new MockMultipartFile("file", "test.zip", "application/zip", "content".getBytes()));
 
             assertTrue(tplTemplateService.createTemplate(request));
+            // 验证模板编码自动生成
+            verify(templateMapper).selectMaxTemplateCode(anyString());
             verify(templateMapper).insert(any(TplTemplate.class));
             verify(versionMapper).insert(any(TplTemplateVersion.class));
         } finally {
