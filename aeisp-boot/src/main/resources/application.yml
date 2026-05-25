@@ -2,6 +2,11 @@ server:
   port: 8080
   tomcat:
     uri-encoding: UTF-8
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   application:
@@ -47,7 +52,12 @@ jwt:
 
 template:
   upload-path: ./uploads/templates/
-  resource-base-url: http://localhost/EISP/Resource/Template/
+
+resource-server:
+  type: nfs    # nfs or oss
+  nfs:
+    upload-path: /mnt/nfs/templates/     # NFS 挂载的本地路径（Windows 可设为 Z:/templates/）
+    base-url: http://localhost/EISP/Resource/Template/
 
 logging:
   level:
