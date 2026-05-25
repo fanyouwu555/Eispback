@@ -2,7 +2,7 @@ package com.aeisp.system.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.dto.CreateDictTypeRequest;
 import com.aeisp.system.dto.DictTypeQueryRequest;
@@ -42,7 +42,7 @@ public class DictTypeController {
     public Result<DictTypeVO> getById(@PathVariable Long id) {
         SysDictType type = dictTypeService.getById(id);
         if (type == null) {
-            return Result.error(ResultCode.NOT_FOUND, "字典类型不存在");
+            return Result.error(CommonErrorCode.RESOURCE_NOT_FOUND, "字典类型不存在");
         }
         DictTypeVO vo = new DictTypeVO();
         vo.setId(type.getId());
@@ -67,7 +67,7 @@ public class DictTypeController {
         type.setStatus(request.getStatus() != null ? request.getStatus() : 1);
         type.setIsSystem(request.getIsSystem() != null ? request.getIsSystem() : 0);
         boolean success = dictTypeService.createType(type);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "创建字典类型失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "创建字典类型失败");
     }
 
     @PreAuthorize("hasAuthority('system:dict:manage')")
@@ -76,7 +76,7 @@ public class DictTypeController {
     public Result<Void> updateType(@PathVariable Long id, @Valid @RequestBody UpdateDictTypeRequest request) {
         SysDictType existing = dictTypeService.getById(id);
         if (existing == null) {
-            return Result.error(ResultCode.NOT_FOUND, "字典类型不存在");
+            return Result.error(CommonErrorCode.RESOURCE_NOT_FOUND, "字典类型不存在");
         }
         if (request.getDictName() != null) existing.setDictName(request.getDictName());
         if (request.getDictCode() != null) existing.setDictCode(request.getDictCode());
@@ -84,7 +84,7 @@ public class DictTypeController {
         if (request.getStatus() != null) existing.setStatus(request.getStatus());
         if (request.getIsSystem() != null) existing.setIsSystem(request.getIsSystem());
         boolean success = dictTypeService.updateType(existing);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新字典类型失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新字典类型失败");
     }
 
     @PreAuthorize("hasAuthority('system:dict:manage')")
@@ -92,7 +92,7 @@ public class DictTypeController {
     @DeleteMapping("/{id}")
     public Result<Void> deleteType(@PathVariable Long id) {
         boolean success = dictTypeService.deleteType(id);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "删除字典类型失败，系统内置类型不可删除");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "删除字典类型失败，系统内置类型不可删除");
     }
 
     @PreAuthorize("hasAuthority('system:dict:list')")

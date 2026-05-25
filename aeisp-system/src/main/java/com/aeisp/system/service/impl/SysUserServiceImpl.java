@@ -3,6 +3,7 @@ package com.aeisp.system.service.impl;
 import com.aeisp.common.PageResult;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.system.code.SystemErrorCode;
 import com.aeisp.system.dto.UserQueryRequest;
 import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.entity.SysUser;
@@ -87,7 +88,7 @@ public class SysUserServiceImpl implements SysUserService {
         // 防止降级最后一个超级管理员
         if (roleIds != null && !roleIds.contains(SUPER_ADMIN_ROLE_ID)) {
             if (hasSuperAdminRole(user.getId()) && isLastSuperAdmin(user.getId())) {
-                throw new BizException("系统中至少保留一个超级管理员，无法降级");
+                throw new BizException(SystemErrorCode.USER_CANNOT_DEMOTE_SUPER);
             }
         }
         int rows = sysUserMapper.updateById(user);
@@ -109,7 +110,7 @@ public class SysUserServiceImpl implements SysUserService {
     public boolean deleteUser(Long userId) {
         // 防止删除最后一个超级管理员
         if (hasSuperAdminRole(userId) && isLastSuperAdmin(userId)) {
-            throw new BizException("系统中至少保留一个超级管理员，无法删除");
+            throw new BizException(SystemErrorCode.USER_CANNOT_DELETE_LAST_SUPER);
         }
         int rows = sysUserMapper.deleteById(userId);
         if (rows > 0) {

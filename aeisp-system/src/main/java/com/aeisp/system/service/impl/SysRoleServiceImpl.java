@@ -2,6 +2,7 @@ package com.aeisp.system.service.impl;
 
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.system.code.SystemErrorCode;
 import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysRolePermissionMapper;
@@ -65,7 +66,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     public boolean updateRole(SysRole role, List<Long> permissionIds) {
         SysRole existing = sysRoleMapper.selectById(role.getId());
         if (existing == null) {
-            throw new BizException("角色不存在");
+            throw new BizException(SystemErrorCode.ROLE_NOT_FOUND);
         }
         if (Integer.valueOf(1).equals(existing.getIsSystem())) {
             // 系统内置角色禁止修改编码和内置标识
@@ -94,7 +95,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     public boolean deleteRole(Long roleId) {
         SysRole role = sysRoleMapper.selectById(roleId);
         if (role == null) {
-            throw new BizException("角色不存在");
+            throw new BizException(SystemErrorCode.ROLE_NOT_FOUND);
         }
         if (Integer.valueOf(1).equals(role.getIsSystem())) {
             throw new BizException("系统内置角色不可删除");

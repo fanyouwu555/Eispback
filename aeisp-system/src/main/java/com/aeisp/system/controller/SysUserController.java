@@ -2,7 +2,7 @@ package com.aeisp.system.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.dto.CreateUserRequest;
 import com.aeisp.system.dto.UpdateUserRequest;
@@ -65,7 +65,7 @@ public class SysUserController {
     public Result<SysUserVO> getUserById(@PathVariable Long id) {
         SysUser user = sysUserService.getById(id);
         if (user == null) {
-            return Result.error(ResultCode.NOT_FOUND, "用户不存在");
+            return Result.error(CommonErrorCode.RESOURCE_NOT_FOUND, "用户不存在");
         }
         SysUserVO vo = new SysUserVO();
         vo.setId(user.getId());
@@ -114,7 +114,7 @@ public class SysUserController {
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         boolean success = sysUserService.createUser(user, request.getRoleIds());
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "创建用户失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "创建用户失败");
     }
 
     /**
@@ -136,7 +136,7 @@ public class SysUserController {
         user.setPhone(request.getPhone());
         user.setStatus(request.getStatus());
         boolean success = sysUserService.updateUser(user, request.getRoleIds());
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新用户失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新用户失败");
     }
 
     /**
@@ -150,6 +150,6 @@ public class SysUserController {
     @DeleteMapping("/{id}")
     public Result<Void> deleteUser(@PathVariable Long id) {
         boolean success = sysUserService.deleteUser(id);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "删除用户失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "删除用户失败");
     }
 }

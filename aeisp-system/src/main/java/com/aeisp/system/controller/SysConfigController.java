@@ -1,7 +1,7 @@
 package com.aeisp.system.controller;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.service.SysConfigService;
 import com.aeisp.system.vo.SysConfigVO;
@@ -67,9 +67,9 @@ public class SysConfigController {
     public Result<Void> updateConfig(@PathVariable String key, @RequestBody Map<String, String> body) {
         String value = body.get("configValue");
         if (value == null) {
-            return Result.error(ResultCode.BAD_REQUEST, "configValue 不能为空");
+            return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, "configValue 不能为空");
         }
         boolean success = sysConfigService.updateConfig(key, value, activeProfile);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新配置失败，配置键不存在");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新配置失败，配置键不存在");
     }
 }

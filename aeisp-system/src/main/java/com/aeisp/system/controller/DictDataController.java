@@ -1,7 +1,7 @@
 package com.aeisp.system.controller;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.dto.CreateDictDataRequest;
 import com.aeisp.system.dto.UpdateDictDataRequest;
@@ -41,7 +41,7 @@ public class DictDataController {
         data.setColor(request.getColor());
         data.setIsDefault(request.getIsDefault() != null ? request.getIsDefault() : 0);
         boolean success = dictDataService.createData(data);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "创建字典数据失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "创建字典数据失败");
     }
 
     @PreAuthorize("hasAuthority('system:dict:manage')")
@@ -50,7 +50,7 @@ public class DictDataController {
     public Result<Void> updateData(@PathVariable Long id, @Valid @RequestBody UpdateDictDataRequest request) {
         SysDictData existing = dictDataService.getById(id);
         if (existing == null) {
-            return Result.error(ResultCode.NOT_FOUND, "字典数据不存在");
+            return Result.error(CommonErrorCode.RESOURCE_NOT_FOUND, "字典数据不存在");
         }
         if (request.getItemLabel() != null) existing.setItemLabel(request.getItemLabel());
         if (request.getItemValue() != null) existing.setItemValue(request.getItemValue());
@@ -59,7 +59,7 @@ public class DictDataController {
         if (request.getColor() != null) existing.setColor(request.getColor());
         if (request.getIsDefault() != null) existing.setIsDefault(request.getIsDefault());
         boolean success = dictDataService.updateData(existing);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新字典数据失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新字典数据失败");
     }
 
     @PreAuthorize("hasAuthority('system:dict:manage')")
@@ -67,6 +67,6 @@ public class DictDataController {
     @DeleteMapping("/{id}")
     public Result<Void> deleteData(@PathVariable Long id) {
         boolean success = dictDataService.deleteData(id);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "删除字典数据失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "删除字典数据失败");
     }
 }

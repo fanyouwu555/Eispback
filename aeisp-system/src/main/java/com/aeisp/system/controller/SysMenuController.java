@@ -1,7 +1,7 @@
 package com.aeisp.system.controller;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.entity.SysPermission;
 import com.aeisp.system.service.SysMenuService;
@@ -40,7 +40,7 @@ public class SysMenuController {
     public Result<SysPermission> getById(@PathVariable Long id) {
         SysPermission permission = sysMenuService.getById(id);
         if (permission == null) {
-            return Result.error(ResultCode.NOT_FOUND, "菜单不存在");
+            return Result.error(CommonErrorCode.RESOURCE_NOT_FOUND, "菜单不存在");
         }
         return Result.success(permission);
     }
@@ -52,7 +52,7 @@ public class SysMenuController {
         if (permission.getParentId() == null) permission.setParentId(0L);
         if (permission.getSortOrder() == null) permission.setSortOrder(0);
         boolean success = sysMenuService.createMenu(permission);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "创建菜单失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "创建菜单失败");
     }
 
     @PreAuthorize("hasAuthority('system:menu:manage')")
@@ -61,7 +61,7 @@ public class SysMenuController {
     public Result<Void> updateMenu(@PathVariable Long id, @RequestBody SysPermission permission) {
         permission.setId(id);
         boolean success = sysMenuService.updateMenu(permission);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新菜单失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新菜单失败");
     }
 
     @PreAuthorize("hasAuthority('system:menu:manage')")
@@ -70,7 +70,7 @@ public class SysMenuController {
     public Result<Void> deleteMenu(@PathVariable Long id) {
         boolean success = sysMenuService.deleteMenu(id);
         if (!success) {
-            return Result.error(ResultCode.INTERNAL_ERROR, "删除失败，该菜单存在子菜单");
+            return Result.error(CommonErrorCode.SYSTEM_ERROR, "删除失败，该菜单存在子菜单");
         }
         return Result.success();
     }
@@ -79,7 +79,7 @@ public class SysMenuController {
     public Result<MenuRoutesVO> getUserRoutes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            return Result.error(ResultCode.UNAUTHORIZED, "未登录");
+            return Result.error(CommonErrorCode.ACCESS_DENIED, "未登录");
         }
         Object principal = authentication.getPrincipal();
         Long userId = null;
@@ -95,7 +95,7 @@ public class SysMenuController {
             }
         }
         if (userId == null) {
-            return Result.error(ResultCode.UNAUTHORIZED, "无法识别用户");
+            return Result.error(CommonErrorCode.ACCESS_DENIED, "无法识别用户");
         }
         return Result.success(sysMenuService.getUserRoutes(userId));
     }

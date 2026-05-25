@@ -1,7 +1,7 @@
 package com.aeisp.system.controller;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.dto.CreateRoleRequest;
 import com.aeisp.system.dto.UpdateRoleRequest;
@@ -95,7 +95,7 @@ public class SysRoleController {
         role.setIsSystem(request.getIsSystem() != null ? request.getIsSystem() : 0);
         role.setDataScope(request.getDataScope() != null ? request.getDataScope() : "ALL");
         boolean success = sysRoleService.createRole(role, request.getPermissionIds());
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "创建角色失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "创建角色失败");
     }
 
     /**
@@ -119,7 +119,7 @@ public class SysRoleController {
         role.setIsSystem(request.getIsSystem());
         role.setDataScope(request.getDataScope());
         boolean success = sysRoleService.updateRole(role, request.getPermissionIds());
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新角色失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新角色失败");
     }
 
     /**
@@ -133,7 +133,7 @@ public class SysRoleController {
     @DeleteMapping("/{id}")
     public Result<Void> deleteRole(@PathVariable Long id) {
         boolean success = sysRoleService.deleteRole(id);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "删除角色失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "删除角色失败");
     }
 
     private static SysRoleVO convertToVO(SysRole role, List<SysPermission> permissions) {
