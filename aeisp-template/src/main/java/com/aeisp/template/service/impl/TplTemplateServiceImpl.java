@@ -263,6 +263,13 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         LambdaQueryWrapper<TplTemplateVersion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TplTemplateVersion::getTemplateId, templateId);
         versionMapper.delete(wrapper);
+        // 清理资源服务器文件
+        LambdaQueryWrapper<TplTemplateVersion> versionQuery = new LambdaQueryWrapper<>();
+        versionQuery.eq(TplTemplateVersion::getTemplateId, templateId);
+        List<TplTemplateVersion> allVersions = versionMapper.selectList(versionQuery);
+        for (TplTemplateVersion v : allVersions) {
+            resourceServerService.deleteVersionFiles(templateId, v.getVersionNo());
+        }
         // 删除物理文件（在 DB 删除之后执行，避免文件已删但 DB 回滚导致不一致）
         templateStorageService.deleteTemplateFiles(templateId);
         return true;
