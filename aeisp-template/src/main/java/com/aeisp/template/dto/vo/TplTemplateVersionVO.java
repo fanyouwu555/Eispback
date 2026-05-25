@@ -46,4 +46,14 @@ public class TplTemplateVersionVO implements Serializable {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+
+    /**
+     * ZIP 文件的资源服务器下载地址。
+     */
+    private String storageUrl;
+
+    /**
+     * 该版本资源的基础 URL，Unity 客户端用于拼接具体资源路径按需加载。
+     */
+    private String resourceBaseUrl;
 }
