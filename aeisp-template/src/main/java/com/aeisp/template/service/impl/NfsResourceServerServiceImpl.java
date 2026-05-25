@@ -1,11 +1,8 @@
 package com.aeisp.template.service.impl;
 
 import cn.hutool.core.io.FileUtil;
-import com.aeisp.template.service.ResourceServerService;
+import com.aeisp.common.service.ResourceServerService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,15 +20,15 @@ import java.util.stream.Stream;
  * 适用于阿里云 OSS 上线前的临时方案。</p>
  */
 @Slf4j
-@Service
-@ConditionalOnProperty(name = "resource-server.type", havingValue = "nfs", matchIfMissing = true)
 public class NfsResourceServerServiceImpl implements ResourceServerService {
 
-    @Value("${resource-server.nfs.upload-path}")
-    private String uploadPath;
+    private final String uploadPath;
+    private final String baseUrl;
 
-    @Value("${resource-server.nfs.base-url}")
-    private String baseUrl;
+    public NfsResourceServerServiceImpl(String uploadPath, String baseUrl) {
+        this.uploadPath = uploadPath;
+        this.baseUrl = baseUrl;
+    }
 
     @Override
     public String uploadFile(String relativePath, byte[] data) {
@@ -128,6 +125,25 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
     }
 
     @Override
+    public void deleteDirectory(String relativePath) {
+        if (!isPathSafe(relativePath)) {
+            log.warn("非法目录路径: {}", relativePath);
+            throw new SecurityException("非法目录路径");
+        }
+        String normalizedPath = normalizePath(relativePath);
+        String absolutePath = FileUtil.normalize(uploadPath + "/" + normalizedPath);
+        if (!isWithinBaseDir(absolutePath)) {
+            log.warn("路径超出允许范围: {}", absolutePath);
+            throw new SecurityException("非法目录路径");
+        }
+        File dir = new File(absolutePath);
+        if (dir.exists()) {
+            FileUtil.del(dir);
+            log.debug("NFS 删除目录完成: {}", absolutePath);
+        }
+    }
+
+    @Override
     public String getUrl(String relativePath) {
         if (baseUrl == null || baseUrl.isBlank()) {
             log.warn("baseUrl 未配置，无法生成完整 URL");
@@ -162,9 +178,6 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
 
     /**
      * 校验路径是否安全，防止路径遍历攻击。
-     *
-     * <p>通过将目标路径解析为绝对路径后，检查其是否仍然位于允许的基目录下，
-     * 可有效防御 {@code ../}、绝对路径、空字节注入等多种路径遍历手段。</p>
      *
      * @param path 待校验的路径片段
      * @return true 表示安全

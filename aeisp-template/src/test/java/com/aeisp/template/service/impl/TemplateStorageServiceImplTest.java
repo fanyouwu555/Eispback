@@ -1,6 +1,6 @@
 package com.aeisp.template.service.impl;
 
-import com.aeisp.template.service.ResourceServerService;
+import com.aeisp.common.service.ResourceServerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,6 +29,7 @@ class TemplateStorageServiceImplTest {
             @Override public String getUrl(String relativePath) { return "http://localhost/" + relativePath; }
             @Override public String getBaseUrl() { return "http://localhost/"; }
             @Override public boolean fileExists(String relativePath) { return false; }
+            @Override public void deleteDirectory(String relativePath) { }
         };
         storageService = new TemplateStorageServiceImpl(mockResourceServerService);
     }

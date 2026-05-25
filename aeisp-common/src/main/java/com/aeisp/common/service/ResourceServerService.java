@@ -1,4 +1,4 @@
-package com.aeisp.template.service;
+package com.aeisp.common.service;
 
 import java.io.File;
 import java.util.List;
@@ -6,10 +6,8 @@ import java.util.List;
 /**
  * 资源服务器服务接口。
  *
- * <p>负责将模板资源（ZIP、提取文件等）上传到远程资源服务器（NFS/OSS），
+ * <p>负责将资源（ZIP、提取文件等）上传到远程资源服务器（NFS/OSS），
  * 并提供 URL 访问能力。NFS 和 OSS 通过不同的实现类切换。</p>
- *
- * @author AEISP Team
  */
 public interface ResourceServerService {
 
@@ -24,7 +22,6 @@ public interface ResourceServerService {
 
     /**
      * 批量上传解压后的所有文件到资源服务器。
-     * 遍历 extractDir 下的所有文件，保持子目录结构。
      *
      * @param templateId 模板 ID
      * @param versionNo  版本号
@@ -47,6 +44,13 @@ public interface ResourceServerService {
      * @param versionNo  版本号
      */
     void deleteVersionFiles(Long templateId, String versionNo);
+
+    /**
+     * 递归删除资源服务器上的整个目录。
+     *
+     * @param relativePath 相对路径，如 "18/42/"
+     */
+    void deleteDirectory(String relativePath);
 
     /**
      * 根据相对路径获取完整的可访问 URL。

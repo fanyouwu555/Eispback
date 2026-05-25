@@ -1,6 +1,6 @@
 package com.aeisp.boot.filter;
 
-import com.aeisp.boot.security.CustomUserDetails;
+import com.aeisp.common.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.FilterChain;

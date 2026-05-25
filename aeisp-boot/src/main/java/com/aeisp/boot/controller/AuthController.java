@@ -1,7 +1,7 @@
 package com.aeisp.boot.controller;
 
 import com.aeisp.boot.request.LoginRequest;
-import com.aeisp.boot.security.CustomUserDetails;
+import com.aeisp.common.security.CustomUserDetails;
 import com.aeisp.boot.vo.LoginResponse;
 import com.aeisp.boot.vo.UserInfoVO;
 import com.aeisp.boot.util.UserAgentUtil;

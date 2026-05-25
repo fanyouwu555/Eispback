@@ -17,7 +17,7 @@ import com.aeisp.template.entity.TplTemplateVersion;
 import com.aeisp.template.enums.TemplateStatusEnum;
 import com.aeisp.template.mapper.TplTemplateMapper;
 import com.aeisp.template.mapper.TplTemplateVersionMapper;
-import com.aeisp.template.service.ResourceServerService;
+import com.aeisp.common.service.ResourceServerService;
 import com.aeisp.template.service.TemplateStorageService;
 import com.aeisp.template.service.TplTemplateCategoryService;
 import com.aeisp.template.service.TplTemplateService;

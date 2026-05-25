@@ -1,6 +1,7 @@
 package com.aeisp.boot.security;
 
 import com.aeisp.common.constant.CommonConstants;
+import com.aeisp.common.security.CustomUserDetails;
 import com.aeisp.system.entity.SysUser;
 import com.aeisp.system.mapper.SysPermissionMapper;
 import com.aeisp.system.mapper.SysRoleMapper;

@@ -58,6 +58,9 @@ resource-server:
   nfs:
     upload-path: D:/Users/admin/Desktop/EISP/Resource/Template/     # HFS 文件服务路径
     base-url: http://192.168.50.215/EISP/Resource/Template/
+  users:
+    upload-path: D:/Users/admin/Desktop/EISP/Users/
+    base-url: http://192.168.50.215/EISP/Users/
 
 logging:
   level:

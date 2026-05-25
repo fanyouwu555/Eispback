@@ -1,4 +1,4 @@
-package com.aeisp.boot.security;
+package com.aeisp.common.security;
 
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,8 +14,6 @@ import java.util.stream.Stream;
  *
  * <p>包装系统管理员（SysUser）和前端用户（UsrUser）的统一认证信息，
  * 支持角色和权限的 Spring Security 授权校验。</p>
- *
- * @author AEISP Team
  */
 @Data
 public class CustomUserDetails implements UserDetails {
@@ -82,7 +80,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 将角色和权限都转换为 SimpleGrantedAuthority
         List<SimpleGrantedAuthority> roleAuthorities = roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .toList();

@@ -2,7 +2,7 @@ package com.aeisp.template.service.impl;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ZipUtil;
-import com.aeisp.template.service.ResourceServerService;
+import com.aeisp.common.service.ResourceServerService;
 import com.aeisp.template.service.TemplateStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
