@@ -2,6 +2,7 @@ package com.aeisp.model.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.model.code.ModelErrorCode;
 import com.aeisp.model.dto.AiMessageVO;
 import com.aeisp.model.dto.AiSessionQueryRequest;
 import com.aeisp.model.dto.AiSessionVO;
@@ -63,7 +64,7 @@ public class AiSessionServiceImpl implements AiSessionService {
     public AiSessionVO getSession(Long id) {
         AiSession entity = aiSessionMapper.selectById(id);
         if (entity == null || entity.getDeleted() != 0) {
-            throw new BizException("会话不存在");
+            throw new BizException(ModelErrorCode.SESSION_NOT_FOUND);
         }
         return toVO(entity);
     }
@@ -83,7 +84,7 @@ public class AiSessionServiceImpl implements AiSessionService {
     public Boolean deleteSession(Long id) {
         AiSession entity = aiSessionMapper.selectById(id);
         if (entity == null) {
-            throw new BizException("会话不存在");
+            throw new BizException(ModelErrorCode.SESSION_NOT_FOUND);
         }
         entity.setDeleted(1);
         aiSessionMapper.updateById(entity);
@@ -95,7 +96,7 @@ public class AiSessionServiceImpl implements AiSessionService {
     public Boolean archiveSession(Long id) {
         AiSession entity = aiSessionMapper.selectById(id);
         if (entity == null) {
-            throw new BizException("会话不存在");
+            throw new BizException(ModelErrorCode.SESSION_NOT_FOUND);
         }
         entity.setStatus(2);
         aiSessionMapper.updateById(entity);

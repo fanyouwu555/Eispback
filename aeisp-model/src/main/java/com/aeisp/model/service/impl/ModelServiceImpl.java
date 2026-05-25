@@ -2,6 +2,7 @@ package com.aeisp.model.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.model.code.ModelErrorCode;
 import com.aeisp.model.dto.ModelDTO;
 import com.aeisp.model.dto.ModelQueryRequest;
 import com.aeisp.model.dto.ModelTestRequest;
@@ -48,7 +49,7 @@ public class ModelServiceImpl implements ModelService {
     public boolean updateModel(Long id, ModelDTO dto) {
         AiModel model = aiModelMapper.selectById(id);
         if (model == null) {
-            throw new BizException("模型不存在");
+            throw new BizException(ModelErrorCode.MODEL_NOT_FOUND);
         }
         BeanUtils.copyProperties(dto, model);
         return aiModelMapper.updateById(model) > 0;
@@ -58,7 +59,7 @@ public class ModelServiceImpl implements ModelService {
     public boolean deleteModel(Long id) {
         AiModel model = aiModelMapper.selectById(id);
         if (model == null) {
-            throw new BizException("模型不存在");
+            throw new BizException(ModelErrorCode.MODEL_NOT_FOUND);
         }
         aiModelMapper.deleteById(id);
         return true;
@@ -68,7 +69,7 @@ public class ModelServiceImpl implements ModelService {
     public boolean toggleStatus(Long id, Integer status) {
         AiModel model = aiModelMapper.selectById(id);
         if (model == null) {
-            throw new BizException("模型不存在");
+            throw new BizException(ModelErrorCode.MODEL_NOT_FOUND);
         }
         model.setStatus(status);
         return aiModelMapper.updateById(model) > 0;
@@ -78,7 +79,7 @@ public class ModelServiceImpl implements ModelService {
     public boolean updateSortOrder(Long id, Integer sortOrder) {
         AiModel model = aiModelMapper.selectById(id);
         if (model == null) {
-            throw new BizException("模型不存在");
+            throw new BizException(ModelErrorCode.MODEL_NOT_FOUND);
         }
         model.setSortOrder(sortOrder);
         return aiModelMapper.updateById(model) > 0;
