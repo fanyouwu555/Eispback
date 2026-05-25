@@ -1,8 +1,8 @@
 package com.aeisp.common.aspect;
 
 import com.aeisp.common.annotation.RateLimit;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.constant.CacheConstants;
-import com.aeisp.common.constant.ResultCode;
 import com.aeisp.common.exception.BizException;
 import com.aeisp.common.util.RedisUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,7 +45,7 @@ public class RateLimitAspect {
         long count = incrementAndGet(key, rateLimit.windowSeconds());
         if (count > rateLimit.maxRequests()) {
             log.warn("接口限流触发, key={}, count={}", key, count);
-            throw new BizException(ResultCode.TOO_MANY_REQUESTS, rateLimit.message());
+            throw new BizException(CommonErrorCode.RATE_LIMITED, rateLimit.message());
         }
     }
 

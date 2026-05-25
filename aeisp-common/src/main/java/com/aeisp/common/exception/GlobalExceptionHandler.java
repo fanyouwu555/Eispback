@@ -1,7 +1,7 @@
 package com.aeisp.common.exception;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.entity.SysErrorLog;
 import com.aeisp.common.mapper.SysErrorLogMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
     public Result<Void> handleSysException(SysException e) {
         log.error("系统异常: {}", e.getMessage(), e);
         saveErrorLog(e, 3);
-        return Result.error(ResultCode.INTERNAL_ERROR, e.getMessage());
+        return Result.error(CommonErrorCode.SYSTEM_ERROR, e.getMessage());
     }
 
     /**
@@ -81,7 +81,7 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         log.warn("参数校验失败: {}", message);
-        return Result.error(ResultCode.BAD_REQUEST, message);
+        return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, message);
     }
 
     /**
@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
                 .collect(Collectors.joining("; "));
         log.warn("方法参数校验失败: {}", message);
-        return Result.error(ResultCode.BAD_REQUEST, message);
+        return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, message);
     }
 
     /**
@@ -113,7 +113,7 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         log.warn("参数绑定失败: {}", message);
-        return Result.error(ResultCode.BAD_REQUEST, message);
+        return Result.error(CommonErrorCode.PARAM_BIND_FAILED, message);
     }
 
     /**
@@ -125,7 +125,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public Result<Void> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException e) {
         log.warn("权限不足: {}", e.getMessage());
-        return Result.error(ResultCode.FORBIDDEN, "权限不足，无法访问该资源");
+        return Result.error(CommonErrorCode.ACCESS_DENIED);
     }
 
     /**
@@ -137,7 +137,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
     public Result<Void> handleMissingServletRequestParameterException(org.springframework.web.bind.MissingServletRequestParameterException e) {
         log.warn("请求参数缺失: {}", e.getMessage());
-        return Result.error(ResultCode.BAD_REQUEST, "请求参数缺失: " + e.getParameterName());
+        return Result.error(CommonErrorCode.PARAM_MISSING, "请求参数缺失: " + e.getParameterName());
     }
 
     /**
@@ -149,7 +149,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public Result<Void> handleNoResourceFoundException(NoResourceFoundException e) {
         log.warn("请求资源不存在: {}", e.getResourcePath());
-        return Result.error(ResultCode.NOT_FOUND, "请求资源不存在");
+        return Result.error(CommonErrorCode.RESOURCE_NOT_FOUND);
     }
 
     /**
@@ -161,7 +161,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public Result<Void> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
         log.warn("请求方法不支持: {} {}", e.getMethod(), e.getMessage());
-        return Result.error(ResultCode.METHOD_NOT_ALLOWED, "请求方法不支持: " + e.getMethod());
+        return Result.error(CommonErrorCode.METHOD_NOT_ALLOWED, "请求方法不支持: " + e.getMethod());
     }
 
     /**
@@ -174,7 +174,7 @@ public class GlobalExceptionHandler {
     public Result<Void> handleException(Exception e) {
         log.error("未知异常: {}", e.getMessage(), e);
         saveErrorLog(e, 3);
-        return Result.error(ResultCode.INTERNAL_ERROR, "系统繁忙，请稍后重试");
+        return Result.error(CommonErrorCode.SYSTEM_ERROR);
     }
 
     private void saveErrorLog(Exception e, int severity) {

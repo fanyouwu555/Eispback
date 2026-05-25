@@ -69,6 +69,16 @@ public class BizException extends BaseException {
     }
 
     /**
+     * 构造业务异常（通过 ErrorCode，自定义消息）。
+     *
+     * @param errorCode 错误码枚举
+     * @param message   错误信息
+     */
+    public BizException(ErrorCode errorCode, String message) {
+        super(errorCode.getCode(), message);
+    }
+
+    /**
      * 构造业务异常（通过 ErrorCode，携带 cause）。
      *
      * @param errorCode 错误码枚举
