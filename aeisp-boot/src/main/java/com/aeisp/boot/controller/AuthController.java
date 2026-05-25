@@ -7,7 +7,8 @@ import com.aeisp.boot.vo.UserInfoVO;
 import com.aeisp.boot.util.UserAgentUtil;
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.CommonConstants;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.boot.code.BootErrorCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.util.JwtUtil;
 import com.aeisp.common.util.TokenBlacklistUtil;
 import com.aeisp.system.entity.SysOperationLog;
@@ -119,13 +120,13 @@ public class AuthController {
             String ip = getClientIp(httpRequest);
             String device = httpRequest.getHeader("User-Agent");
             handleFrontendLoginFailure(request.getUsername(), ip, device);
-            return Result.error(ResultCode.UNAUTHORIZED, "用户名或密码错误");
+            return Result.error(BootErrorCode.PASSWORD_MISMATCH);
         } catch (DisabledException e) {
             log.warn("登录失败，账号已禁用: {}", request.getUsername());
-            return Result.error(ResultCode.UNAUTHORIZED, "账号已禁用");
+            return Result.error(BootErrorCode.ACCOUNT_DISABLED);
         } catch (Exception e) {
             log.error("登录异常: {}", e.getMessage(), e);
-            return Result.error(ResultCode.INTERNAL_ERROR, "登录失败，请稍后重试");
+            return Result.error(CommonErrorCode.SYSTEM_ERROR, "登录失败，请稍后重试");
         }
     }
 
@@ -142,12 +143,12 @@ public class AuthController {
         try {
             // 检查 Refresh Token 是否已被拉黑
             if (tokenBlacklistUtil.isBlacklisted(refreshToken)) {
-                return Result.error(ResultCode.UNAUTHORIZED, "Refresh Token 已失效");
+                return Result.error(BootErrorCode.TOKEN_INVALID);
             }
             Claims claims = jwtUtil.parseToken(refreshToken);
             String type = claims.get("type", String.class);
             if (!"refresh".equals(type)) {
-                return Result.error(ResultCode.UNAUTHORIZED, "无效的 Refresh Token");
+                return Result.error(BootErrorCode.TOKEN_TYPE_INVALID);
             }
             String userId = claims.get("userId", String.class);
             CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUserId(Long.parseLong(userId));
@@ -170,7 +171,7 @@ public class AuthController {
             return Result.success(response, "刷新成功");
         } catch (Exception e) {
             log.warn("刷新 Token 失败: {}", e.getMessage());
-            return Result.error(ResultCode.UNAUTHORIZED, "Refresh Token 已过期或无效");
+            return Result.error(BootErrorCode.TOKEN_MISSING);
         }
     }
 
@@ -223,7 +224,7 @@ public class AuthController {
     public Result<UserInfoVO> getInfo(@RequestHeader("Authorization") String authorization) {
         String token = resolveBearerToken(authorization);
         if (token == null) {
-            return Result.error(ResultCode.UNAUTHORIZED, "Token 不能为空");
+            return Result.error(BootErrorCode.TOKEN_MISSING);
         }
         try {
             Claims claims = jwtUtil.parseToken(token);
@@ -239,7 +240,7 @@ public class AuthController {
             return Result.success(vo, "获取成功");
         } catch (Exception e) {
             log.warn("获取用户信息失败: {}", e.getMessage());
-            return Result.error(ResultCode.UNAUTHORIZED, "Token 已过期或无效");
+            return Result.error(BootErrorCode.TOKEN_INVALID);
         }
     }
 

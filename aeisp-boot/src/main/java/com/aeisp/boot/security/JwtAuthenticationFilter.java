@@ -2,7 +2,7 @@ package com.aeisp.boot.security;
 
 import com.aeisp.common.Result;
 import com.aeisp.common.constant.CommonConstants;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.boot.code.BootErrorCode;
 import com.aeisp.common.util.JwtUtil;
 import com.aeisp.common.util.TokenBlacklistUtil;
 import com.aeisp.user.entity.UsrUser;
@@ -65,14 +65,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 // 检查 Token 是否在黑名单中
                 if (tokenBlacklistUtil.isBlacklisted(token)) {
-                    writeUnauthorized(response, "Token 已失效，请重新登录");
+                    writeUnauthorized(response, BootErrorCode.TOKEN_INVALID);
                     return;
                 }
                 Claims claims = jwtUtil.parseToken(token);
                 String type = claims.get("type", String.class);
                 // 只允许 Access Token 用于接口认证
                 if (!"access".equals(type)) {
-                    writeUnauthorized(response, "无效的 Token 类型");
+                    writeUnauthorized(response, BootErrorCode.TOKEN_TYPE_INVALID);
                     return;
                 }
                 // 检查用户是否已被全局拉黑（密码重置后强制登出）
@@ -81,7 +81,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     try {
                         Long userId = Long.parseLong(userIdStr);
                         if (tokenBlacklistUtil.isUserBlacklisted(userId)) {
-                            writeUnauthorized(response, "账号密码已重置，请重新登录");
+                            writeUnauthorized(response, BootErrorCode.ACCOUNT_RESET);
                             return;
                         }
                     } catch (NumberFormatException ignored) {
@@ -101,7 +101,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     case 4 -> "锁定";
                                     default -> "异常";
                                 };
-                                writeUnauthorized(response, "账号已被" + label);
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                response.setContentType("application/json;charset=UTF-8");
+                                Result<Void> result = Result.error(BootErrorCode.ACCOUNT_DISABLED.getCode(), "账号已被" + label);
+                                response.getWriter().write(objectMapper.writeValueAsString(result));
                                 return;
                             }
                         } catch (NumberFormatException ignored) {
@@ -118,7 +121,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             } catch (Exception e) {
                 log.warn("JWT 认证失败: {}", e.getMessage());
-                writeUnauthorized(response, "未登录或 Token 已过期");
+                writeUnauthorized(response, BootErrorCode.TOKEN_MISSING);
                 return;
             }
         }
@@ -147,10 +150,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * @param message  错误信息
      * @throws IOException IO 异常
      */
-    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
+    private void writeUnauthorized(HttpServletResponse response, BootErrorCode errorCode) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
-        Result<Void> result = Result.error(ResultCode.UNAUTHORIZED, message);
+        Result<Void> result = Result.error(errorCode);
         response.getWriter().write(objectMapper.writeValueAsString(result));
     }
 }
