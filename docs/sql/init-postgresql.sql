@@ -543,7 +543,6 @@ CREATE TABLE IF NOT EXISTS tpl_template (
     id BIGSERIAL PRIMARY KEY,
     template_code VARCHAR(30) DEFAULT NULL,
     template_name VARCHAR(64) NOT NULL,
-    scenario VARCHAR(32) DEFAULT NULL,
     description VARCHAR(512) DEFAULT NULL,
     preview_image VARCHAR(255) DEFAULT NULL,
     sort_weight INT NOT NULL DEFAULT 0,
@@ -554,6 +553,21 @@ CREATE TABLE IF NOT EXISTS tpl_template (
     optimization_flag SMALLINT NOT NULL DEFAULT 0,
     storage_path VARCHAR(255) DEFAULT NULL,
     difficulty INT DEFAULT NULL,
+    top_category_id BIGINT DEFAULT NULL,
+    first_category_id BIGINT DEFAULT NULL,
+    second_category_id BIGINT DEFAULT NULL,
+    is_paid SMALLINT NOT NULL DEFAULT 0,
+    fee_type VARCHAR(32) DEFAULT NULL,
+    price DECIMAL(10,2) DEFAULT NULL,
+    online_time TIMESTAMP DEFAULT NULL,
+    valid_time TIMESTAMP DEFAULT NULL,
+    creator VARCHAR(64) DEFAULT NULL,
+    produce_date DATE DEFAULT NULL,
+    download_count BIGINT NOT NULL DEFAULT 0,
+    favorite_count BIGINT NOT NULL DEFAULT 0,
+    visit_count BIGINT NOT NULL DEFAULT 0,
+    detail_desc TEXT DEFAULT NULL,
+    violation_reason VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
@@ -562,14 +576,28 @@ CREATE TABLE IF NOT EXISTS tpl_template (
     CONSTRAINT uk_tpl_template_code UNIQUE (template_code)
 );
 CREATE INDEX IF NOT EXISTS idx_tpl_template_status ON tpl_template (status);
-CREATE INDEX IF NOT EXISTS idx_tpl_template_scenario ON tpl_template (scenario);
 COMMENT ON TABLE tpl_template IS '模板主表';
-COMMENT ON COLUMN tpl_template.template_code IS '模板唯一编码';
-COMMENT ON COLUMN tpl_template.status IS '状态：1-上架，2-下架';
+COMMENT ON COLUMN tpl_template.template_code IS '模板编码（自动生成：TPL+yyyyMMdd+4位序号）';
+COMMENT ON COLUMN tpl_template.status IS '状态：0-正常, 1-上架, 2-下架, 3-违规';
 COMMENT ON COLUMN tpl_template.project_count IS '累计项目数';
 COMMENT ON COLUMN tpl_template.optimization_flag IS '优化标记：0-正常，1-需要优化';
 COMMENT ON COLUMN tpl_template.storage_path IS '存储路径';
-COMMENT ON COLUMN tpl_template.difficulty IS '难度系数';
+COMMENT ON COLUMN tpl_template.difficulty IS '难度等级：1-入门, 2-初级, 3-中级, 4-高级, 5-专家';
+COMMENT ON COLUMN tpl_template.top_category_id IS '顶级分类 ID';
+COMMENT ON COLUMN tpl_template.first_category_id IS '一级分类 ID';
+COMMENT ON COLUMN tpl_template.second_category_id IS '二级分类 ID';
+COMMENT ON COLUMN tpl_template.is_paid IS '是否付费：0-免费，1-付费';
+COMMENT ON COLUMN tpl_template.fee_type IS '费用类型（字典 template_fee_type）';
+COMMENT ON COLUMN tpl_template.price IS '价格（元）';
+COMMENT ON COLUMN tpl_template.online_time IS '上线时间';
+COMMENT ON COLUMN tpl_template.valid_time IS '有效截止时间';
+COMMENT ON COLUMN tpl_template.creator IS '创作者名称';
+COMMENT ON COLUMN tpl_template.produce_date IS '创作时间';
+COMMENT ON COLUMN tpl_template.download_count IS '下载次数';
+COMMENT ON COLUMN tpl_template.favorite_count IS '收藏数';
+COMMENT ON COLUMN tpl_template.visit_count IS '访问量';
+COMMENT ON COLUMN tpl_template.detail_desc IS '详细描述';
+COMMENT ON COLUMN tpl_template.violation_reason IS '违规原因';
 
 -- 模板版本表
 CREATE TABLE IF NOT EXISTS tpl_template_version (
@@ -596,6 +624,25 @@ COMMENT ON COLUMN tpl_template_version.storage_url IS '存储 URL';
 COMMENT ON COLUMN tpl_template_version.file_size IS '文件大小（字节）';
 COMMENT ON COLUMN tpl_template_version.file_hash IS '文件哈希值';
 COMMENT ON COLUMN tpl_template_version.is_major_update IS '是否重大更新：0-否，1-是';
+
+-- 模板三级分类表
+CREATE TABLE IF NOT EXISTS tpl_template_category (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(64) NOT NULL,
+    parent_id BIGINT DEFAULT NULL,
+    level INT NOT NULL DEFAULT 0,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT NULL,
+    created_by BIGINT DEFAULT NULL,
+    updated_by BIGINT DEFAULT NULL,
+    deleted SMALLINT NOT NULL DEFAULT 0
+);
+COMMENT ON TABLE tpl_template_category IS '模板三级分类表';
+COMMENT ON COLUMN tpl_template_category.name IS '分类名称';
+COMMENT ON COLUMN tpl_template_category.parent_id IS '上级分类 ID';
+COMMENT ON COLUMN tpl_template_category.level IS '层级：0-顶级, 1-一级, 2-二级';
+COMMENT ON COLUMN tpl_template_category.sort_order IS '排序顺序';
 
 -- 模板预览图片表
 CREATE TABLE IF NOT EXISTS tpl_template_preview_image (
