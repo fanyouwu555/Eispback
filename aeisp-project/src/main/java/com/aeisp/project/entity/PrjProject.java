@@ -23,5 +23,6 @@ public class PrjProject extends BaseEntity {
     private Long runTimeSeconds;
     private String projectConfig;
     private String remark;
+    private String resourceUrl;
     private LocalDateTime archivedAt;
 }
