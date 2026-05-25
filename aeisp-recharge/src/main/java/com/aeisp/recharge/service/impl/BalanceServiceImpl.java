@@ -1,6 +1,7 @@
 package com.aeisp.recharge.service.impl;
 
 import com.aeisp.common.exception.BizException;
+import com.aeisp.recharge.code.RechargeErrorCode;
 import com.aeisp.recharge.dto.BalanceVO;
 import com.aeisp.recharge.entity.UsrBalanceChangeLog;
 import com.aeisp.recharge.mapper.UsrBalanceChangeLogMapper;
@@ -40,7 +41,7 @@ public class BalanceServiceImpl implements BalanceService {
     @Transactional(rollbackFor = Exception.class)
     public boolean rechargeBalance(Long userId, Integer amount) {
         if (amount == null || amount <= 0) {
-            throw new BizException("充值金额必须大于0");
+            throw new BizException(RechargeErrorCode.BALANCE_RECHARGE_AMOUNT_INVALID);
         }
         UsrUserBalance balance = userBalanceMapper.selectByUserId(userId);
         int previousBalance = balance != null ? balance.getBalanceCents() : 0;
@@ -77,12 +78,12 @@ public class BalanceServiceImpl implements BalanceService {
     @Transactional(rollbackFor = Exception.class)
     public boolean deductBalance(Long userId, Integer amount, String reason) {
         if (amount == null || amount <= 0) {
-            throw new BizException("抵扣金额必须大于0");
+            throw new BizException(RechargeErrorCode.BALANCE_DEDUCT_AMOUNT_INVALID);
         }
         UsrUserBalance balance = userBalanceMapper.selectByUserId(userId);
         int previousBalance = balance != null ? balance.getBalanceCents() : 0;
         if (previousBalance < amount) {
-            throw new BizException("余额不足");
+            throw new BizException(RechargeErrorCode.BALANCE_INSUFFICIENT);
         }
         int currentBalance = previousBalance - amount;
 
@@ -117,13 +118,13 @@ public class BalanceServiceImpl implements BalanceService {
     @Transactional(rollbackFor = Exception.class)
     public boolean adjustBalance(Long userId, Integer delta, String reason, Long operatorId) {
         if (delta == null || delta == 0) {
-            throw new BizException("调整金额不能为0");
+            throw new BizException(RechargeErrorCode.BALANCE_ADJUST_ZERO);
         }
         UsrUserBalance balance = userBalanceMapper.selectByUserId(userId);
         int previousBalance = balance != null ? balance.getBalanceCents() : 0;
         int currentBalance = previousBalance + delta;
         if (currentBalance < 0) {
-            throw new BizException("调整后余额不能为负数");
+            throw new BizException(RechargeErrorCode.BALANCE_ADJUST_NEGATIVE);
         }
 
         if (balance == null) {

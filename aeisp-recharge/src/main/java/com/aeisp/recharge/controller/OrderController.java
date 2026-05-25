@@ -11,6 +11,7 @@ import com.aeisp.system.mapper.SysUserBehaviorLogMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.exception.BizException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -99,10 +100,10 @@ public class OrderController {
     private void verifyAdminPassword(String adminPassword) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UserDetails details)) {
-            throw new BizException("无法获取当前管理员信息");
+            throw new BizException(CommonErrorCode.ACCESS_DENIED, "无法获取当前管理员信息");
         }
         if (!passwordEncoder.matches(adminPassword, details.getPassword())) {
-            throw new BizException("管理员密码错误");
+            throw new BizException(CommonErrorCode.ACCESS_DENIED, "管理员密码错误");
         }
     }
 

@@ -2,6 +2,7 @@ package com.aeisp.recharge.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.recharge.code.RechargeErrorCode;
 import com.aeisp.recharge.dto.DurationConsumeVO;
 import com.aeisp.recharge.dto.DurationQueryRequest;
 import com.aeisp.recharge.dto.DurationStatVO;
@@ -35,12 +36,12 @@ public class DurationServiceImpl implements DurationService {
     @Transactional(rollbackFor = Exception.class)
     public boolean consumeDuration(Long userId, Long minutes, String consumeType, Long projectId, String description) {
         if (minutes == null || minutes <= 0) {
-            throw new BizException("消耗时长必须大于0");
+            throw new BizException(RechargeErrorCode.DURATION_CONSUME_INVALID);
         }
         UsrUserDuration duration = userDurationMapper.selectByUserId(userId);
         int previousRemaining = duration != null ? duration.getRemainingMinutes() : 0;
         if (previousRemaining < minutes) {
-            throw new BizException("剩余时长不足");
+            throw new BizException(RechargeErrorCode.DURATION_INSUFFICIENT);
         }
         int currentRemaining = (int) (previousRemaining - minutes);
 
@@ -77,7 +78,7 @@ public class DurationServiceImpl implements DurationService {
     @Transactional(rollbackFor = Exception.class)
     public boolean addDuration(Long userId, Long minutes, String reason) {
         if (minutes == null || minutes <= 0) {
-            throw new BizException("增加时长必须大于0");
+            throw new BizException(RechargeErrorCode.DURATION_ADD_INVALID);
         }
         UsrUserDuration duration = userDurationMapper.selectByUserId(userId);
         int previousRemaining = duration != null ? duration.getRemainingMinutes() : 0;

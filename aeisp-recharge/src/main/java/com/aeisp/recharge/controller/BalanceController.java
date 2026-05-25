@@ -1,6 +1,7 @@
 package com.aeisp.recharge.controller;
 
 import com.aeisp.common.Result;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.exception.BizException;
 import com.aeisp.recharge.dto.BalanceVO;
 import com.aeisp.recharge.service.BalanceService;
@@ -105,10 +106,10 @@ public class BalanceController {
     private void verifyAdminPassword(String adminPassword) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UserDetails details)) {
-            throw new BizException("无法获取当前管理员信息");
+            throw new BizException(CommonErrorCode.ACCESS_DENIED, "无法获取当前管理员信息");
         }
         if (!passwordEncoder.matches(adminPassword, details.getPassword())) {
-            throw new BizException("管理员密码错误");
+            throw new BizException(CommonErrorCode.ACCESS_DENIED, "管理员密码错误");
         }
     }
 }

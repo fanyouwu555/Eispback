@@ -2,6 +2,7 @@ package com.aeisp.recharge.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.recharge.code.RechargeErrorCode;
 import com.aeisp.recharge.dto.PackageDTO;
 import com.aeisp.recharge.dto.PackageQueryRequest;
 import com.aeisp.recharge.dto.PackageVO;
@@ -49,7 +50,7 @@ public class PackageServiceImpl implements PackageService {
     public boolean updatePackage(Long id, PackageDTO dto) {
         DurationPackage entity = packageMapper.selectById(id);
         if (entity == null) {
-            throw new BizException("套餐不存在");
+            throw new BizException(RechargeErrorCode.PACKAGE_NOT_FOUND);
         }
         entity.setPackageName(dto.getPackageName());
         entity.setPriceCents(dto.getPrice());
@@ -65,7 +66,7 @@ public class PackageServiceImpl implements PackageService {
     public boolean deletePackage(Long id) {
         DurationPackage entity = packageMapper.selectById(id);
         if (entity == null) {
-            throw new BizException("套餐不存在");
+            throw new BizException(RechargeErrorCode.PACKAGE_NOT_FOUND);
         }
         packageMapper.deleteById(id);
         return true;

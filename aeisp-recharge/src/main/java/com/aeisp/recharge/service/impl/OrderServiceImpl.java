@@ -2,6 +2,7 @@ package com.aeisp.recharge.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.recharge.code.RechargeErrorCode;
 import com.aeisp.recharge.dto.OrderQueryRequest;
 import com.aeisp.recharge.dto.OrderVO;
 import com.aeisp.recharge.entity.DurationPackage;
@@ -41,7 +42,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderVO createOrder(Long userId, Long packageId) {
         DurationPackage pkg = packageMapper.selectById(packageId);
         if (pkg == null) {
-            throw new BizException("套餐不存在");
+            throw new BizException(RechargeErrorCode.PACKAGE_NOT_FOUND);
         }
 
         RechargeOrder order = new RechargeOrder();
@@ -61,10 +62,10 @@ public class OrderServiceImpl implements OrderService {
     public boolean payOrder(String orderNo, String payType) {
         RechargeOrder order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
-            throw new BizException("订单不存在");
+            throw new BizException(RechargeErrorCode.ORDER_NOT_FOUND);
         }
         if (!Integer.valueOf(1).equals(order.getStatus())) {
-            throw new BizException("订单状态不正确，无法支付");
+            throw new BizException(RechargeErrorCode.ORDER_STATUS_PAY_INVALID);
         }
         order.setStatus(2); // 已支付
         order.setPayType(payType);
@@ -77,10 +78,10 @@ public class OrderServiceImpl implements OrderService {
     public boolean refundOrder(String orderNo, String reason) {
         RechargeOrder order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
-            throw new BizException("订单不存在");
+            throw new BizException(RechargeErrorCode.ORDER_NOT_FOUND);
         }
         if (!Integer.valueOf(2).equals(order.getStatus())) {
-            throw new BizException("订单状态不正确，无法退款");
+            throw new BizException(RechargeErrorCode.ORDER_STATUS_REFUND_INVALID);
         }
         order.setStatus(3); // 已退款
         order.setRefundReason(reason);
@@ -92,10 +93,10 @@ public class OrderServiceImpl implements OrderService {
     public boolean cancelOrder(String orderNo) {
         RechargeOrder order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
-            throw new BizException("订单不存在");
+            throw new BizException(RechargeErrorCode.ORDER_NOT_FOUND);
         }
         if (!Integer.valueOf(1).equals(order.getStatus())) {
-            throw new BizException("订单状态不正确，无法取消");
+            throw new BizException(RechargeErrorCode.ORDER_STATUS_CANCEL_INVALID);
         }
         order.setStatus(4); // 已取消
         return orderMapper.updateById(order) > 0;
