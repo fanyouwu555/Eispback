@@ -1,6 +1,7 @@
 package com.aeisp.template.service.impl;
 
 import com.aeisp.common.exception.BizException;
+import com.aeisp.template.code.TemplateErrorCode;
 import com.aeisp.template.dto.TplTemplateCategoryDTO;
 import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.entity.TplTemplateCategory;
@@ -35,7 +36,7 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
     public TplTemplateCategoryVO getById(Long id) {
         TplTemplateCategory entity = mapper.selectById(id);
         if (entity == null || entity.getDeleted() != 0) {
-            throw new BizException("分类不存在");
+            throw new BizException(TemplateErrorCode.CATEGORY_NOT_FOUND);
         }
         return toVO(entity);
     }
@@ -47,10 +48,10 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
         if (dto.getParentId() != null && dto.getParentId() > 0) {
             TplTemplateCategory parent = mapper.selectById(dto.getParentId());
             if (parent == null || parent.getDeleted() != 0) {
-                throw new BizException("上级分类不存在");
+                throw new BizException(TemplateErrorCode.CATEGORY_PARENT_NOT_FOUND);
             }
             if (parent.getLevel() >= 2) {
-                throw new BizException("最多支持三级分类");
+                throw new BizException(TemplateErrorCode.CATEGORY_MAX_LEVEL);
             }
             entity.setLevel(parent.getLevel() + 1);
         } else {
@@ -63,7 +64,7 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
     @Override
     public Boolean update(Long id, TplTemplateCategoryDTO dto) {
         TplTemplateCategory entity = mapper.selectById(id);
-        if (entity == null) throw new BizException("分类不存在");
+        if (entity == null) throw new BizException(TemplateErrorCode.CATEGORY_NOT_FOUND);
         if (dto.getName() != null) entity.setName(dto.getName());
         if (dto.getSortOrder() != null) entity.setSortOrder(dto.getSortOrder());
         mapper.updateById(entity);
@@ -73,12 +74,12 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
     @Override
     public Boolean delete(Long id) {
         TplTemplateCategory entity = mapper.selectById(id);
-        if (entity == null) throw new BizException("分类不存在");
+        if (entity == null) throw new BizException(TemplateErrorCode.CATEGORY_NOT_FOUND);
         long childCount = mapper.selectCount(
                 new LambdaQueryWrapper<TplTemplateCategory>()
                         .eq(TplTemplateCategory::getParentId, id)
                         .eq(TplTemplateCategory::getDeleted, 0));
-        if (childCount > 0) throw new BizException("存在子分类，无法删除");
+        if (childCount > 0) throw new BizException(TemplateErrorCode.CATEGORY_HAS_CHILDREN);
         mapper.deleteById(id);
         return true;
     }

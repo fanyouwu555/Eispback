@@ -2,6 +2,7 @@ package com.aeisp.template.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
@@ -312,7 +313,7 @@ public class TemplateController {
     public Result<Boolean> purchaseTemplate(@PathVariable Long id) {
         Long userId = extractUserId(SecurityContextHolder.getContext().getAuthentication().getPrincipal());
         if (userId == null) {
-            return Result.error(401, "用户未登录");
+            return Result.error(CommonErrorCode.ACCESS_DENIED, "用户未登录");
         }
         return Result.success(userTemplateService.purchaseTemplate(userId, id));
     }

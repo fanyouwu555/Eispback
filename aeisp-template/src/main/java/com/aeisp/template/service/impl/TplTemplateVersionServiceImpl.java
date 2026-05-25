@@ -1,6 +1,7 @@
 package com.aeisp.template.service.impl;
 
 import com.aeisp.common.exception.BizException;
+import com.aeisp.template.code.TemplateErrorCode;
 import com.aeisp.template.dto.vo.TplTemplateVersionVO;
 import com.aeisp.template.entity.TplTemplate;
 import com.aeisp.template.entity.TplTemplateVersion;
@@ -51,11 +52,11 @@ public class TplTemplateVersionServiceImpl implements TplTemplateVersionService 
     public boolean deleteVersion(Long versionId) {
         TplTemplateVersion version = versionMapper.selectById(versionId);
         if (version == null) {
-            throw new BizException("版本不存在");
+            throw new BizException(TemplateErrorCode.VERSION_NOT_FOUND);
         }
         TplTemplate template = templateMapper.selectById(version.getTemplateId());
         if (template != null && versionId.equals(template.getCurrentVersionId())) {
-            throw new BizException("不能删除当前正在使用的版本");
+            throw new BizException(TemplateErrorCode.VERSION_IN_USE);
         }
 
         // 删除物理文件

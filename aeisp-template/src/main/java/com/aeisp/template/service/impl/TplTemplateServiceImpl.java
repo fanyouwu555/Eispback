@@ -1,7 +1,9 @@
 package com.aeisp.template.service.impl;
 
 import com.aeisp.common.PageResult;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.template.code.TemplateErrorCode;
 import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
@@ -113,7 +115,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public boolean updateTemplateInfo(Long templateId, UpdateTemplateRequest request) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
         template.setTemplateName(request.getTemplateName());
         template.setScenario(request.getScenario());
@@ -138,7 +140,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public boolean uploadNewVersion(Long templateId, MultipartFile zipFile, String versionNo, String changelog) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
 
         // 检查版本号是否已存在
@@ -146,7 +148,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         wrapper.eq(TplTemplateVersion::getTemplateId, templateId)
                 .eq(TplTemplateVersion::getVersionNo, versionNo);
         if (versionMapper.selectCount(wrapper) > 0) {
-            throw new BizException("版本号已存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_VERSION_EXISTS);
         }
 
         // 存储 ZIP（非事务操作）
@@ -181,11 +183,11 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public boolean rollbackVersion(Long templateId, Long versionId) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
         TplTemplateVersion version = versionMapper.selectById(versionId);
         if (version == null || !version.getTemplateId().equals(templateId)) {
-            throw new BizException("版本不存在或不属于该模板");
+            throw new BizException(TemplateErrorCode.VERSION_NOT_BELONG);
         }
         template.setCurrentVersionId(versionId);
         return templateMapper.updateById(template) > 0;
@@ -195,7 +197,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public boolean toggleStatus(Long templateId, Integer status) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
         template.setStatus(status);
         return templateMapper.updateById(template) > 0;
@@ -205,7 +207,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public boolean deleteTemplate(Long templateId) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
         // 逻辑删除模板
         templateMapper.deleteById(templateId);
@@ -244,7 +246,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public TplTemplateDetailVO getDetail(Long templateId) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
 
         TplTemplateDetailVO vo = new TplTemplateDetailVO();
@@ -284,10 +286,10 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public TplTemplateDetailVO getPublicDetail(Long templateId) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
         if (!TemplateStatusEnum.ACTIVE.getCode().equals(template.getStatus())) {
-            throw new BizException("模板未上线");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_PUBLISHED);
         }
         return getDetail(templateId);
     }
@@ -306,7 +308,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     public boolean markViolation(Long templateId, String reason) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
-            throw new BizException("模板不存在");
+            throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
         template.setStatus(TemplateStatusEnum.VIOLATION.getCode());
         template.setViolationReason(reason);
