@@ -85,7 +85,7 @@ class UsrUserServiceImplTest {
         user.setUsername("testuser");
 
         BizException ex = assertThrows(BizException.class, () -> usrUserService.register(user));
-        assertEquals("用户名已存在", ex.getMessage());
+        assertEquals("用户名已注册", ex.getMessage());
     }
 
     @Test

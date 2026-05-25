@@ -1,8 +1,10 @@
 package com.aeisp.user.service.impl;
 
 import com.aeisp.common.PageResult;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.user.code.UserErrorCode;
 import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.user.entity.*;
@@ -67,13 +69,13 @@ public class UsrUserServiceImpl implements UsrUserService {
     public boolean register(UsrUser user) {
         // 校验唯一性
         if (usrUserMapper.selectByUsername(user.getUsername()) != null) {
-            throw new BizException("用户名已存在");
+            throw new BizException(UserErrorCode.USERNAME_EXISTS);
         }
         if (StringUtils.hasText(user.getPhone()) && usrUserMapper.selectByPhone(user.getPhone()) != null) {
-            throw new BizException("手机号已存在");
+            throw new BizException(UserErrorCode.PHONE_EXISTS);
         }
         if (StringUtils.hasText(user.getEmail()) && usrUserMapper.selectByEmail(user.getEmail()) != null) {
-            throw new BizException("邮箱已存在");
+            throw new BizException(UserErrorCode.EMAIL_EXISTS);
         }
 
         // 加密密码并设置默认值
@@ -104,13 +106,13 @@ public class UsrUserServiceImpl implements UsrUserService {
     public String createByAdmin(UserCreateRequest request) {
         // 校验唯一性
         if (usrUserMapper.selectByUsername(request.getUsername()) != null) {
-            throw new BizException("用户名已存在");
+            throw new BizException(UserErrorCode.USERNAME_EXISTS);
         }
         if (StringUtils.hasText(request.getPhone()) && usrUserMapper.selectByPhone(request.getPhone()) != null) {
-            throw new BizException("手机号已存在");
+            throw new BizException(UserErrorCode.PHONE_EXISTS);
         }
         if (StringUtils.hasText(request.getEmail()) && usrUserMapper.selectByEmail(request.getEmail()) != null) {
-            throw new BizException("邮箱已存在");
+            throw new BizException(UserErrorCode.EMAIL_EXISTS);
         }
 
         String rawPassword = request.getPassword();
@@ -198,19 +200,19 @@ public class UsrUserServiceImpl implements UsrUserService {
     public boolean updateUser(UserUpdateRequest request) {
         UsrUser existing = usrUserMapper.selectById(request.getId());
         if (existing == null) {
-            throw new BizException("用户不存在");
+            throw new BizException(UserErrorCode.USER_NOT_FOUND);
         }
 
         // 校验手机号唯一性
         if (StringUtils.hasText(request.getPhone()) && !Objects.equals(existing.getPhone(), request.getPhone())) {
             if (usrUserMapper.selectByPhone(request.getPhone()) != null) {
-                throw new BizException("手机号已存在");
+                throw new BizException(UserErrorCode.PHONE_EXISTS);
             }
         }
         // 校验邮箱唯一性
         if (StringUtils.hasText(request.getEmail()) && !Objects.equals(existing.getEmail(), request.getEmail())) {
             if (usrUserMapper.selectByEmail(request.getEmail()) != null) {
-                throw new BizException("邮箱已存在");
+                throw new BizException(UserErrorCode.EMAIL_EXISTS);
             }
         }
 
@@ -243,7 +245,7 @@ public class UsrUserServiceImpl implements UsrUserService {
     public boolean updateStatus(Long userId, Integer status, String reason) {
         UsrUser existing = usrUserMapper.selectById(userId);
         if (existing == null) {
-            throw new BizException("用户不存在");
+            throw new BizException(UserErrorCode.USER_NOT_FOUND);
         }
         int currentStatus = existing.getStatus() != null ? existing.getStatus() : CommonConstants.USER_STATUS_NORMAL;
 
@@ -256,7 +258,7 @@ public class UsrUserServiceImpl implements UsrUserService {
             default -> false;
         };
         if (!validTransition) {
-            throw new BizException("非法的状态转换");
+            throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED, "非法的状态转换");
         }
 
         UsrUser user = new UsrUser();
@@ -403,7 +405,7 @@ public class UsrUserServiceImpl implements UsrUserService {
     public boolean adjustDuration(AdjustDurationRequest request) {
         UsrUserDuration duration = usrUserDurationMapper.selectByUserId(request.getUserId());
         if (duration == null) {
-            throw new BizException("用户时长记录不存在");
+            throw new BizException(CommonErrorCode.RESOURCE_NOT_FOUND, "用户时长记录不存在");
         }
 
         int previousRemaining = duration.getRemainingMinutes();
@@ -428,14 +430,14 @@ public class UsrUserServiceImpl implements UsrUserService {
                     changeMinutes = -request.getDeltaMinutes();
                 }
                 if (newRemaining < 0) {
-                    throw new BizException("剩余时长不足，无法扣除，缺口：" + Math.abs(newRemaining) + " 分钟");
+                    throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED, "剩余时长不足，无法扣除，缺口：" + Math.abs(newRemaining) + " 分钟");
                 }
                 operationType = "ADMIN_SUBTRACT";
             }
             case 3 -> { // 设定
                 newRemaining = request.getDeltaMinutes();
                 if (newRemaining < 0) {
-                    throw new BizException("设定时长不能为负数");
+                    throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED, "设定时长不能为负数");
                 }
                 changeMinutes = newRemaining - previousRemaining;
                 operationType = "ADMIN_SET";
@@ -567,13 +569,13 @@ public class UsrUserServiceImpl implements UsrUserService {
     public UserImportResultVO importFromExcel(MultipartFile file) {
         String filename = file.getOriginalFilename();
         if (filename == null || !(filename.endsWith(".xlsx") || filename.endsWith(".xls"))) {
-            throw new BizException("仅支持 .xlsx 或 .xls 格式的 Excel 文件");
+            throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED, "仅支持 .xlsx 或 .xls 格式的 Excel 文件");
         }
         List<UserImportRow> rows;
         try {
             rows = EasyExcel.read(file.getInputStream()).head(UserImportRow.class).sheet().doReadSync();
         } catch (IOException e) {
-            throw new BizException("读取 Excel 文件失败");
+            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "读取 Excel 文件失败");
         }
 
         UserImportResultVO result = new UserImportResultVO();
@@ -585,7 +587,7 @@ public class UsrUserServiceImpl implements UsrUserService {
         }
 
         if (rows.size() > 1000) {
-            throw new BizException("单次导入最多 1000 条记录");
+            throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED, "单次导入最多 1000 条记录");
         }
 
         List<UserImportResultVO.FailItem> failList = new ArrayList<>();
@@ -780,7 +782,7 @@ public class UsrUserServiceImpl implements UsrUserService {
             response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
             EasyExcel.write(response.getOutputStream(), UserExportVO.class).sheet("用户列表").doWrite(voList);
         } catch (IOException e) {
-            throw new BizException("导出 Excel 失败");
+            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "导出 Excel 失败");
         }
     }
 

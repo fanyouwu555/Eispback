@@ -2,7 +2,7 @@ package com.aeisp.user.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.util.TokenBlacklistUtil;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.user.request.*;
@@ -59,7 +59,7 @@ public class UserController {
     public Result<UsrUserVO> getUserDetail(@PathVariable Long id) {
         UsrUserVO vo = usrUserService.getUserDetail(id);
         if (vo == null) {
-            return Result.error(ResultCode.NOT_FOUND, "用户不存在");
+            return Result.error(CommonErrorCode.RESOURCE_NOT_FOUND, "用户不存在");
         }
         return Result.success(vo);
     }
@@ -71,7 +71,7 @@ public class UserController {
     @PostMapping
     public Result<String> createUser(@Valid @RequestBody UserCreateRequest request) {
         String password = usrUserService.createByAdmin(request);
-        return password != null ? Result.success(password, "创建成功") : Result.error(ResultCode.INTERNAL_ERROR, "创建失败");
+        return password != null ? Result.success(password, "创建成功") : Result.error(CommonErrorCode.SYSTEM_ERROR, "创建失败");
     }
 
     /**
@@ -83,7 +83,7 @@ public class UserController {
                                    @Valid @RequestBody UserUpdateRequest request) {
         request.setId(id);
         boolean success = usrUserService.updateUser(request);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新失败");
     }
 
     /**
@@ -96,7 +96,7 @@ public class UserController {
                                      @Valid @RequestBody StatusUpdateRequest request) {
         verifyAdminPassword(request.getAdminPassword());
         boolean success = usrUserService.updateStatus(id, request.getStatus(), request.getReason());
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "状态修改失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "状态修改失败");
     }
 
     /**
@@ -120,7 +120,7 @@ public class UserController {
                     new java.util.Date(System.currentTimeMillis() + 86400000L));
         }
         return success ? Result.success(newPassword, "密码已重置，请通知用户尽快修改") :
-                Result.error(ResultCode.INTERNAL_ERROR, "密码重置失败");
+                Result.error(CommonErrorCode.SYSTEM_ERROR, "密码重置失败");
     }
 
     /**
@@ -134,7 +134,7 @@ public class UserController {
         verifyAdminPassword(request.getAdminPassword());
         request.setUserId(id);
         boolean success = usrUserService.adjustDuration(request);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "时长调整失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "时长调整失败");
     }
 
     /**
@@ -144,7 +144,7 @@ public class UserController {
     @PostMapping("/batch")
     public Result<Void> batchCreate(@Valid @RequestBody UserBatchCreateRequest request) {
         boolean success = usrUserService.batchCreate(request);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "批量导入失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "批量导入失败");
     }
 
     /**
@@ -174,10 +174,10 @@ public class UserController {
     private void verifyAdminPassword(String adminPassword) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UserDetails details)) {
-            throw new BizException("无法获取当前管理员信息");
+            throw new BizException(CommonErrorCode.ACCESS_DENIED, "无法获取当前管理员信息");
         }
         if (!passwordEncoder.matches(adminPassword, details.getPassword())) {
-            throw new BizException("管理员密码错误");
+            throw new BizException(CommonErrorCode.ACCESS_DENIED, "管理员密码错误");
         }
     }
 }

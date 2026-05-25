@@ -1,7 +1,7 @@
 package com.aeisp.user.controller;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.user.entity.UsrUserPermission;
 import com.aeisp.user.entity.UsrUserPermissionLog;
@@ -75,7 +75,7 @@ public class UserPermissionController {
             }
         }
 
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "更新权限失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新权限失败");
     }
 
     @PreAuthorize("hasAuthority('user:permission:update')")
@@ -91,7 +91,7 @@ public class UserPermissionController {
             log.setCreatedAt(LocalDateTime.now());
             usrUserPermissionLogMapper.insert(log);
         }
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "重置权限失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "重置权限失败");
     }
 
     @PreAuthorize("hasAuthority('user:permission:read')")

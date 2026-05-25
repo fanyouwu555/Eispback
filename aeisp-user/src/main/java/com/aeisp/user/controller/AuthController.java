@@ -1,7 +1,7 @@
 package com.aeisp.user.controller;
 
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.request.UserRegisterRequest;
 import com.aeisp.user.service.CaptchaService;
@@ -52,13 +52,13 @@ public class AuthController {
     public Result<Void> register(@Valid @RequestBody UserRegisterRequest request,
                                  HttpServletRequest httpRequest) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return Result.error(ResultCode.BAD_REQUEST, "两次输入的密码不一致");
+            return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, "两次输入的密码不一致");
         }
         if (!"true".equalsIgnoreCase(request.getAgreement())) {
-            return Result.error(ResultCode.BAD_REQUEST, "请同意用户协议");
+            return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, "请同意用户协议");
         }
         if (!captchaService.verifyCaptcha(request.getCaptchaKey(), request.getCaptchaCode())) {
-            return Result.error(ResultCode.BAD_REQUEST, "验证码错误或已过期");
+            return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, "验证码错误或已过期");
         }
 
         UsrUser user = new UsrUser();
@@ -70,7 +70,7 @@ public class AuthController {
         user.setRegisterDeviceInfo(httpRequest.getHeader("User-Agent"));
 
         boolean success = usrUserService.register(user);
-        return success ? Result.success() : Result.error(ResultCode.INTERNAL_ERROR, "注册失败");
+        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "注册失败");
     }
 
     /**
