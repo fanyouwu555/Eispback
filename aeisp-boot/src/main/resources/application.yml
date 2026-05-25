@@ -56,8 +56,8 @@ template:
 resource-server:
   type: nfs    # nfs or oss
   nfs:
-    upload-path: /mnt/nfs/templates/     # NFS 挂载的本地路径（Windows 可设为 Z:/templates/）
-    base-url: http://localhost/EISP/Resource/Template/
+    upload-path: D:/Users/admin/Desktop/EISP/Resource/Template/     # HFS 文件服务路径
+    base-url: http://192.168.50.215/EISP/Resource/Template/
 
 logging:
   level:

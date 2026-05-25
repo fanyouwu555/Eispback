@@ -63,7 +63,6 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         // 自动生成 template_code
         template.setTemplateCode(generateTemplateCode());
         template.setDescription(request.getDescription());
-        template.setPreviewImage(request.getPreviewImage());
         template.setSortWeight(request.getSortWeight());
         template.setTopCategoryId(request.getTopCategoryId());
         template.setFirstCategoryId(request.getFirstCategoryId());
@@ -87,6 +86,16 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             template.setCreatedBy(adminId);
         }
         templateMapper.insert(template);
+
+        // 上传封面图到资源服务器（使用模板 ID 作为路径）
+        if (request.getCoverImage() != null && !request.getCoverImage().isEmpty()) {
+            try {
+                String coverUrl = templateStorageService.storeCoverImage(template.getId(), request.getCoverImage());
+                template.setPreviewImage(coverUrl);
+            } catch (Exception e) {
+                log.error("上传封面图失败: templateId={}", template.getId(), e);
+            }
+        }
 
         // 1. 暂存 ZIP 到本地临时目录
         String relativePath = templateStorageService.storeZip(template.getId(), request.getVersionNo(), request.getZipFile());
@@ -464,9 +473,9 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         String prefix = "TPL" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
         String maxCode = templateMapper.selectMaxTemplateCode(prefix);
         int seq = 1;
-        if (maxCode != null && maxCode.length() >= 16) {
+        if (maxCode != null && maxCode.length() > prefix.length()) {
             try {
-                seq = Integer.parseInt(maxCode.substring(12)) + 1;
+                seq = Integer.parseInt(maxCode.substring(prefix.length())) + 1;
             } catch (NumberFormatException e) {
                 log.warn("解析最大模板编码序号失败: {}", maxCode);
             }
@@ -486,6 +495,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             TplTemplateVersion version = versionMapper.selectById(template.getCurrentVersionId());
             if (version != null) {
                 vo.setCurrentVersionNo(version.getVersionNo());
+                vo.setResourceUrl(version.getStorageUrl());
             }
         }
         return vo;
@@ -507,6 +517,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         target.setVisitCount(source.getVisitCount());
         target.setDetailDesc(source.getDetailDesc());
         target.setViolationReason(source.getViolationReason());
+        target.setUpdatedAt(source.getUpdatedAt() != null ? source.getUpdatedAt().toString() : null);
     }
 
     /**

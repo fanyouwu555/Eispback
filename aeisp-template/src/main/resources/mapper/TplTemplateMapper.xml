@@ -29,6 +29,7 @@
         SELECT MAX(template_code)
         FROM tpl_template
         WHERE template_code LIKE CONCAT(#{prefix}, '%')
+          AND deleted = 0
     </select>
 
 </mapper>

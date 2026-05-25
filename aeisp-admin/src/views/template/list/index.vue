@@ -110,8 +110,11 @@
         <el-form-item label="权重" prop="sortWeight">
           <el-input-number v-model="createForm.sortWeight" :min="0" :step="1" style="width: 200px" />
         </el-form-item>
-        <el-form-item label="预览图URL" prop="previewImage">
-          <el-input v-model="createForm.previewImage" placeholder="预览图URL（可选）" maxlength="500" />
+        <el-form-item label="封面图" prop="coverImage">
+          <el-upload ref="coverUploadRef" :auto-upload="false" :limit="1" accept="image/*" @change="handleCoverImageChange">
+            <el-button type="primary" icon="Upload">选择封面图</el-button>
+            <template #tip><span class="el-upload__tip">支持 JPG/PNG/GIF 等图片格式</span></template>
+          </el-upload>
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="createForm.description" type="textarea" :rows="2" placeholder="模板描述（可选）" maxlength="500" />
@@ -297,6 +300,12 @@
           <el-table-column prop="versionNo" label="版本号" width="100" />
           <el-table-column prop="changelog" label="更新日志" min-width="200" show-overflow-tooltip />
           <el-table-column prop="createdAt" label="创建时间" width="170" />
+          <el-table-column label="ZIP 下载" width="100" align="center">
+            <template #default="{ row }">
+              <el-link v-if="row.storageUrl" :href="row.storageUrl" target="_blank" type="primary" :underline="false" icon="Download">下载</el-link>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="100" align="center">
             <template #default="{ row }">
               <el-button
@@ -385,7 +394,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, onActivated, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Folder, Document } from '@element-plus/icons-vue'
 import { useDict } from '@/composables/useDict'
@@ -419,6 +428,10 @@ const versionTemplateName = ref('')
 const versionTemplateId = ref(null)
 const zipFile = ref(null)
 const versionZipFile = ref(null)
+const coverImageFile = ref(null)
+const coverUploadRef = ref(null)
+const zipUploadRef = ref(null)
+const versionUploadRef = ref(null)
 
 const categoryPath = ref(null)
 const categoryTreeOptions = ref([])
@@ -438,7 +451,6 @@ const queryParams = reactive({
 const createForm = reactive({
   templateName: '',
   sortWeight: 0,
-  previewImage: '',
   description: '',
   detailDesc: '',
   difficulty: undefined,
@@ -492,13 +504,9 @@ const editCategoryPath = ref([])
 
 watch(createCategoryPath, (val) => {
   if (val && val.length > 0) {
-    const node = findNodeByPath(categoryTreeOptions.value, val)
-    if (node) {
-      const lvl = node.level !== undefined ? node.level : 0
-      createForm.topCategoryId = lvl === 0 ? node.id : undefined
-      createForm.firstCategoryId = lvl === 1 ? node.id : undefined
-      createForm.secondCategoryId = lvl === 2 ? node.id : undefined
-    }
+    createForm.topCategoryId = val[0]
+    createForm.firstCategoryId = val.length > 1 ? val[1] : undefined
+    createForm.secondCategoryId = val.length > 2 ? val[2] : undefined
   } else {
     createForm.topCategoryId = undefined
     createForm.firstCategoryId = undefined
@@ -508,13 +516,9 @@ watch(createCategoryPath, (val) => {
 
 watch(editCategoryPath, (val) => {
   if (val && val.length > 0) {
-    const node = findNodeByPath(categoryTreeOptions.value, val)
-    if (node) {
-      const lvl = node.level !== undefined ? node.level : 0
-      editForm.topCategoryId = lvl === 0 ? node.id : undefined
-      editForm.firstCategoryId = lvl === 1 ? node.id : undefined
-      editForm.secondCategoryId = lvl === 2 ? node.id : undefined
-    }
+    editForm.topCategoryId = val[0]
+    editForm.firstCategoryId = val.length > 1 ? val[1] : undefined
+    editForm.secondCategoryId = val.length > 2 ? val[2] : undefined
   } else {
     editForm.topCategoryId = undefined
     editForm.firstCategoryId = undefined
@@ -577,6 +581,10 @@ function handleZipChange(uploadFile) {
   zipFile.value = uploadFile.raw
 }
 
+function handleCoverImageChange(uploadFile) {
+  coverImageFile.value = uploadFile.raw
+}
+
 function handleVersionZipChange(uploadFile) {
   versionZipFile.value = uploadFile.raw
 }
@@ -584,7 +592,6 @@ function handleVersionZipChange(uploadFile) {
 function handleAdd() {
   createForm.templateName = ''
   createForm.sortWeight = 0
-  createForm.previewImage = ''
   createForm.description = ''
   createForm.detailDesc = ''
   createForm.versionNo = '1.0.0'
@@ -601,7 +608,13 @@ function handleAdd() {
   createForm.produceDate = undefined
   createCategoryPath.value = []
   zipFile.value = null
+  coverImageFile.value = null
   createVisible.value = true
+  // 清除上传组件的内部文件列表，避免显示上一次的文件
+  nextTick(() => {
+    zipUploadRef.value?.clearFiles()
+    coverUploadRef.value?.clearFiles()
+  })
 }
 
 function handleCreateSubmit() {
@@ -613,7 +626,6 @@ function handleCreateSubmit() {
   const fd = new FormData()
   fd.append('templateName', createForm.templateName)
   fd.append('sortWeight', createForm.sortWeight)
-  fd.append('previewImage', createForm.previewImage || '')
   fd.append('description', createForm.description || '')
   fd.append('versionNo', createForm.versionNo)
   fd.append('changelog', createForm.changelog || '')
@@ -630,6 +642,7 @@ function handleCreateSubmit() {
   fd.append('detailDesc', createForm.detailDesc || '')
   fd.append('difficulty', createForm.difficulty !== undefined && createForm.difficulty !== null ? createForm.difficulty : '')
   fd.append('zipFile', zipFile.value)
+  if (coverImageFile.value) fd.append('coverImage', coverImageFile.value)
   createTemplate(fd).then(() => {
     ElMessage.success('创建成功')
     createVisible.value = false
@@ -713,6 +726,9 @@ function handleUploadVersion(row) {
   versionForm.price = undefined
   versionZipFile.value = null
   versionVisible.value = true
+  nextTick(() => {
+    versionUploadRef.value?.clearFiles()
+  })
 }
 
 function handleVersionSubmit() {
@@ -811,17 +827,6 @@ function findNode(nodes, id) {
   return null
 }
 
-function findNodeByPath(nodes, path) {
-  let current = nodes
-  let node = null
-  for (const id of path) {
-    node = current.find(n => n.id === id)
-    if (!node) break
-    current = node.children || []
-  }
-  return node
-}
-
 function findPathToNode(nodes, id, path = []) {
   for (const n of nodes || []) {
     if (n.id === id) {
@@ -866,6 +871,10 @@ function handlePurchase(row) {
 
 onMounted(() => {
   getList()
+  loadCategories()
+})
+
+onActivated(() => {
   loadCategories()
 })
 </script>

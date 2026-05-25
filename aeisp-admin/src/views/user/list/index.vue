@@ -416,7 +416,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, UploadFilled, Plus } from '@element-plus/icons-vue'
 import { listUsers, getUser, updateUser, updateUserStatus, resetUserPassword, adjustDuration, importUsers, createUser, listLoginLogs, listDurationLogs } from '@/api/user'
@@ -698,6 +698,9 @@ function handleImport() {
   importOpen.value = true
   importResult.value = null
   importFile.value = null
+  nextTick(() => {
+    uploadRef.value?.clearFiles()
+  })
 }
 function onImportFileChange(uploadFile) {
   importFile.value = uploadFile.raw

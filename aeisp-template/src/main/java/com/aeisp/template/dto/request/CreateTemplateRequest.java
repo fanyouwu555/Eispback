@@ -26,9 +26,9 @@ public class CreateTemplateRequest {
     private String description;
 
     /**
-     * 预览图片 URL。
+     * 封面图片文件（上传到资源服务器）。
      */
-    private String previewImage;
+    private MultipartFile coverImage;
 
     /**
      * 排序权重。

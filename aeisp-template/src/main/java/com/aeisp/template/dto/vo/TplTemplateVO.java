@@ -141,6 +141,16 @@ public class TplTemplateVO implements Serializable {
     private String categoryPath;
 
     /**
+     * 资源路径（当前版本的 ZIP 下载 URL）。
+     */
+    private String resourceUrl;
+
+    /**
+     * 更新时间。
+     */
+    private String updatedAt;
+
+    /**
      * 违规原因。
      */
     private String violationReason;
