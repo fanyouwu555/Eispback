@@ -80,12 +80,19 @@ public class TemplateController {
      */
     @PreAuthorize("hasAuthority('template:version:manage')")
     @PostMapping(value = "/{id}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "上传新版本", description = "为指定模板上传新版本 ZIP 文件")
+    @Operation(summary = "上传新版本", description = "为指定模板上传新版本，可选同步更新模板字段")
     public Result<Boolean> uploadNewVersion(@PathVariable Long id,
                                             @RequestParam("zipFile") MultipartFile zipFile,
                                             @RequestParam("versionNo") String versionNo,
-                                            @RequestParam(value = "changelog", required = false) String changelog) {
-        return Result.success(templateService.uploadNewVersion(id, zipFile, versionNo, changelog));
+                                            @RequestParam(value = "changelog", required = false) String changelog,
+                                            @RequestParam(value = "onlineTime", required = false) String onlineTime,
+                                            @RequestParam(value = "validTime", required = false) String validTime,
+                                            @RequestParam(value = "difficulty", required = false) Integer difficulty,
+                                            @RequestParam(value = "isPaid", required = false) Integer isPaid,
+                                            @RequestParam(value = "feeType", required = false) String feeType,
+                                            @RequestParam(value = "price", required = false) java.math.BigDecimal price) {
+        return Result.success(templateService.uploadNewVersion(id, zipFile, versionNo, changelog,
+                onlineTime, validTime, difficulty, isPaid, feeType, price));
     }
 
     /**

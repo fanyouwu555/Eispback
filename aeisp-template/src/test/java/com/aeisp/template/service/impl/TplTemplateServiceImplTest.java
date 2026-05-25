@@ -222,6 +222,40 @@ class TplTemplateServiceImplTest {
     }
 
     @Test
+    void testUploadNewVersionWithExtraFields() throws IOException {
+        Path tempDir = Files.createTempDirectory("tpl-test-ext-");
+        Path tempFile = tempDir.resolve("template.zip");
+        Files.write(tempFile, "dummy zip content".getBytes());
+
+        try {
+            TplTemplate template = new TplTemplate();
+            template.setId(1L);
+            template.setCurrentVersionId(10L);
+            when(templateMapper.selectById(1L)).thenReturn(template);
+            when(templateStorageService.storeZip(anyLong(), anyString(), any())).thenReturn("templates/1/v1.1.0/template.zip");
+            when(templateStorageService.getZipAbsolutePath(anyLong(), anyString())).thenReturn(tempFile.toString());
+            doNothing().when(templateStorageService).extractZip(anyString(), anyString());
+            when(resourceServerService.uploadExtractedFiles(anyLong(), anyString(), any())).thenReturn(List.of());
+            when(versionMapper.insert(any(TplTemplateVersion.class))).thenAnswer(inv -> {
+                TplTemplateVersion v = inv.getArgument(0);
+                v.setId(20L);
+                return 1;
+            });
+            when(templateMapper.updateById(any(TplTemplate.class))).thenReturn(1);
+
+            MockMultipartFile mockFile = new MockMultipartFile("file", "test.zip", "application/zip", "content".getBytes());
+            assertTrue(tplTemplateService.uploadNewVersion(1L, mockFile, "v1.1.0", "bug fixes",
+                    "2026-06-01T00:00:00", "2026-12-31T23:59:59", 4, 1, "onetime", new java.math.BigDecimal("99.00")));
+
+            // 验证模板字段被更新（needUpdate=true 触发额外 updateById + currentVersionId 更新 = 2次）
+            verify(templateMapper, times(2)).updateById(any(TplTemplate.class));
+        } finally {
+            Files.deleteIfExists(tempFile);
+            Files.deleteIfExists(tempDir);
+        }
+    }
+
+    @Test
     void testListOnlineTemplates() {
         TplTemplate template = new TplTemplate();
         template.setId(1L);

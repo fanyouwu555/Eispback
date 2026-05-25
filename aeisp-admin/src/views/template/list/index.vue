@@ -339,6 +339,37 @@
         <el-form-item label="更新日志" prop="changelog">
           <el-input v-model="versionForm.changelog" type="textarea" :rows="2" placeholder="更新说明（可选）" maxlength="500" />
         </el-form-item>
+        <el-divider>同步更新模板信息（可选，留空则不修改）</el-divider>
+        <el-form-item label="上线时间" prop="onlineTime">
+          <el-date-picker v-model="versionForm.onlineTime" type="datetime" placeholder="留空不更新" style="width: 200px" value-format="YYYY-MM-DDTHH:mm:ss" />
+        </el-form-item>
+        <el-form-item label="有效截止" prop="validTime">
+          <el-date-picker v-model="versionForm.validTime" type="datetime" placeholder="留空不更新" style="width: 200px" value-format="YYYY-MM-DDTHH:mm:ss" />
+        </el-form-item>
+        <el-form-item label="难度等级" prop="difficulty">
+          <el-select v-model="versionForm.difficulty" placeholder="留空不更新" clearable style="width: 200px">
+            <el-option label="入门" :value="1" />
+            <el-option label="初级" :value="2" />
+            <el-option label="中级" :value="3" />
+            <el-option label="高级" :value="4" />
+            <el-option label="专家" :value="5" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="是否付费" prop="isPaid">
+          <el-select v-model="versionForm.isPaid" placeholder="留空不更新" clearable style="width: 200px">
+            <el-option label="免费" :value="0" />
+            <el-option label="付费" :value="1" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="versionForm.isPaid === 1" label="费用类型" prop="feeType">
+          <el-select v-model="versionForm.feeType" placeholder="留空不更新" clearable style="width: 200px">
+            <el-option v-for="item in feeTypeOptions" :key="item.itemValue" :label="item.itemLabel" :value="item.itemValue" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="versionForm.isPaid === 1" label="价格" prop="price">
+          <el-input-number v-model="versionForm.price" :min="0" :precision="2" :step="1" style="width: 200px" />
+          <span class="ml-2">元</span>
+        </el-form-item>
         <el-form-item label="ZIP文件" prop="zipFile">
           <el-upload ref="versionUploadRef" :auto-upload="false" :limit="1" accept=".zip,application/zip,application/x-zip-compressed" @change="handleVersionZipChange">
             <el-button type="primary" icon="Upload">选择ZIP文件</el-button>
@@ -447,7 +478,13 @@ const editId = ref(null)
 
 const versionForm = reactive({
   versionNo: '',
-  changelog: ''
+  changelog: '',
+  onlineTime: undefined,
+  validTime: undefined,
+  difficulty: undefined,
+  isPaid: undefined,
+  feeType: undefined,
+  price: undefined
 })
 
 const createCategoryPath = ref([])
@@ -668,6 +705,12 @@ function handleUploadVersion(row) {
   versionTemplateName.value = row.templateName
   versionForm.versionNo = ''
   versionForm.changelog = ''
+  versionForm.onlineTime = undefined
+  versionForm.validTime = undefined
+  versionForm.difficulty = undefined
+  versionForm.isPaid = undefined
+  versionForm.feeType = undefined
+  versionForm.price = undefined
   versionZipFile.value = null
   versionVisible.value = true
 }
@@ -681,6 +724,12 @@ function handleVersionSubmit() {
   const fd = new FormData()
   fd.append('versionNo', versionForm.versionNo)
   fd.append('changelog', versionForm.changelog || '')
+  if (versionForm.onlineTime) fd.append('onlineTime', versionForm.onlineTime)
+  if (versionForm.validTime) fd.append('validTime', versionForm.validTime)
+  if (versionForm.difficulty !== undefined && versionForm.difficulty !== null) fd.append('difficulty', versionForm.difficulty)
+  if (versionForm.isPaid !== undefined && versionForm.isPaid !== null) fd.append('isPaid', versionForm.isPaid)
+  if (versionForm.feeType) fd.append('feeType', versionForm.feeType)
+  if (versionForm.price !== undefined && versionForm.price !== null) fd.append('price', versionForm.price)
   fd.append('zipFile', versionZipFile.value)
   uploadTemplateVersion(versionTemplateId.value, fd).then(() => {
     ElMessage.success('版本上传成功')

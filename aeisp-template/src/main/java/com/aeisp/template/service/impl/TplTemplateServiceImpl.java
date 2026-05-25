@@ -166,7 +166,9 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     }
 
     @Override
-    public boolean uploadNewVersion(Long templateId, MultipartFile zipFile, String versionNo, String changelog) {
+    public boolean uploadNewVersion(Long templateId, MultipartFile zipFile, String versionNo,
+                                     String changelog, String onlineTime, String validTime,
+                                     Integer difficulty, Integer isPaid, String feeType, java.math.BigDecimal price) {
         TplTemplate template = templateMapper.selectById(templateId);
         if (template == null) {
             throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
@@ -217,6 +219,36 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         version.setFileSize(zipFile.getSize());
         version.setFileHash(calcFileHash(zipFile));
         versionMapper.insert(version);
+
+        // 同步更新模板主表字段（如果新版本提供了值）
+        boolean needUpdate = false;
+        if (onlineTime != null && !onlineTime.isBlank()) {
+            template.setOnlineTime(parseDateTime(onlineTime));
+            needUpdate = true;
+        }
+        if (validTime != null && !validTime.isBlank()) {
+            template.setValidTime(parseDateTime(validTime));
+            needUpdate = true;
+        }
+        if (difficulty != null) {
+            template.setDifficulty(difficulty);
+            needUpdate = true;
+        }
+        if (isPaid != null) {
+            template.setIsPaid(isPaid);
+            needUpdate = true;
+        }
+        if (feeType != null && !feeType.isBlank()) {
+            template.setFeeType(feeType);
+            needUpdate = true;
+        }
+        if (price != null) {
+            template.setPrice(price);
+            needUpdate = true;
+        }
+        if (needUpdate) {
+            templateMapper.updateById(template);
+        }
 
         // 6. 更新当前版本
         template.setCurrentVersionId(version.getId());

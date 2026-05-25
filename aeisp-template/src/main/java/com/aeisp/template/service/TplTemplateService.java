@@ -22,7 +22,24 @@ public interface TplTemplateService {
 
     boolean updateTemplateInfo(Long templateId, UpdateTemplateRequest request);
 
-    boolean uploadNewVersion(Long templateId, MultipartFile zipFile, String versionNo, String changelog);
+    /**
+     * 上传新版本，可选同步更新模板主表字段（onlineTime/validTime/difficulty/isPaid/feeType/price）。
+     *
+     * @param templateId 模板 ID
+     * @param zipFile     ZIP 文件
+     * @param versionNo   版本号
+     * @param changelog   更新日志（版本描述）
+     * @param onlineTime  上线时间（ISO 格式，空则不更新模板字段）
+     * @param validTime   有效截止时间（ISO 格式，空则不更新）
+     * @param difficulty  难度等级（null 则不更新）
+     * @param isPaid      是否付费（null 则不更新）
+     * @param feeType     费用类型（空则不更新）
+     * @param price       价格（null 则不更新）
+     * @return true 表示成功
+     */
+    boolean uploadNewVersion(Long templateId, MultipartFile zipFile, String versionNo,
+                             String changelog, String onlineTime, String validTime,
+                             Integer difficulty, Integer isPaid, String feeType, java.math.BigDecimal price);
 
     boolean rollbackVersion(Long templateId, Long versionId);
 
