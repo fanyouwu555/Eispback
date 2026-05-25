@@ -446,6 +446,10 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         TplTemplateVO vo = new TplTemplateVO();
         BeanUtils.copyProperties(template, vo);
         copyNewFields(template, vo);
+        vo.setCategoryPath(buildCategoryPath(
+                template.getTopCategoryId(),
+                template.getFirstCategoryId(),
+                template.getSecondCategoryId()));
         if (template.getCurrentVersionId() != null) {
             TplTemplateVersion version = versionMapper.selectById(template.getCurrentVersionId());
             if (version != null) {
@@ -471,6 +475,30 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         target.setVisitCount(source.getVisitCount());
         target.setDetailDesc(source.getDetailDesc());
         target.setViolationReason(source.getViolationReason());
+    }
+
+    /**
+     * 获取模板的分类路径字符串。
+     */
+    private String buildCategoryPath(Long topId, Long firstId, Long secondId) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            if (topId != null) {
+                TplTemplateCategoryVO top = categoryService.getById(topId);
+                if (top != null) sb.append(top.getName());
+            }
+            if (firstId != null) {
+                TplTemplateCategoryVO first = categoryService.getById(firstId);
+                if (first != null) sb.append("-").append(first.getName());
+            }
+            if (secondId != null) {
+                TplTemplateCategoryVO second = categoryService.getById(secondId);
+                if (second != null) sb.append("-").append(second.getName());
+            }
+        } catch (Exception e) {
+            log.warn("构建分类路径失败: template={}-{}-{}", topId, firstId, secondId, e);
+        }
+        return sb.toString();
     }
 
     private static TplTemplateVersionVO convertToVersionVO(TplTemplateVersion version) {

@@ -42,6 +42,7 @@
       <el-table-column prop="id" label="ID" width="70" align="center" />
       <el-table-column prop="templateCode" label="编码" width="180" align="center" />
       <el-table-column prop="templateName" label="模板名称" min-width="140" show-overflow-tooltip />
+      <el-table-column prop="categoryPath" label="所属分类" min-width="160" show-overflow-tooltip align="center" />
       <el-table-column prop="status" label="状态" width="90" align="center">
         <template #default="{ row }">
           <el-tag :type="templateStatusColor(row.status) || 'info'" size="small">

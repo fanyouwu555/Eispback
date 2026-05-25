@@ -136,6 +136,11 @@ public class TplTemplateVO implements Serializable {
     private Integer difficulty;
 
     /**
+     * 分类路径，如 "常用模板-小车类-巡线"。
+     */
+    private String categoryPath;
+
+    /**
      * 违规原因。
      */
     private String violationReason;
