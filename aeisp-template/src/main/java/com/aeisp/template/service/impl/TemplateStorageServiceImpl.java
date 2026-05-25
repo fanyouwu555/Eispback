@@ -48,15 +48,13 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
         if (originalFilename == null || originalFilename.isBlank()) {
             originalFilename = "template.zip";
         }
-        String targetPath = absoluteDir + originalFilename;
-
+        String targetPath = new File(absoluteDir, originalFilename).getAbsolutePath();
         try (InputStream is = file.getInputStream()) {
             FileUtil.writeFromStream(is, targetPath);
         } catch (IOException e) {
             log.error("存储 ZIP 文件失败: templateId={}, versionNo={}", templateId, versionNo, e);
             throw new RuntimeException("存储 ZIP 文件失败", e);
         }
-
         return relativeDir + originalFilename;
     }
 
@@ -211,20 +209,16 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
         if (original != null && original.contains(".")) {
             ext = original.substring(original.lastIndexOf("."));
         }
-        String filename = "cover_" + System.currentTimeMillis() + ext;
-        String relativeDir = "covers/" + templateId + "/";
-        String absoluteDir = FileUtil.normalize(basePath + "/" + relativeDir);
-        FileUtil.mkdir(absoluteDir);
+        String filename = System.currentTimeMillis() + ext;
+        String relativePath = templateId + "/cover/" + filename;
 
-        String targetPath = absoluteDir + filename;
-        try (InputStream is = file.getInputStream()) {
-            FileUtil.writeFromStream(is, targetPath);
+        try {
+            byte[] bytes = file.getBytes();
+            return resourceServerService.uploadFile(relativePath, bytes);
         } catch (IOException e) {
-            log.error("存储封面图失败: templateId={}", templateId, e);
-            throw new RuntimeException("存储封面图失败", e);
+            log.error("上传封面图到资源服务器失败: templateId={}", templateId, e);
+            throw new RuntimeException("上传封面图失败", e);
         }
-
-        return resourceServerService.getUrl(relativeDir + filename);
     }
 
     @Override
