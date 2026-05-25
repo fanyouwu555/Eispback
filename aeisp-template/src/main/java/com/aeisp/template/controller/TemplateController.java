@@ -11,6 +11,7 @@ import com.aeisp.template.dto.vo.TplTemplateDetailVO;
 import com.aeisp.template.dto.vo.TplTemplateVO;
 import com.aeisp.template.entity.TplTemplate;
 import com.aeisp.template.entity.TplTemplateUsageLog;
+import com.aeisp.template.entity.TplTemplateVersion;
 import com.aeisp.template.mapper.TplTemplateUsageLogMapper;
 import com.aeisp.template.service.TemplateStorageService;
 import com.aeisp.template.service.TplTemplateService;
@@ -20,19 +21,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +52,7 @@ public class TemplateController {
     private final UserTemplateService userTemplateService;
     private final TplTemplateUsageLogMapper tplTemplateUsageLogMapper;
     private final com.aeisp.template.mapper.TplTemplateMapper templateMapper;
+    private final com.aeisp.template.mapper.TplTemplateVersionMapper versionMapper;
 
     /**
      * 创建模板（含首个版本 ZIP）。
@@ -172,13 +169,13 @@ public class TemplateController {
     }
 
     /**
-     * 下载当前版本的 ZIP。
+     * 下载当前版本的 ZIP（重定向到资源服务器）。
      */
     @PreAuthorize("hasAuthority('template:read')")
     @GetMapping("/{id}/download")
-    @Operation(summary = "下载 ZIP", description = "下载模板指定版本的 ZIP 文件（需有下载权限）")
-    public ResponseEntity<Resource> downloadZip(@PathVariable Long id,
-                                                @RequestParam(value = "versionNo", required = false) String versionNo) {
+    @Operation(summary = "下载 ZIP", description = "下载模板指定版本的 ZIP 文件，重定向到资源服务器（需有下载权限）")
+    public ResponseEntity<Void> downloadZip(@PathVariable Long id,
+                                             @RequestParam(value = "versionNo", required = false) String versionNo) {
         TplTemplateDetailVO detail = templateService.getDetail(id);
         if (detail == null) {
             return ResponseEntity.notFound().build();
@@ -195,17 +192,21 @@ public class TemplateController {
             userTemplateService.grantFreeAccess(userId, id);
         }
 
+        // 查找版本记录获取 storageUrl
         String targetVersion = versionNo != null ? versionNo
                 : (detail.getCurrentVersion() != null ? detail.getCurrentVersion().getVersionNo() : null);
         if (targetVersion == null) {
             return ResponseEntity.notFound().build();
         }
-        String zipPath = templateStorageService.getZipAbsolutePath(id, targetVersion);
-        if (zipPath == null) {
+
+        // 用 MyBatis-Plus 查询版本
+        TplTemplateVersion version = versionMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TplTemplateVersion>()
+                        .eq(TplTemplateVersion::getTemplateId, id)
+                        .eq(TplTemplateVersion::getVersionNo, targetVersion));
+        if (version == null || version.getStorageUrl() == null) {
             return ResponseEntity.notFound().build();
         }
-        File file = new File(zipPath);
-        Resource resource = new FileSystemResource(file);
 
         // 下载计数 +1
         templateService.incrementDownloadCount(id);
@@ -213,10 +214,10 @@ public class TemplateController {
         // 记录模板下载日志
         recordUsageLog(id, detail.getTemplateName(), targetVersion, "download");
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
+        // 302 重定向到资源服务器 URL
+        return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .header(org.springframework.http.HttpHeaders.LOCATION, version.getStorageUrl())
+                .build();
     }
 
     private void recordUsageLog(Long templateId, String templateName, String versionNo, String actionType) {
