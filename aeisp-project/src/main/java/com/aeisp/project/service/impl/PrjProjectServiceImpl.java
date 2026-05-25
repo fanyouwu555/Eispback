@@ -2,6 +2,7 @@ package com.aeisp.project.service.impl;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.project.code.ProjectErrorCode;
 import com.aeisp.project.dto.request.ProjectQueryRequest;
 import com.aeisp.project.dto.vo.PrjProjectVO;
 import com.aeisp.project.entity.PrjProject;
@@ -53,7 +54,7 @@ public class PrjProjectServiceImpl implements PrjProjectService {
     public PrjProjectVO getDetail(Long id) {
         PrjProject project = projectMapper.selectById(id);
         if (project == null) {
-            throw new BizException("项目不存在");
+            throw new BizException(ProjectErrorCode.PROJECT_NOT_FOUND);
         }
         return convertToVO(project);
     }
@@ -63,10 +64,10 @@ public class PrjProjectServiceImpl implements PrjProjectService {
     public boolean archiveProject(Long id) {
         PrjProject project = projectMapper.selectById(id);
         if (project == null) {
-            throw new BizException("项目不存在");
+            throw new BizException(ProjectErrorCode.PROJECT_NOT_FOUND);
         }
         if (Integer.valueOf(2).equals(project.getStatus())) {
-            throw new BizException("项目已归档，无需重复操作");
+            throw new BizException(ProjectErrorCode.PROJECT_ALREADY_ARCHIVED);
         }
         project.setStatus(ProjectStatusEnum.ARCHIVED.getCode());
         project.setArchivedAt(LocalDateTime.now());
@@ -78,7 +79,7 @@ public class PrjProjectServiceImpl implements PrjProjectService {
     public boolean deleteProject(Long id) {
         PrjProject project = projectMapper.selectById(id);
         if (project == null) {
-            throw new BizException("项目不存在");
+            throw new BizException(ProjectErrorCode.PROJECT_NOT_FOUND);
         }
         return projectMapper.deleteById(id) > 0;
     }
