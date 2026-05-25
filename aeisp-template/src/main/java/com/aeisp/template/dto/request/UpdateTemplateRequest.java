@@ -18,12 +18,7 @@ public class UpdateTemplateRequest {
     @NotBlank(message = "模板名称不能为空")
     private String templateName;
 
-    /**
-     * 适用场景。
-     */
-    @NotBlank(message = "适用场景不能为空")
-    private String scenario;
-
+    
     /**
      * 模板简介。
      */

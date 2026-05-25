@@ -29,11 +29,7 @@ public class TplTemplate extends BaseEntity {
      */
     private String templateName;
 
-    /**
-     * 适用场景：teaching-教学, competition-竞赛, practice-实战。
-     */
-    private String scenario;
-
+    
     /**
      * 模板简介。
      */

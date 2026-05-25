@@ -75,7 +75,6 @@ class TplTemplateServiceImplTest {
 
             CreateTemplateRequest request = new CreateTemplateRequest();
             request.setTemplateName("测试模板");
-            request.setScenario("simulation");
             request.setVersionNo("v1.0.0");
             request.setDifficulty(3);
             request.setZipFile(new MockMultipartFile("file", "test.zip", "application/zip", "content".getBytes()));
@@ -106,7 +105,6 @@ class TplTemplateServiceImplTest {
 
         UpdateTemplateRequest request = new UpdateTemplateRequest();
         request.setTemplateName("新名称");
-        request.setScenario("debug");
         request.setDifficulty(3);
 
         assertTrue(tplTemplateService.updateTemplateInfo(1L, request));
@@ -230,14 +228,14 @@ class TplTemplateServiceImplTest {
         template.setTemplateName("在线模板");
         template.setStatus(TemplateStatusEnum.ACTIVE.getCode());
         template.setCurrentVersionId(10L);
-        when(templateMapper.selectOnlineList("simulation")).thenReturn(List.of(template));
+        when(templateMapper.selectOnlineList()).thenReturn(List.of(template));
 
         TplTemplateVersion version = new TplTemplateVersion();
         version.setId(10L);
         version.setVersionNo("v1.0.0");
         when(versionMapper.selectById(10L)).thenReturn(version);
 
-        List<TplTemplateVO> result = tplTemplateService.listOnlineTemplates("simulation");
+        List<TplTemplateVO> result = tplTemplateService.listOnlineTemplates();
         assertEquals(1, result.size());
         assertEquals("在线模板", result.get(0).getTemplateName());
     }

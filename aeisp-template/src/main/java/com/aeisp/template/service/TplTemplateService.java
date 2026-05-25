@@ -34,7 +34,7 @@ public interface TplTemplateService {
 
     TplTemplateDetailVO getDetail(Long templateId);
 
-    List<TplTemplateVO> listOnlineTemplates(String scenario);
+    List<TplTemplateVO> listOnlineTemplates();
 
     /**
      * 查询上线模板详情（前端使用）。

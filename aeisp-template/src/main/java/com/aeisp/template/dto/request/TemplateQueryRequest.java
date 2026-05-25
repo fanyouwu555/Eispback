@@ -30,11 +30,7 @@ public class TemplateQueryRequest {
      */
     private String templateCode;
 
-    /**
-     * 适用场景。
-     */
-    private String scenario;
-
+    
     /**
      * 状态：0-正常, 1-上架, 2-下架, 3-违规。
      */

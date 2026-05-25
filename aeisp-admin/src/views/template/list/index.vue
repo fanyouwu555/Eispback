@@ -8,13 +8,6 @@
       <el-form-item label="模板编码" prop="templateCode">
         <el-input v-model="queryParams.templateCode" placeholder="编码精确搜索" clearable @keyup.enter="handleQuery" style="width: 180px" />
       </el-form-item>
-      <el-form-item label="场景" prop="scenario">
-        <el-select v-model="queryParams.scenario" placeholder="场景类型" clearable style="width: 130px">
-          <el-option label="教学" value="teaching" />
-          <el-option label="竞赛" value="competition" />
-          <el-option label="实训" value="practice" />
-        </el-select>
-      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="模板状态" clearable style="width: 120px">
           <el-option v-for="item in templateStatusOptions" :key="item.itemValue" :label="item.itemLabel" :value="Number(item.itemValue)" />
@@ -49,14 +42,6 @@
       <el-table-column prop="id" label="ID" width="70" align="center" />
       <el-table-column prop="templateCode" label="编码" width="180" align="center" />
       <el-table-column prop="templateName" label="模板名称" min-width="140" show-overflow-tooltip />
-      <el-table-column prop="scenario" label="场景" width="90" align="center">
-        <template #default="{ row }">
-          <el-tag v-if="row.scenario === 'teaching'" type="primary" size="small">教学</el-tag>
-          <el-tag v-else-if="row.scenario === 'competition'" type="warning" size="small">竞赛</el-tag>
-          <el-tag v-else-if="row.scenario === 'practice'" type="success" size="small">实训</el-tag>
-          <span v-else>{{ row.scenario }}</span>
-        </template>
-      </el-table-column>
       <el-table-column prop="status" label="状态" width="90" align="center">
         <template #default="{ row }">
           <el-tag :type="templateStatusColor(row.status) || 'info'" size="small">
@@ -120,13 +105,6 @@
       <el-form :model="createForm" ref="createFormRef" label-width="110px" :rules="templateRules">
         <el-form-item label="模板名称" prop="templateName">
           <el-input v-model="createForm.templateName" placeholder="请输入模板名称" maxlength="100" />
-        </el-form-item>
-        <el-form-item label="场景" prop="scenario">
-          <el-select v-model="createForm.scenario" placeholder="请选择场景" style="width: 200px">
-            <el-option label="教学" value="teaching" />
-            <el-option label="竞赛" value="competition" />
-            <el-option label="实训" value="practice" />
-          </el-select>
         </el-form-item>
         <el-form-item label="权重" prop="sortWeight">
           <el-input-number v-model="createForm.sortWeight" :min="0" :step="1" style="width: 200px" />
@@ -212,13 +190,6 @@
         <el-form-item label="模板名称" prop="templateName">
           <el-input v-model="editForm.templateName" maxlength="100" />
         </el-form-item>
-        <el-form-item label="场景" prop="scenario">
-          <el-select v-model="editForm.scenario" style="width: 200px">
-            <el-option label="教学" value="teaching" />
-            <el-option label="竞赛" value="competition" />
-            <el-option label="实训" value="practice" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="权重" prop="sortWeight">
           <el-input-number v-model="editForm.sortWeight" :min="0" :step="1" style="width: 200px" />
         </el-form-item>
@@ -290,12 +261,6 @@
         <el-descriptions :column="2" border class="mb-4">
           <el-descriptions-item label="ID" :span="1">{{ currentDetail.id }}</el-descriptions-item>
           <el-descriptions-item label="模板名称" :span="1">{{ currentDetail.templateName }}</el-descriptions-item>
-          <el-descriptions-item label="场景" :span="1">
-            <el-tag v-if="currentDetail.scenario === 'teaching'" type="primary" size="small">教学</el-tag>
-            <el-tag v-else-if="currentDetail.scenario === 'competition'" type="warning" size="small">竞赛</el-tag>
-            <el-tag v-else-if="currentDetail.scenario === 'practice'" type="success" size="small">实训</el-tag>
-            <span v-else>{{ currentDetail.scenario }}</span>
-          </el-descriptions-item>
           <el-descriptions-item label="状态" :span="1">
             <el-tag v-if="currentDetail.status === 1" type="success" size="small">上架</el-tag>
             <el-tag v-else type="danger" size="small">下架</el-tag>
@@ -431,7 +396,6 @@ const queryParams = reactive({
   pageSize: 10,
   templateName: undefined,
   templateCode: undefined,
-  scenario: undefined,
   status: undefined,
   topCategoryId: undefined,
   firstCategoryId: undefined,
@@ -441,7 +405,6 @@ const queryParams = reactive({
 
 const createForm = reactive({
   templateName: '',
-  scenario: 'teaching',
   sortWeight: 0,
   previewImage: '',
   description: '',
@@ -463,7 +426,6 @@ const createForm = reactive({
 
 const editForm = reactive({
   templateName: '',
-  scenario: 'teaching',
   sortWeight: 0,
   previewImage: '',
   description: '',
@@ -524,7 +486,6 @@ watch(editCategoryPath, (val) => {
 
 const templateRules = {
   templateName: [{ required: true, message: '模板名称不能为空', trigger: 'blur' }],
-  scenario: [{ required: true, message: '请选择场景', trigger: 'change' }],
   sortWeight: [{ required: true, message: '请输入权重', trigger: 'blur' }],
   versionNo: [{ required: true, message: '请输入版本号', trigger: 'blur' }]
 }
@@ -561,7 +522,6 @@ function handleQuery() {
 
 function resetQuery() {
   queryParams.templateName = undefined
-  queryParams.scenario = undefined
   queryParams.status = undefined
   queryParams.topCategoryId = undefined
   queryParams.firstCategoryId = undefined
@@ -585,7 +545,6 @@ function handleVersionZipChange(uploadFile) {
 
 function handleAdd() {
   createForm.templateName = ''
-  createForm.scenario = 'teaching'
   createForm.sortWeight = 0
   createForm.previewImage = ''
   createForm.description = ''
@@ -615,7 +574,6 @@ function handleCreateSubmit() {
   createLoading.value = true
   const fd = new FormData()
   fd.append('templateName', createForm.templateName)
-  fd.append('scenario', createForm.scenario)
   fd.append('sortWeight', createForm.sortWeight)
   fd.append('previewImage', createForm.previewImage || '')
   fd.append('description', createForm.description || '')
@@ -646,7 +604,6 @@ function handleCreateSubmit() {
 function handleEdit(row) {
   editId.value = row.id
   editForm.templateName = row.templateName
-  editForm.scenario = row.scenario
   editForm.sortWeight = row.sortWeight
   editForm.previewImage = row.previewImage || ''
   editForm.description = row.description || ''
@@ -672,7 +629,6 @@ function handleEditSubmit() {
   editLoading.value = true
   updateTemplate(editId.value, {
     templateName: editForm.templateName,
-    scenario: editForm.scenario,
     sortWeight: editForm.sortWeight,
     previewImage: editForm.previewImage,
     description: editForm.description,

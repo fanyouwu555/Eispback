@@ -17,10 +17,9 @@ public interface TplTemplateMapper extends BaseMapper<TplTemplate> {
     /**
      * 查询上线的模板列表。
      *
-     * @param scenario 适用场景筛选（可选）
      * @return 上线的模板列表
      */
-    List<TplTemplate> selectOnlineList(@Param("scenario") String scenario);
+    List<TplTemplate> selectOnlineList();
 
     /**
      * 查询当前日期最大的模板编码。

@@ -62,7 +62,6 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setTemplateName(request.getTemplateName());
         // 自动生成 template_code
         template.setTemplateCode(generateTemplateCode());
-        template.setScenario(request.getScenario());
         template.setDescription(request.getDescription());
         template.setPreviewImage(request.getPreviewImage());
         template.setSortWeight(request.getSortWeight());
@@ -148,7 +147,6 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             throw new BizException(TemplateErrorCode.TEMPLATE_NOT_FOUND);
         }
         template.setTemplateName(request.getTemplateName());
-        template.setScenario(request.getScenario());
         template.setDescription(request.getDescription());
         template.setPreviewImage(request.getPreviewImage());
         template.setSortWeight(request.getSortWeight());
@@ -287,7 +285,6 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         LambdaQueryWrapper<TplTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(request.getTemplateName()), TplTemplate::getTemplateName, request.getTemplateName())
                 .eq(StringUtils.hasText(request.getTemplateCode()), TplTemplate::getTemplateCode, request.getTemplateCode())
-                .eq(StringUtils.hasText(request.getScenario()), TplTemplate::getScenario, request.getScenario())
                 .eq(request.getStatus() != null, TplTemplate::getStatus, request.getStatus())
                 .eq(request.getTopCategoryId() != null, TplTemplate::getTopCategoryId, request.getTopCategoryId())
                 .eq(request.getFirstCategoryId() != null, TplTemplate::getFirstCategoryId, request.getFirstCategoryId())
@@ -361,8 +358,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     }
 
     @Override
-    public List<TplTemplateVO> listOnlineTemplates(String scenario) {
-        List<TplTemplate> list = templateMapper.selectOnlineList(scenario);
+    public List<TplTemplateVO> listOnlineTemplates() {
+        List<TplTemplate> list = templateMapper.selectOnlineList();
         List<TplTemplateVO> voList = new ArrayList<>();
         for (TplTemplate t : list) {
             voList.add(convertToVO(t));
@@ -409,20 +406,6 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         result.put("total", total);
         result.put("online", online);
         result.put("offline", offline);
-
-        // 场景分布
-        List<TplTemplate> allTemplates = templateMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>());
-        Map<String, Long> scenarioMap = allTemplates.stream()
-                .filter(t -> t.getScenario() != null)
-                .collect(java.util.stream.Collectors.groupingBy(TplTemplate::getScenario, java.util.stream.Collectors.counting()));
-        List<Map<String, Object>> scenarioList = scenarioMap.entrySet().stream()
-                .map(e -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("scenario", e.getKey());
-                    m.put("count", e.getValue());
-                    return m;
-                }).toList();
-        result.put("scenarioDistribution", scenarioList);
 
         // 热门模板（按使用次数排序前10）
         List<TplTemplate> hotList = templateMapper.selectList(
@@ -584,7 +567,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         List<TplTemplateCategoryVO> tree = categoryService.getTree();
 
         // 2. 获取所有上架模板
-        List<TplTemplate> templates = templateMapper.selectOnlineList(null);
+        List<TplTemplate> templates = templateMapper.selectOnlineList();
 
         // 3. 按三级分类 ID 分组
         Map<Long, List<TplTemplateVO>> templateMap = new HashMap<>();

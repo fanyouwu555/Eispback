@@ -261,9 +261,9 @@ public class TemplateController {
      * 查询上线的模板列表（前端使用）。
      */
     @GetMapping("/public")
-    @Operation(summary = "上线模板列表", description = "查询所有上线的模板列表，支持场景筛选（前端使用）")
-    public Result<List<TplTemplateVO>> listOnlineTemplates(@RequestParam(value = "scenario", required = false) String scenario) {
-        return Result.success(templateService.listOnlineTemplates(scenario));
+    @Operation(summary = "上线模板列表", description = "查询所有上线的模板列表（前端使用）")
+    public Result<List<TplTemplateVO>> listOnlineTemplates() {
+        return Result.success(templateService.listOnlineTemplates());
     }
 
     /**

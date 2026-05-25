@@ -25,11 +25,7 @@ public class TplTemplateDetailVO implements Serializable {
      */
     private String templateName;
 
-    /**
-     * 适用场景。
-     */
-    private String scenario;
-
+    
     /**
      * 模板简介。
      */
