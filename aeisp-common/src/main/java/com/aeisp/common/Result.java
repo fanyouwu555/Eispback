@@ -1,5 +1,6 @@
 package com.aeisp.common;
 
+import com.aeisp.common.code.ErrorCode;
 import com.aeisp.common.constant.ResultCode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -121,6 +122,37 @@ public class Result<T> implements Serializable {
                 .code(code)
                 .message(message)
                 .data(data)
+                .timestamp(System.currentTimeMillis())
+                .build();
+    }
+
+    /**
+     * 构造一个错误响应（通过 ErrorCode）。
+     *
+     * @param errorCode 错误码枚举
+     * @param <T>       数据类型
+     * @return 错误响应对象
+     */
+    public static <T> Result<T> error(ErrorCode errorCode) {
+        return Result.<T>builder()
+                .code(errorCode.getCode())
+                .message(errorCode.getMessage())
+                .timestamp(System.currentTimeMillis())
+                .build();
+    }
+
+    /**
+     * 构造一个错误响应（通过 ErrorCode，自定义消息）。
+     *
+     * @param errorCode 错误码枚举
+     * @param message   自定义错误信息
+     * @param <T>       数据类型
+     * @return 错误响应对象
+     */
+    public static <T> Result<T> error(ErrorCode errorCode, String message) {
+        return Result.<T>builder()
+                .code(errorCode.getCode())
+                .message(message)
                 .timestamp(System.currentTimeMillis())
                 .build();
     }

@@ -1,5 +1,7 @@
 package com.aeisp.common.exception;
 
+import com.aeisp.common.code.ErrorCode;
+
 /**
  * 业务异常。
  *
@@ -55,5 +57,24 @@ public class BizException extends BaseException {
      */
     public BizException(Integer code, String message, Throwable cause) {
         super(code, message, cause);
+    }
+
+    /**
+     * 构造业务异常（通过 ErrorCode）。
+     *
+     * @param errorCode 错误码枚举
+     */
+    public BizException(ErrorCode errorCode) {
+        super(errorCode.getCode(), errorCode.getMessage());
+    }
+
+    /**
+     * 构造业务异常（通过 ErrorCode，携带 cause）。
+     *
+     * @param errorCode 错误码枚举
+     * @param cause     原始异常
+     */
+    public BizException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode.getCode(), errorCode.getMessage(), cause);
     }
 }
