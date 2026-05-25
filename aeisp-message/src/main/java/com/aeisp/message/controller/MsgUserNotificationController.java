@@ -2,7 +2,7 @@ package com.aeisp.message.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
-import com.aeisp.common.constant.ResultCode;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.message.request.NotificationQueryRequest;
 import com.aeisp.message.service.MsgUserNotificationService;
 import com.aeisp.message.vo.UserNotificationVO;
@@ -70,7 +70,7 @@ public class MsgUserNotificationController {
     public Result<PageResult<UserNotificationVO>> listMyNotifications(NotificationQueryRequest request) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(ResultCode.UNAUTHORIZED, "用户未登录");
+            return Result.error(CommonErrorCode.ACCESS_DENIED, "用户未登录");
         }
         PageResult<UserNotificationVO> result = msgUserNotificationService.listUserNotifications(userId, request);
         return Result.success(result);
@@ -86,7 +86,7 @@ public class MsgUserNotificationController {
     public Result<Long> getUnreadCount() {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(ResultCode.UNAUTHORIZED, "用户未登录");
+            return Result.error(CommonErrorCode.ACCESS_DENIED, "用户未登录");
         }
         Long count = msgUserNotificationService.getUnreadCount(userId);
         return Result.success(count);
@@ -104,7 +104,7 @@ public class MsgUserNotificationController {
             @Parameter(description = "消息通知 ID") @PathVariable("id") Long id) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(ResultCode.UNAUTHORIZED, "用户未登录");
+            return Result.error(CommonErrorCode.ACCESS_DENIED, "用户未登录");
         }
         boolean success = msgUserNotificationService.markAsRead(userId, id);
         return Result.success(success);
@@ -120,7 +120,7 @@ public class MsgUserNotificationController {
     public Result<Boolean> markAllAsRead() {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(ResultCode.UNAUTHORIZED, "用户未登录");
+            return Result.error(CommonErrorCode.ACCESS_DENIED, "用户未登录");
         }
         boolean success = msgUserNotificationService.markAllAsRead(userId);
         return Result.success(success);

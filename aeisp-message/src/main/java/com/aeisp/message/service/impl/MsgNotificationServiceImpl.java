@@ -3,6 +3,7 @@ package com.aeisp.message.service.impl;
 import com.aeisp.common.PageResult;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.exception.BizException;
+import com.aeisp.message.code.MessageErrorCode;
 import com.aeisp.message.dto.PushTargetDTO;
 import com.aeisp.message.entity.MsgNotification;
 import com.aeisp.message.entity.MsgUserNotification;
@@ -104,15 +105,15 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     public boolean pushNotification(Long notificationId) {
         MsgNotification notification = getById(notificationId);
         if (notification == null) {
-            throw new BizException("消息不存在");
+            throw new BizException(MessageErrorCode.NOTIFICATION_NOT_FOUND);
         }
         if (!Objects.equals(notification.getStatus(), STATUS_DRAFT)) {
-            throw new BizException("只有草稿状态的消息才能推送");
+            throw new BizException(MessageErrorCode.NOTIFICATION_ONLY_DRAFT_CAN_PUSH);
         }
 
         PushScopeEnum scope = PushScopeEnum.fromValue(notification.getPushScope());
         if (scope == null) {
-            throw new BizException("推送范围无效");
+            throw new BizException(MessageErrorCode.NOTIFICATION_PUSH_SCOPE_INVALID);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -124,7 +125,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         } else {
             List<Long> targetUserIds = resolveTargetUsers(notification);
             if (CollectionUtils.isEmpty(targetUserIds)) {
-                throw new BizException("推送目标用户为空");
+                throw new BizException(MessageErrorCode.NOTIFICATION_PUSH_TARGET_EMPTY);
             }
             List<MsgUserNotification> userNotifications = targetUserIds.stream()
                     .distinct()
@@ -196,10 +197,10 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     public boolean revokeNotification(Long notificationId) {
         MsgNotification notification = getById(notificationId);
         if (notification == null) {
-            throw new BizException("消息不存在");
+            throw new BizException(MessageErrorCode.NOTIFICATION_NOT_FOUND);
         }
         if (!Objects.equals(notification.getStatus(), STATUS_SENT)) {
-            throw new BizException("只有已发送的消息才能撤回");
+            throw new BizException(MessageErrorCode.NOTIFICATION_ONLY_SENT_CAN_REVOKE);
         }
         notification.setStatus(STATUS_REVOKED);
         boolean updated = updateById(notification);
@@ -221,7 +222,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     public boolean archiveNotification(Long notificationId) {
         MsgNotification notification = getById(notificationId);
         if (notification == null) {
-            throw new BizException("消息不存在");
+            throw new BizException(MessageErrorCode.NOTIFICATION_NOT_FOUND);
         }
         notification.setStatus(STATUS_ARCHIVED);
         return updateById(notification);
@@ -232,7 +233,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     public boolean toggleTop(Long notificationId, Integer isTop) {
         MsgNotification notification = getById(notificationId);
         if (notification == null) {
-            throw new BizException("消息不存在");
+            throw new BizException(MessageErrorCode.NOTIFICATION_NOT_FOUND);
         }
         notification.setIsTop(isTop);
         return updateById(notification);
@@ -260,7 +261,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     public MsgNotificationDetailVO getDetail(Long notificationId) {
         MsgNotification notification = getById(notificationId);
         if (notification == null) {
-            throw new BizException("消息不存在");
+            throw new BizException(MessageErrorCode.NOTIFICATION_NOT_FOUND);
         }
         MsgNotificationDetailVO vo = new MsgNotificationDetailVO();
         vo.setId(notification.getId());
