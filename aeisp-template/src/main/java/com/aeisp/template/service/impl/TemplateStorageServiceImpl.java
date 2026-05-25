@@ -2,7 +2,9 @@ package com.aeisp.template.service.impl;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ZipUtil;
+import com.aeisp.template.service.ResourceServerService;
 import com.aeisp.template.service.TemplateStorageService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,14 +29,14 @@ import java.util.stream.Stream;
  * @author AEISP Team
  */
 @Slf4j
+@RequiredArgsConstructor
 @Service
 public class TemplateStorageServiceImpl implements TemplateStorageService {
 
     @Value("${template.upload-path:./uploads/templates/}")
     private String basePath;
 
-    @Value("${template.resource-base-url:http://localhost/EISP/Resource/Template/}")
-    private String resourceBaseUrl;
+    private final ResourceServerService resourceServerService;
 
     @Override
     public String storeZip(Long templateId, String versionNo, MultipartFile file) {
@@ -222,15 +224,11 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
             throw new RuntimeException("存储封面图失败", e);
         }
 
-        return resourceBaseUrl + relativeDir + filename;
+        return resourceServerService.getUrl(relativeDir + filename);
     }
 
     @Override
     public String getResourceUrl(String relativePath) {
-        if (relativePath == null || relativePath.isBlank()) {
-            return null;
-        }
-        String normalized = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-        return resourceBaseUrl + normalized;
+        return resourceServerService.getUrl(relativePath);
     }
 }
