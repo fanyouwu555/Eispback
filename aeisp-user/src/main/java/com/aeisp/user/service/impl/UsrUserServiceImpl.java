@@ -116,6 +116,9 @@ public class UsrUserServiceImpl implements UsrUserService {
         }
 
         String rawPassword = request.getPassword();
+        if (!StringUtils.hasText(rawPassword)) {
+            rawPassword = "123456";
+        }
         UsrUser user = new UsrUser();
         user.setUsername(request.getUsername());
         user.setPhone(request.getPhone());

@@ -43,10 +43,9 @@ public class UserCreateRequest {
     private String nickname;
 
     /**
-     * 初始密码。
+     * 初始密码（不传则默认 123456）。
      */
-    @NotBlank(message = "密码不能为空")
-    @Size(min = 8, max = 32, message = "密码长度需在 8-32 位之间")
+    @Size(min = 6, max = 32, message = "密码长度需在 6-32 位之间")
     private String password;
 
     /**

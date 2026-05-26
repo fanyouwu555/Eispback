@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface TplTemplateCategoryService {
     List<TplTemplateCategoryVO> getTree();
+    List<TplTemplateCategoryVO> listAll();
     TplTemplateCategoryVO getById(Long id);
     Long create(TplTemplateCategoryDTO dto);
     Boolean update(Long id, TplTemplateCategoryDTO dto);

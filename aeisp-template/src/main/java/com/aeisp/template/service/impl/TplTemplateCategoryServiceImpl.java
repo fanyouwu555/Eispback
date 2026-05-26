@@ -33,6 +33,16 @@ public class TplTemplateCategoryServiceImpl implements TplTemplateCategoryServic
     }
 
     @Override
+    public List<TplTemplateCategoryVO> listAll() {
+        List<TplTemplateCategory> all = mapper.selectList(
+                new LambdaQueryWrapper<TplTemplateCategory>()
+                        .eq(TplTemplateCategory::getDeleted, 0)
+                        .orderByAsc(TplTemplateCategory::getLevel)
+                        .orderByAsc(TplTemplateCategory::getSortOrder));
+        return all.stream().map(this::toVO).collect(Collectors.toList());
+    }
+
+    @Override
     public TplTemplateCategoryVO getById(Long id) {
         TplTemplateCategory entity = mapper.selectById(id);
         if (entity == null || entity.getDeleted() != 0) {

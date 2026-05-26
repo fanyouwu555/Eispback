@@ -475,7 +475,7 @@ const templateUsageList = ref([])
 const templateUsageLoading = ref(false)
 
 const createForm = reactive({
-  username: '', password: '', phone: '', email: '', nickname: '',
+  username: '', password: '123456', phone: '', email: '', nickname: '',
   roleIds: [], remainingMinutes: 0, isCompetition: 0
 })
 const registerTimeRange = ref(null)
@@ -664,14 +664,14 @@ async function submitResetPermission() {
 }
 
 function handleCreate() {
-  createForm.username = ''; createForm.password = ''; createForm.phone = ''
+  createForm.username = ''; createForm.password = '123456'; createForm.phone = ''
   createForm.email = ''; createForm.nickname = ''
   createForm.roleIds = []; createForm.remainingMinutes = 0; createForm.isCompetition = 0
   createOpen.value = true
 }
 async function submitCreate() {
-  if (!createForm.username || !createForm.password) {
-    ElMessage.warning('用户名和密码不能为空')
+  if (!createForm.username) {
+    ElMessage.warning('用户名不能为空')
     return
   }
   try {

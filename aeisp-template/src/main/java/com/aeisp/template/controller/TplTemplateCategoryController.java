@@ -26,6 +26,12 @@ public class TplTemplateCategoryController {
         return Result.success(categoryService.getTree());
     }
 
+    @Operation(summary = "全部分类列表")
+    @GetMapping("/list")
+    public Result<List<TplTemplateCategoryVO>> listAll() {
+        return Result.success(categoryService.listAll());
+    }
+
     @Operation(summary = "分类详情")
     @GetMapping("/{id}")
     public Result<TplTemplateCategoryVO> getById(@PathVariable Long id) {
