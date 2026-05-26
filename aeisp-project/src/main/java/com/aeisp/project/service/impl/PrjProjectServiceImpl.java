@@ -11,6 +11,7 @@ import com.aeisp.project.entity.PrjProject;
 import com.aeisp.project.enums.ProjectStatusEnum;
 import com.aeisp.project.mapper.PrjProjectMapper;
 import com.aeisp.project.service.PrjProjectService;
+import com.aeisp.template.mapper.TplTemplateMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
@@ -30,11 +31,14 @@ public class PrjProjectServiceImpl implements PrjProjectService {
 
     private final PrjProjectMapper projectMapper;
     private final ResourceServerService userResourceServer;
+    private final TplTemplateMapper templateMapper;
 
     public PrjProjectServiceImpl(PrjProjectMapper projectMapper,
-                                 @Qualifier("userResourceServer") ResourceServerService userResourceServer) {
+                                 @Qualifier("userResourceServer") ResourceServerService userResourceServer,
+                                 TplTemplateMapper templateMapper) {
         this.projectMapper = projectMapper;
         this.userResourceServer = userResourceServer;
+        this.templateMapper = templateMapper;
     }
 
     // --- existing admin methods (unchanged) ---
@@ -114,6 +118,11 @@ public class PrjProjectServiceImpl implements PrjProjectService {
         project.setStatus(ProjectStatusEnum.IN_PROGRESS.getCode());
         projectMapper.insert(project);
 
+        // 模板使用次数 +1
+        if (templateId != null) {
+            templateMapper.incrementUsageCount(templateId);
+        }
+
         // 生成 resourceUrl: base + {userId}/{projectId}/
         String resourceUrl = userResourceServer.getUrl(userId + "/" + project.getId() + "/");
         project.setResourceUrl(resourceUrl);
@@ -135,6 +144,16 @@ public class PrjProjectServiceImpl implements PrjProjectService {
             voList.add(toClientVO(p));
         }
         return PageResult.of(resultPage, voList);
+    }
+
+    @Override
+    public List<ClientProjectVO> listAllClientProjects(Long userId) {
+        LambdaQueryWrapper<PrjProject> wrapper = new LambdaQueryWrapper<PrjProject>()
+                .eq(PrjProject::getUserId, userId)
+                .orderByDesc(PrjProject::getCreatedAt);
+
+        List<PrjProject> records = projectMapper.selectList(wrapper);
+        return records.stream().map(this::toClientVO).toList();
     }
 
     @Override

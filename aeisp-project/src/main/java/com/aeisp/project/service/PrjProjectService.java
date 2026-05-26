@@ -5,6 +5,8 @@ import com.aeisp.project.dto.request.ProjectQueryRequest;
 import com.aeisp.project.dto.vo.ClientProjectVO;
 import com.aeisp.project.dto.vo.PrjProjectVO;
 
+import java.util.List;
+
 public interface PrjProjectService {
 
     PageResult<PrjProjectVO> listProjects(ProjectQueryRequest request);
@@ -20,6 +22,8 @@ public interface PrjProjectService {
     ClientProjectVO createClientProject(Long userId, Long templateId, String projectName);
 
     PageResult<ClientProjectVO> listClientProjects(Long userId, int pageNum, int pageSize);
+
+    List<ClientProjectVO> listAllClientProjects(Long userId);
 
     String uploadProjectZip(Long projectId, Long userId, byte[] zipData);
 

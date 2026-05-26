@@ -29,6 +29,13 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Template Module (for usage count tracking) -->
+        <dependency>
+            <groupId>com.aeisp</groupId>
+            <artifactId>aeisp-template</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

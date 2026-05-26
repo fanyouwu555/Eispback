@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,6 +60,13 @@ public class ClientProjectController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         return Result.success(projectService.listClientProjects(user.getUserId(), page, size));
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "用户所有项目", description = "获取当前用户的所有项目列表（不分页）")
+    public Result<List<ClientProjectVO>> listAllProjects(
+            @AuthenticationPrincipal CustomUserDetails user) {
+        return Result.success(projectService.listAllClientProjects(user.getUserId()));
     }
 
     @PostMapping("/{projectId}/upload")
