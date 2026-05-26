@@ -32,6 +32,24 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * <p>配置 JWT 无状态认证、权限控制、公开接口放行、以及异常处理。
  * 禁用 CSRF 和 Session，适用于前后端分离架构。</p>
  *
+ * <h3>API 路径约定</h3>
+ * <pre>
+ *   /api/v1/auth/**           — 认证相关（登录/注册/刷新），无需认证
+ *   /api/v1/client/**         — 客户端 API（Unity/其他），需 JWT 认证，不检查 @PreAuthorize
+ *   /api/v1/templates/public/** — 公开模板数据，无需认证
+ *   /api/v1/template-categories/** — 模板分类，公开接口无需认证，管理接口需 admin 权限
+ *   /api/v1/**（其他）         — 管理端 API，需 JWT 认证 + @PreAuthorize 细粒度权限
+ * </pre>
+ *
+ * <h3>客户端 API 授权策略</h3>
+ * <p>客户端 API（/api/v1/client/*）采用 <b>身份授权</b> 而非 <b>角色授权</b>：
+ * <ul>
+ *   <li>只验证 JWT 有效性（已登录）</li>
+ *   <li>不检查 {@code @PreAuthorize} 细粒度权限</li>
+ *   <li>授权逻辑由 Controller/Service 自行处理（如按 userId 过滤资源归属）</li>
+ *   <li>如需客户端分级（免费版/付费版），在 Service 层使用用户属性判断，而非 RBAC</li>
+ * </ul>
+ *
  * @author AEISP Team
  */
 @Configuration
@@ -54,16 +72,23 @@ public class SecurityConfig {
 
     /**
      * 白名单路径：无需认证即可访问。
+     *
+     * <p>仅保留认证入口、API 文档和静态资源。业务数据接口（模板/分类等）
+     * 均需要登录后才能访问，即使是客户端也需先获取 JWT。</p>
      */
     private static final String[] WHITE_LIST = {
-            "/api/v1/auth/**",
-            "/api/v1/templates/public/**",
-            "/api/v1/template-categories/tree",
-            "/api/v1/template-categories/list",
+            // ===== 认证接口 =====
+            "/api/v1/auth/**",                  // 登录/注册/刷新 token
+
+            // ===== API 文档 =====
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-ui.html",
+
+            // ===== 系统默认 =====
             "/error",
+
+            // ===== 静态资源 =====
             "/",
             "/index.html",
             "/assets/**",

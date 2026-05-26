@@ -162,6 +162,11 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
     }
 
     @Override
+    public String getUploadPath() {
+        return uploadPath;
+    }
+
+    @Override
     public boolean fileExists(String relativePath) {
         if (!isPathSafe(relativePath)) {
             log.warn("非法文件路径: {}", relativePath);

@@ -361,6 +361,23 @@ public class TemplateController {
     }
 
     /**
+     * 上传模板缩略图。
+     */
+    @PreAuthorize("hasAuthority('template:update')")
+    @PostMapping(value = "/{id}/thumbnail", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传缩略图", description = "上传模板缩略图并返回访问 URL（客户端展示用）")
+    public Result<String> uploadThumbnail(@PathVariable Long id,
+                                           @RequestParam("file") MultipartFile file) {
+        templateService.getDetail(id);
+        String url = templateStorageService.storeThumbnail(id, file);
+        TplTemplate update = new TplTemplate();
+        update.setId(id);
+        update.setThumbnail(url);
+        templateMapper.updateById(update);
+        return Result.success(url);
+    }
+
+    /**
      * 标记模板违规并下架。
      */
     @PreAuthorize("hasAuthority('template:update')")

@@ -19,6 +19,20 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * 客户端项目管理 Controller。
+ *
+ * <p>这是 <b>客户端 API</b> 的参考实现，所有客户端 Controller 应遵循以下规范：</p>
+ * <ul>
+ *   <li>路径前缀：{@code /api/v1/client/*}</li>
+ *   <li><b>不使用</b> {@code @PreAuthorize}（客户端采用身份授权而非角色授权）</li>
+ *   <li>用户身份：{@code @AuthenticationPrincipal CustomUserDetails user}</li>
+ *   <li>资源隔离：每个用户只能操作自己的数据（通过 {@code user.getUserId()} 过滤）</li>
+ *   <li>如需分级（免费版/付费版），在 Service 层用用户属性判断，而非 RBAC</li>
+ * </ul>
+ *
+ * @author AEISP Team
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/client/projects")

@@ -110,11 +110,9 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
             log.warn("非法版本号: {}", versionNo);
             throw new SecurityException("非法版本号");
         }
-        String versionDir = FileUtil.normalize(basePath + "/" + templateId + "/" + versionNo);
-        if (!isWithinBaseDir(versionDir)) {
-            log.warn("路径超出允许范围: {}", versionDir);
-            throw new SecurityException("非法文件路径");
-        }
+        // 使用资源服务器路径（NFS）而非本地临时路径
+        String baseDir = resourceServerService.getUploadPath();
+        String versionDir = FileUtil.normalize(baseDir + "/" + templateId + "/" + versionNo);
         File dir = new File(versionDir);
         if (!dir.exists() || !dir.isDirectory()) {
             return new ArrayList<>();
@@ -138,11 +136,9 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
             log.warn("非法版本号或文件路径: versionNo={}, filePath={}", versionNo, filePath);
             throw new SecurityException("非法文件路径");
         }
-        String absolutePath = FileUtil.normalize(basePath + "/" + templateId + "/" + versionNo + "/" + filePath);
-        if (!isWithinBaseDir(absolutePath)) {
-            log.warn("路径超出允许范围: {}", absolutePath);
-            throw new SecurityException("非法文件路径");
-        }
+        // 使用资源服务器路径（NFS）而非本地临时路径
+        String baseDir = resourceServerService.getUploadPath();
+        String absolutePath = FileUtil.normalize(baseDir + "/" + templateId + "/" + versionNo + "/" + filePath);
         File file = new File(absolutePath);
         if (!file.exists() || !file.isFile()) {
             log.warn("文件不存在: {}", absolutePath);
@@ -218,6 +214,25 @@ public class TemplateStorageServiceImpl implements TemplateStorageService {
         } catch (IOException e) {
             log.error("上传封面图到资源服务器失败: templateId={}", templateId, e);
             throw new RuntimeException("上传封面图失败", e);
+        }
+    }
+
+    @Override
+    public String storeThumbnail(Long templateId, MultipartFile file) {
+        String ext = "";
+        String original = file.getOriginalFilename();
+        if (original != null && original.contains(".")) {
+            ext = original.substring(original.lastIndexOf("."));
+        }
+        String filename = System.currentTimeMillis() + ext;
+        String relativePath = templateId + "/thumbnail/" + filename;
+
+        try {
+            byte[] bytes = file.getBytes();
+            return resourceServerService.uploadFile(relativePath, bytes);
+        } catch (IOException e) {
+            log.error("上传缩略图到资源服务器失败: templateId={}", templateId, e);
+            throw new RuntimeException("上传缩略图失败", e);
         }
     }
 

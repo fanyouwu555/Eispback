@@ -84,6 +84,15 @@ public interface TemplateStorageService {
     String storeCoverImage(Long templateId, MultipartFile file);
 
     /**
+     * 存储缩略图，返回可访问 URL。
+     *
+     * @param templateId 模板 ID
+     * @param file       缩略图文件
+     * @return 可访问 URL
+     */
+    String storeThumbnail(Long templateId, MultipartFile file);
+
+    /**
      * 获取资源的可访问 URL。
      *
      * <p>本地存储时拼接 base URL + 相对路径；OSS 存储时返回 OSS 外链。</p>

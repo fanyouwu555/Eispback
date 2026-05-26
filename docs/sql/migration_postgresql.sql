@@ -355,3 +355,11 @@ COMMENT ON COLUMN usr_user_permission.perm_key IS '权限键（如 ai_dialog_ena
 COMMENT ON COLUMN usr_user_permission.perm_value IS '权限值（如 true/10/配额值）';
 COMMENT ON COLUMN usr_user_permission.effective_at IS '生效时间';
 COMMENT ON COLUMN usr_user_permission.expire_at IS '过期时间';
+
+-- ========================================================
+-- 6. 模板缩略图字段
+-- ========================================================
+ALTER TABLE tpl_template
+    ADD COLUMN IF NOT EXISTS thumbnail VARCHAR(500) DEFAULT NULL;
+
+COMMENT ON COLUMN tpl_template.thumbnail IS '缩略图 URL（客户端展示用）';

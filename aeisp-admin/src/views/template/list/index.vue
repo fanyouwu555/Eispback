@@ -116,6 +116,12 @@
             <template #tip><span class="el-upload__tip">支持 JPG/PNG/GIF 等图片格式</span></template>
           </el-upload>
         </el-form-item>
+        <el-form-item label="缩略图" prop="thumbnail">
+          <el-upload ref="thumbnailUploadRef" :auto-upload="false" :limit="1" accept="image/*" @change="handleThumbnailChange">
+            <el-button type="primary" icon="Upload">选择缩略图</el-button>
+            <template #tip><span class="el-upload__tip">客户端列表展示用缩略图</span></template>
+          </el-upload>
+        </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="createForm.description" type="textarea" :rows="2" placeholder="模板描述（可选）" maxlength="500" />
         </el-form-item>
@@ -199,6 +205,14 @@
         </el-form-item>
         <el-form-item label="预览图URL" prop="previewImage">
           <el-input v-model="editForm.previewImage" maxlength="500" />
+        </el-form-item>
+        <el-form-item label="缩略图" prop="thumbnail">
+          <div class="flex items-center gap-2">
+            <el-input v-model="editForm.thumbnail" maxlength="500" placeholder="缩略图 URL" />
+            <el-upload ref="editThumbnailUploadRef" :auto-upload="false" :limit="1" accept="image/*" :show-file-list="false" @change="handleEditThumbnailChange">
+              <el-button type="primary" size="small" icon="Upload">上传</el-button>
+            </el-upload>
+          </div>
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="editForm.description" type="textarea" :rows="3" maxlength="500" />
@@ -402,7 +416,7 @@ import {
   listTemplates, getTemplate, createTemplate, updateTemplate,
   deleteTemplate, toggleTemplateStatus,
   uploadTemplateVersion, rollbackTemplateVersion,
-  uploadTemplateCover, markTemplateViolation,
+  uploadTemplateCover, uploadTemplateThumbnail, markTemplateViolation,
   purchaseTemplate
 } from '@/api/template'
 import { getCategoryTree } from '@/api/template/category'
@@ -429,6 +443,10 @@ const versionTemplateId = ref(null)
 const zipFile = ref(null)
 const versionZipFile = ref(null)
 const coverImageFile = ref(null)
+const thumbnailFile = ref(null)
+const thumbnailUploadRef = ref(null)
+const editThumbnailUploadRef = ref(null)
+const editThumbnailFile = ref(null)
 const coverUploadRef = ref(null)
 const zipUploadRef = ref(null)
 const versionUploadRef = ref(null)
@@ -472,6 +490,7 @@ const editForm = reactive({
   templateName: '',
   sortWeight: 0,
   previewImage: '',
+  thumbnail: '',
   description: '',
   detailDesc: '',
   difficulty: undefined,
@@ -585,6 +604,14 @@ function handleCoverImageChange(uploadFile) {
   coverImageFile.value = uploadFile.raw
 }
 
+function handleThumbnailChange(uploadFile) {
+  thumbnailFile.value = uploadFile.raw
+}
+
+function handleEditThumbnailChange(uploadFile) {
+  editThumbnailFile.value = uploadFile.raw
+}
+
 function handleVersionZipChange(uploadFile) {
   versionZipFile.value = uploadFile.raw
 }
@@ -609,11 +636,13 @@ function handleAdd() {
   createCategoryPath.value = []
   zipFile.value = null
   coverImageFile.value = null
+  thumbnailFile.value = null
   createVisible.value = true
   // 清除上传组件的内部文件列表，避免显示上一次的文件
   nextTick(() => {
     zipUploadRef.value?.clearFiles()
     coverUploadRef.value?.clearFiles()
+    thumbnailUploadRef.value?.clearFiles()
   })
 }
 
@@ -657,6 +686,8 @@ function handleEdit(row) {
   editForm.templateName = row.templateName
   editForm.sortWeight = row.sortWeight
   editForm.previewImage = row.previewImage || ''
+  editForm.thumbnail = row.thumbnail || ''
+  editThumbnailFile.value = null
   editForm.description = row.description || ''
   editForm.detailDesc = row.detailDesc || ''
   editForm.difficulty = row.difficulty
@@ -682,6 +713,7 @@ function handleEditSubmit() {
     templateName: editForm.templateName,
     sortWeight: editForm.sortWeight,
     previewImage: editForm.previewImage,
+    thumbnail: editForm.thumbnail,
     description: editForm.description,
     detailDesc: editForm.detailDesc,
     difficulty: editForm.difficulty,
@@ -696,11 +728,22 @@ function handleEditSubmit() {
     creator: editForm.creator,
     produceDate: editForm.produceDate
   }).then(() => {
+    // 如果有选中缩略图文件，上传到资源服务器
+    if (editThumbnailFile.value) {
+      const fd = new FormData()
+      fd.append('file', editThumbnailFile.value)
+      return uploadTemplateThumbnail(editId.value, fd).then(res => {
+        // 上传成功后更新缩略图 URL
+        editForm.thumbnail = res
+      })
+    }
+  }).then(() => {
     ElMessage.success('保存成功')
     editVisible.value = false
     getList()
-  }).finally(() => {
+  }).catch(() => {}).finally(() => {
     editLoading.value = false
+    editThumbnailFile.value = null
   })
 }
 

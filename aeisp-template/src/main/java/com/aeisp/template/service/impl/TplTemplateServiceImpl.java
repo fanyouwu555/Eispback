@@ -158,6 +158,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setTemplateName(request.getTemplateName());
         template.setDescription(request.getDescription());
         template.setPreviewImage(request.getPreviewImage());
+        template.setThumbnail(request.getThumbnail());
         template.setSortWeight(request.getSortWeight());
         template.setTopCategoryId(request.getTopCategoryId());
         template.setFirstCategoryId(request.getFirstCategoryId());
@@ -351,6 +352,14 @@ public class TplTemplateServiceImpl implements TplTemplateService {
 
         TplTemplateDetailVO vo = new TplTemplateDetailVO();
         BeanUtils.copyProperties(template, vo);
+
+        // LocalDateTime → String 手动转换（BeanUtils 无法自动处理类型差异）
+        if (template.getOnlineTime() != null) {
+            vo.setOnlineTime(template.getOnlineTime().toString());
+        }
+        if (template.getValidTime() != null) {
+            vo.setValidTime(template.getValidTime().toString());
+        }
 
         // 当前版本
         if (template.getCurrentVersionId() != null) {

@@ -73,6 +73,13 @@ export function uploadTemplateCover(id, data) {
   })
 }
 
+// ===== 缩略图上传 =====
+export function uploadTemplateThumbnail(id, data) {
+  return request.post(`/templates/${id}/thumbnail`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
 // ===== 违规标记 =====
 export function markTemplateViolation(id, reason) {
   return request.post(`/templates/${id}/violation`, null, { params: { reason } })

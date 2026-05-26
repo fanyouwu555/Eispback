@@ -28,6 +28,7 @@ class TemplateStorageServiceImplTest {
             @Override public void deleteVersionFiles(Long templateId, String versionNo) { }
             @Override public String getUrl(String relativePath) { return "http://localhost/" + relativePath; }
             @Override public String getBaseUrl() { return "http://localhost/"; }
+            @Override public String getUploadPath() { return System.getProperty("java.io.tmpdir"); }
             @Override public boolean fileExists(String relativePath) { return false; }
             @Override public void deleteDirectory(String relativePath) { }
         };

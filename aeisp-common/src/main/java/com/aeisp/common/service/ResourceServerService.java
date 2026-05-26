@@ -68,6 +68,13 @@ public interface ResourceServerService {
     String getBaseUrl();
 
     /**
+     * 获取资源服务器的上传路径（本地文件系统路径）。
+     *
+     * @return 上传路径
+     */
+    String getUploadPath();
+
+    /**
      * 判断资源服务器上文件是否存在。
      *
      * @param relativePath 相对路径

@@ -25,9 +25,14 @@ public class UpdateTemplateRequest {
     private String description;
 
     /**
-     * 预览图片 URL。
+     * 预览图片 URL（封面图）。
      */
     private String previewImage;
+
+    /**
+     * 缩略图 URL（客户端展示用）。
+     */
+    private String thumbnail;
 
     /**
      * 顶级分类 ID。

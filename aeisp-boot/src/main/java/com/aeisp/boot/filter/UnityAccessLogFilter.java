@@ -25,10 +25,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 /**
- * Unity 客户端 API 访问日志过滤器。
+ * 通用 API 访问日志过滤器。
  *
  * <p>拦截所有 API 请求，记录请求方法、URI、参数、响应状态、耗时、用户信息等，
- * 以 JSON Lines 格式输出到独立的 access log 文件，便于排查 Unity 客户端问题。</p>
+ * 以 JSON Lines 格式输出到独立的 access log 文件。</p>
+ *
+ * <p>适用于所有客户端（Unity、Web 前端、第三方）的请求追踪，<b>不限定于 Unity</b>。</p>
  *
  * <p>特性：</p>
  * <ul>
