@@ -64,7 +64,7 @@ const featureGroups = computed(() => {
 
 const fetchFeatures = async () => {
   const res = await listFeatures()
-  features.value = res.data || []
+  features.value = res || []
   const maintenance = features.value.find(f => f.featureKey === 'maintenance')
   if (maintenance) {
     maintenanceEnabled.value = maintenance.enabled

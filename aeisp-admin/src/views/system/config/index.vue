@@ -109,7 +109,7 @@ const editForm = ref({
 
 const fetchConfigs = async (category) => {
   const res = await listConfigsByCategory(category)
-  configList.value = res.data || []
+  configList.value = res || []
 }
 
 const handleTabClick = () => {
@@ -147,7 +147,7 @@ const submitForm = async () => {
 
 const handleShowHistory = async (row) => {
   const res = await listConfigLogs('config', row.id)
-  historyList.value = res.data || []
+  historyList.value = res || []
   historyVisible.value = true
 }
 

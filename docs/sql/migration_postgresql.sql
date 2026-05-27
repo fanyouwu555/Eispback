@@ -124,7 +124,7 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 -- 系统配置模块 -> 菜单
 INSERT INTO sys_permission (id, permission_name, permission_code, resource_type, action, description, parent_id, menu_type, sort_order, icon, route_path, component, is_visible, is_cache, created_at, updated_at, created_by, updated_by) VALUES
 (35, '基础配置', 'sysconfig:base', 'sysconfig', 'read', NULL, 10, 1, 1, NULL, '/sysconfig/base', 'system/config/index.vue', 1, 1, NOW(), NOW(), 1, 1),
-(36, '功能开关', 'sysconfig:feature', 'sysconfig', 'read', NULL, 10, 1, 2, NULL, '/sysconfig/feature', 'system/feature/index.vue', 1, 1, NOW(), NOW(), 1, 1);
+(36, '功能开关', 'system:feature:view', 'sysconfig', 'read', NULL, 10, 1, 2, NULL, '/sysconfig/feature', 'system/feature/index.vue', 1, 1, NOW(), NOW(), 1, 1);
 
 -- 按钮权限
 INSERT INTO sys_permission (id, permission_name, permission_code, resource_type, action, description, parent_id, menu_type, sort_order, icon, route_path, component, is_visible, is_cache, created_at, updated_at, created_by, updated_by) VALUES
@@ -386,6 +386,10 @@ CREATE TABLE IF NOT EXISTS sys_config_log (
     environment VARCHAR(10),
     operated_by BIGINT,
     operated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT,
     deleted SMALLINT DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_config_log_ref ON sys_config_log(config_type, ref_id);
@@ -472,13 +476,19 @@ INSERT INTO sys_feature_switch (feature_key, feature_name, category, enabled, de
 
 -- 7f. 新增按钮级别权限（系统配置模块 -> 功能开关 -> 按钮）
 INSERT INTO sys_permission (id, permission_name, permission_code, resource_type, action, description, parent_id, menu_type, sort_order, icon, route_path, component, is_visible, is_cache, created_at, updated_at, created_by, updated_by) VALUES
-(79, '功能开关切换', 'system:feature:toggle', 'system', 'update', NULL, 36, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(81, '功能开关切换', 'system:feature:toggle', 'system', 'update', NULL, 36, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (80, '维护模式操作', 'system:feature:maintenance', 'system', 'update', NULL, 36, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1);
 
--- 为超级管理员角色新增 79、80 号权限
+-- 为超级管理员角色新增 80、81 号权限
 INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
-(1, 79, NOW()),
-(1, 80, NOW());
+(1, 80, NOW()),
+(1, 81, NOW());
 
 -- 更新序列
-SELECT setval('sys_permission_id_seq', 80);
+SELECT setval('sys_permission_id_seq', 81);
+
+-- ========================================================
+-- 8. 移除旧菜单：系统管理下的"系统配置"(id=18)及其按钮(44)
+--    "系统配置模块"(id=10)下的"基础配置"(id=35)和"功能开关"(id=36)保留
+-- ========================================================
+UPDATE sys_permission SET deleted = 1 WHERE id IN (18, 44);

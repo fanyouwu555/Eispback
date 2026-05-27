@@ -18,7 +18,7 @@ public class SysFeatureSwitchController {
     private final SysFeatureSwitchService sysFeatureSwitchService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('system:feature')")
+    @PreAuthorize("hasAuthority('system:feature:view')")
     public Result<List<SysFeatureSwitchVO>> list() {
         return Result.success(sysFeatureSwitchService.listAll());
     }
