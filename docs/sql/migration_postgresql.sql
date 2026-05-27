@@ -363,3 +363,122 @@ ALTER TABLE tpl_template
     ADD COLUMN IF NOT EXISTS thumbnail VARCHAR(500) DEFAULT NULL;
 
 COMMENT ON COLUMN tpl_template.thumbnail IS '缩略图 URL（客户端展示用）';
+
+-- ============================================
+-- 7. 系统配置模块升级：分类、控件类型、日志、功能开关
+-- ============================================
+
+-- 7a. 为 sys_config 添加 category 和 field_type 列
+ALTER TABLE sys_config ADD COLUMN IF NOT EXISTS category VARCHAR(20) NOT NULL DEFAULT 'general';
+COMMENT ON COLUMN sys_config.category IS '分类: storage/backup/platform/timeout/threshold/general';
+
+ALTER TABLE sys_config ADD COLUMN IF NOT EXISTS field_type VARCHAR(20) NOT NULL DEFAULT 'text';
+COMMENT ON COLUMN sys_config.field_type IS '控件类型: text/boolean/number/password';
+
+-- 7b. 创建配置变更历史日志表
+CREATE TABLE IF NOT EXISTS sys_config_log (
+    id BIGSERIAL PRIMARY KEY,
+    config_type VARCHAR(20) NOT NULL,
+    ref_id BIGINT NOT NULL,
+    config_key VARCHAR(64) NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    environment VARCHAR(10),
+    operated_by BIGINT,
+    operated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted SMALLINT DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_config_log_ref ON sys_config_log(config_type, ref_id);
+CREATE INDEX IF NOT EXISTS idx_config_log_time ON sys_config_log(operated_at);
+
+COMMENT ON TABLE sys_config_log IS '配置变更历史日志';
+COMMENT ON COLUMN sys_config_log.config_type IS '类型: config(基础配置)/feature(功能开关)';
+COMMENT ON COLUMN sys_config_log.ref_id IS '关联 sys_config.id 或 sys_feature_switch.id';
+COMMENT ON COLUMN sys_config_log.config_key IS '配置键名(冗余便于查询)';
+COMMENT ON COLUMN sys_config_log.old_value IS '变更前值';
+COMMENT ON COLUMN sys_config_log.new_value IS '变更后值';
+COMMENT ON COLUMN sys_config_log.operated_by IS '操作人ID';
+COMMENT ON COLUMN sys_config_log.operated_at IS '操作时间';
+
+-- 7c. 创建功能开关表
+CREATE TABLE IF NOT EXISTS sys_feature_switch (
+    id BIGSERIAL PRIMARY KEY,
+    feature_key VARCHAR(64) NOT NULL UNIQUE,
+    feature_name VARCHAR(100) NOT NULL,
+    category VARCHAR(30) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    description VARCHAR(255),
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    updated_by BIGINT,
+    deleted SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE sys_feature_switch IS '功能开关表';
+COMMENT ON COLUMN sys_feature_switch.feature_key IS '开关键名';
+COMMENT ON COLUMN sys_feature_switch.feature_name IS '显示名称';
+COMMENT ON COLUMN sys_feature_switch.category IS '分类: business/commercial/security/message/maintenance';
+COMMENT ON COLUMN sys_feature_switch.enabled IS '是否启用';
+COMMENT ON COLUMN sys_feature_switch.description IS '说明';
+COMMENT ON COLUMN sys_feature_switch.sort_order IS '排序号';
+
+-- 7d. 插入分类后的新配置项（已有行的 category 通过 DEFAULT 'general' 自动填充）
+INSERT INTO sys_config (config_key, config_value, description, environment, is_editable, category, field_type) VALUES
+('storage.project', 'D:/projects/', '项目文件存储路径', 'all', 1, 'storage', 'text'),
+('storage.template', 'D:/templates/', '模板资源存储路径', 'all', 1, 'storage', 'text'),
+('storage.upload', 'D:/uploads/', '上传文件存储路径', 'all', 1, 'storage', 'text'),
+('storage.cache', 'D:/cache/', '缓存文件存储路径', 'all', 1, 'storage', 'text'),
+('backup.enabled', 'false', '云端自动备份开关', 'all', 1, 'backup', 'boolean'),
+('backup.interval', '7', '备份周期（天）', 'all', 1, 'backup', 'number'),
+('backup.retention', '30', '保留备份份数', 'all', 1, 'backup', 'number'),
+('backup.path', 'D:/backups/', '备份存储路径', 'all', 1, 'backup', 'text'),
+('backup.alert', 'true', '异常备份告警开关', 'all', 1, 'backup', 'boolean'),
+('platform.website', '', '官网地址', 'all', 1, 'platform', 'text'),
+('platform.foredomain', '', '前台域名', 'all', 1, 'platform', 'text'),
+('platform.backdomain', '', '后台域名', 'all', 1, 'platform', 'text'),
+('platform.name', 'AEisp', '平台名称', 'all', 1, 'platform', 'text'),
+('platform.copyright', 'Copyright 2026 AEisp', '版权信息', 'all', 1, 'platform', 'text'),
+('platform.icp', '', '备案号', 'all', 1, 'platform', 'text'),
+('timeout.session', '120', '会话超时（分钟）', 'all', 1, 'timeout', 'number'),
+('timeout.file', '30', '文件过期时间（天）', 'all', 1, 'timeout', 'number'),
+('timeout.order', '30', '未支付订单超时（分钟）', 'all', 1, 'timeout', 'number'),
+('timeout.task', '60', '运行任务超时（分钟）', 'all', 1, 'timeout', 'number'),
+('threshold.balance', '10', '用户余额预警阈值', 'all', 1, 'threshold', 'number'),
+('threshold.runtime', '50', '运行时长预警阈值', 'all', 1, 'threshold', 'number'),
+('threshold.resource', '80', '资源占用告警阈值', 'all', 1, 'threshold', 'number');
+
+-- 7e. 植入功能开关种子数据
+INSERT INTO sys_feature_switch (feature_key, feature_name, category, enabled, description, sort_order) VALUES
+('user.register', '用户注册', 'business', true, '开启/关闭用户注册功能', 1),
+('user.login', '账号登录', 'business', true, '开启/关闭账号登录功能', 2),
+('project.create', '项目创建', 'business', true, '开启/关闭项目创建功能', 3),
+('code.run', '代码运行', 'business', true, '开启/关闭代码运行功能', 4),
+('ai.chat', 'AI对话', 'business', true, '开启/关闭AI对话功能', 5),
+('file.upload', '文件上传', 'business', true, '开启/关闭文件上传功能', 6),
+('recharge', '充值功能', 'commercial', true, '开启/关闭充值功能', 7),
+('template.purchase', '付费模板购买', 'commercial', true, '开启/关闭付费模板购买功能', 8),
+('balance.deduct', '余额扣费', 'commercial', true, '开启/关闭余额扣费功能', 9),
+('order.pay', '订单支付', 'commercial', true, '开启/关闭订单支付能力', 10),
+('security.location', '异地登录提醒', 'security', true, '开启/关闭异地登录提醒', 11),
+('security.password', '密码复杂度校验', 'security', true, '开启/关闭密码复杂度校验', 12),
+('security.lock', '登录失败锁定', 'security', true, '开启/关闭登录失败锁定', 13),
+('security.content', '内容风控审核', 'security', true, '开启/关闭内容风控审核', 14),
+('notify.system', '系统通知推送', 'message', true, '开启/关闭系统通知推送', 15),
+('notify.alert', '预警消息推送', 'message', true, '开启/关闭预警消息推送', 16),
+('notify.announcement', '公告推送', 'message', true, '开启/关闭公告推送', 17),
+('maintenance', '全站维护模式', 'maintenance', false, '开启后前台仅展示维护提示，禁止用户操作', 18);
+
+-- 7f. 新增按钮级别权限（系统配置模块 -> 功能开关 -> 按钮）
+INSERT INTO sys_permission (id, permission_name, permission_code, resource_type, action, description, parent_id, menu_type, sort_order, icon, route_path, component, is_visible, is_cache, created_at, updated_at, created_by, updated_by) VALUES
+(79, '功能开关切换', 'system:feature:toggle', 'system', 'update', NULL, 36, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(80, '维护模式操作', 'system:feature:maintenance', 'system', 'update', NULL, 36, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1);
+
+-- 为超级管理员角色新增 79、80 号权限
+INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
+(1, 79, NOW()),
+(1, 80, NOW());
+
+-- 更新序列
+SELECT setval('sys_permission_id_seq', 80);
