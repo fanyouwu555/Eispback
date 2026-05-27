@@ -4,6 +4,7 @@ import com.aeisp.message.entity.MsgNotification;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -41,4 +42,19 @@ public interface MsgNotificationMapper extends BaseMapper<MsgNotification> {
      * @return 待推送的消息列表
      */
     List<MsgNotification> selectScheduledNotificationsToPush();
+
+    /**
+     * 将已发送但已过期的公告标记为已过期状态。
+     *
+     * @param now 当前时间
+     * @return 更新的记录数
+     */
+    int markExpired(@Param("now") LocalDateTime now);
+
+    /**
+     * 查询客户端可展示的公告列表（已发送且未过期）。
+     *
+     * @return 公告列表
+     */
+    List<MsgNotification> selectClientAnnouncements();
 }

@@ -29,9 +29,11 @@
     <el-table v-loading="loading" :data="list" border>
       <el-table-column type="index" width="50" />
       <el-table-column label="标题" prop="title" min-width="160" show-overflow-tooltip />
+      <el-table-column label="简介" prop="summary" min-width="120" show-overflow-tooltip />
       <el-table-column label="类型" prop="msgTypeLabel" width="80" />
       <el-table-column label="推送范围" prop="pushScopeLabel" width="100" />
-      <el-table-column label="状态" align="center" width="80">
+      <el-table-column label="发布人" prop="publisherName" width="100" />
+      <el-table-column label="状态" align="center" width="90">
         <template #default="{ row }">
           <el-tag :type="notificationStatusColor(row.status) || 'info'">{{ row.statusLabel }}</el-tag>
         </template>
@@ -46,12 +48,13 @@
         </template>
       </el-table-column>
       <el-table-column label="创建时间" prop="createdAt" width="170" />
-      <el-table-column label="操作" align="center" width="280" fixed="right">
+      <el-table-column label="操作" align="center" width="320" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" icon="View" @click="handleDetail(row)">详情</el-button>
-          <el-button v-if="row.status === 0" link type="success" icon="Promotion" @click="handlePush(row)">发布</el-button>
-          <el-button v-if="row.status === 1" link type="warning" icon="SwitchButton" @click="handleRevoke(row)">撤回</el-button>
-          <el-button v-if="row.status !== 3" link type="info" icon="Folder" @click="handleArchive(row)">归档</el-button>
+          <el-button v-if="row.status === 1" link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
+          <el-button v-if="row.status === 1" link type="success" icon="Promotion" @click="handlePush(row)">发布</el-button>
+          <el-button v-if="row.status === 2" link type="warning" icon="SwitchButton" @click="handleRevoke(row)">撤回</el-button>
+          <el-button v-if="row.status !== 5 && row.status !== 6" link type="info" icon="Folder" @click="handleArchive(row)">归档</el-button>
           <el-button link type="primary" icon="Top" @click="handleToggleTop(row)">{{ row.isTop === 1 ? '取消置顶' : '置顶' }}</el-button>
         </template>
       </el-table-column>
@@ -59,11 +62,14 @@
 
     <Pagination :total="total" :page-num="queryParams.pageNum" :page-size="queryParams.pageSize" @pagination="getList" />
 
-    <!-- 新增弹窗 -->
-    <el-dialog v-model="createOpen" title="新增通告" width="650px">
+    <!-- 新增/编辑弹窗 -->
+    <el-dialog v-model="createOpen" :title="editingId ? '编辑通告' : '新增通告'" width="700px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="标题" prop="title">
           <el-input v-model="form.title" />
+        </el-form-item>
+        <el-form-item label="简介" prop="summary">
+          <el-input v-model="form.summary" placeholder="公告摘要/简介（选填）" />
         </el-form-item>
         <el-form-item label="消息类型" prop="msgType">
           <el-select v-model="form.msgType">
@@ -105,12 +111,28 @@
           <el-date-picker v-model="form.expireTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="选择过期时间" />
         </el-form-item>
         <el-form-item label="内容" prop="content">
-          <el-input v-model="form.content" type="textarea" :rows="6" placeholder="消息内容（支持 HTML）" />
+          <el-input v-model="form.content" type="textarea" :rows="6" placeholder="消息内容（纯文本，可用 [图片:URL] 嵌入图片）" />
+        </el-form-item>
+        <el-form-item label="上传图片">
+          <el-upload
+            ref="uploadRef"
+            :auto-upload="true"
+            :show-file-list="true"
+            :limit="1"
+            :http-request="handleImageUpload"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            list-type="text"
+          >
+            <el-button type="primary" size="small">选择图片</el-button>
+            <template #tip>
+              <span style="font-size:12px;color:#999;">支持 jpg/png/gif/webp，最大 5MB</span>
+            </template>
+          </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="createOpen = false">取 消</el-button>
-        <el-button type="primary" @click="submitCreate">创建并保存草稿</el-button>
+        <el-button type="primary" @click="submitForm">{{ editingId ? '保存修改' : '创建并保存草稿' }}</el-button>
       </template>
     </el-dialog>
 
@@ -118,6 +140,7 @@
     <el-dialog v-model="detailOpen" title="通告详情" width="700px">
       <el-form label-width="100px">
         <el-form-item label="标题">{{ detail?.title }}</el-form-item>
+        <el-form-item label="简介">{{ detail?.summary || '-' }}</el-form-item>
         <el-form-item label="类型">{{ detail?.msgTypeLabel }}</el-form-item>
         <el-form-item label="状态"><el-tag :type="notificationStatusColor(detail?.status) || 'info'">{{ detail?.statusLabel }}</el-tag></el-form-item>
         <el-form-item label="推送范围">{{ detail?.pushScopeLabel }}</el-form-item>
@@ -141,7 +164,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listNotifications, getNotification, createNotification, pushNotification, revokeNotification, archiveNotification, toggleTop } from '@/api/message'
+import { listNotifications, getNotification, createNotification, updateNotification, pushNotification, revokeNotification, archiveNotification, toggleTop, uploadImage } from '@/api/message'
 import { useDict } from '@/composables/useDict'
 import Pagination from '@/components/Pagination.vue'
 
@@ -155,10 +178,12 @@ const list = ref([])
 const total = ref(0)
 const queryRef = ref(null)
 const formRef = ref(null)
+const uploadRef = ref(null)
 const dateRange = ref([])
 const createOpen = ref(false)
 const detailOpen = ref(false)
 const detail = ref(null)
+const editingId = ref(null)
 
 const queryParams = reactive({
   pageNum: 1,
@@ -168,6 +193,7 @@ const queryParams = reactive({
 
 const form = reactive({
   title: '',
+  summary: '',
   content: '',
   msgType: undefined,
   pushScope: undefined,
@@ -207,21 +233,59 @@ function resetQuery() {
   handleQuery()
 }
 
+function resetForm() {
+  Object.assign(form, { title: '', summary: '', content: '', msgType: undefined, pushScope: undefined, pushTarget: '', pushType: 1, pushTime: undefined, expireTime: undefined })
+  editingId.value = null
+}
+
 function handleAdd() {
-  Object.assign(form, { title: '', content: '', msgType: undefined, pushScope: undefined, pushTarget: '', pushType: 1, pushTime: undefined, expireTime: undefined })
+  resetForm()
   createOpen.value = true
 }
 
-async function submitCreate() {
+async function handleEdit(row) {
+  editingId.value = row.id
+  const res = await getNotification(row.id)
+  Object.assign(form, {
+    title: res.title || '',
+    summary: res.summary || '',
+    content: res.content || '',
+    msgType: res.msgType,
+    pushScope: res.pushScope,
+    pushTarget: res.pushTarget || '',
+    pushType: res.pushType,
+    pushTime: res.pushTime || undefined,
+    expireTime: res.expireTime || undefined
+  })
+  createOpen.value = true
+}
+
+async function submitForm() {
   try {
     await formRef.value.validate()
     const data = { ...form }
     if (!data.pushTarget) data.pushTarget = undefined
-    await createNotification(data)
-    ElMessage.success('创建成功')
+    if (editingId.value) {
+      await updateNotification(editingId.value, data)
+      ElMessage.success('保存成功')
+    } else {
+      await createNotification(data)
+      ElMessage.success('创建成功')
+    }
     createOpen.value = false
     getList()
   } catch {}
+}
+
+async function handleImageUpload(options) {
+  try {
+    const res = await uploadImage(options.file)
+    const url = res
+    form.content = (form.content || '') + `\n[图片:${url}]`
+    ElMessage.success('图片已上传并插入到内容中')
+  } catch (e) {
+    ElMessage.error('图片上传失败')
+  }
 }
 
 async function handlePush(row) {

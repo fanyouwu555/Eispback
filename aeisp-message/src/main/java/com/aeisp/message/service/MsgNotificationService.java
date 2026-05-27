@@ -2,9 +2,13 @@ package com.aeisp.message.service;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.message.request.CreateNotificationRequest;
+import com.aeisp.message.request.UpdateNotificationRequest;
 import com.aeisp.message.request.NotificationQueryRequest;
 import com.aeisp.message.vo.MsgNotificationDetailVO;
 import com.aeisp.message.vo.MsgNotificationVO;
+import com.aeisp.message.vo.ClientAnnouncementVO;
+
+import java.util.List;
 
 /**
  * 消息通知 Service 接口。
@@ -22,6 +26,15 @@ public interface MsgNotificationService {
      * @return 是否创建成功
      */
     boolean createNotification(CreateNotificationRequest request);
+
+    /**
+     * 更新消息通知（仅草稿状态可编辑）。
+     *
+     * @param id      消息通知 ID
+     * @param request 更新请求
+     * @return 是否更新成功
+     */
+    boolean updateNotification(Long id, UpdateNotificationRequest request);
 
     /**
      * 执行消息推送。
@@ -80,4 +93,11 @@ public interface MsgNotificationService {
      * @return 消息详情
      */
     MsgNotificationDetailVO getDetail(Long notificationId);
+
+    /**
+     * 获取客户端公告列表（已发送且未过期）。
+     *
+     * @return 公告列表
+     */
+    List<ClientAnnouncementVO> listClientAnnouncements();
 }

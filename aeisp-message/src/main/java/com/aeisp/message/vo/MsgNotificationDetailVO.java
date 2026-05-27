@@ -35,6 +35,11 @@ public class MsgNotificationDetailVO implements Serializable {
     private String content;
 
     /**
+     * 消息摘要/简介。
+     */
+    private String summary;
+
+    /**
      * 消息类型枚举值。
      */
     private Integer msgType;

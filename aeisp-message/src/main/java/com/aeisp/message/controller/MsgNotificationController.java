@@ -3,6 +3,7 @@ package com.aeisp.message.controller;
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
 import com.aeisp.message.request.CreateNotificationRequest;
+import com.aeisp.message.request.UpdateNotificationRequest;
 import com.aeisp.message.request.NotificationQueryRequest;
 import com.aeisp.message.service.MsgNotificationService;
 import com.aeisp.message.vo.MsgNotificationDetailVO;
@@ -16,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -109,6 +111,23 @@ public class MsgNotificationController {
             @Parameter(description = "消息 ID") @PathVariable("id") Long id,
             @Parameter(description = "是否置顶：0-正常，1-置顶") @RequestParam("isTop") Integer isTop) {
         boolean success = msgNotificationService.toggleTop(id, isTop);
+        return Result.success(success);
+    }
+
+    /**
+     * 更新消息通知（仅草稿状态可编辑）。
+     *
+     * @param id      消息 ID
+     * @param request 更新请求
+     * @return 操作结果
+     */
+    @PreAuthorize("hasAuthority('notification:update')")
+    @Operation(summary = "更新消息", description = "更新草稿状态的消息通知")
+    @PutMapping("/{id}")
+    public Result<Boolean> update(
+            @Parameter(description = "消息 ID") @PathVariable("id") Long id,
+            @Valid @RequestBody UpdateNotificationRequest request) {
+        boolean success = msgNotificationService.updateNotification(id, request);
         return Result.success(success);
     }
 

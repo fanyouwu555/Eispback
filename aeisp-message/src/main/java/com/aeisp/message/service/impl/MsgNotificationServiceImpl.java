@@ -13,12 +13,16 @@ import com.aeisp.message.enums.PushTypeEnum;
 import com.aeisp.message.mapper.MsgNotificationMapper;
 import com.aeisp.message.mapper.MsgUserNotificationMapper;
 import com.aeisp.message.request.CreateNotificationRequest;
+import com.aeisp.message.request.UpdateNotificationRequest;
 import com.aeisp.message.request.NotificationQueryRequest;
 import com.aeisp.message.service.MsgNotificationService;
+import com.aeisp.message.vo.ClientAnnouncementVO;
 import com.aeisp.message.vo.MsgNotificationDetailVO;
 import com.aeisp.message.vo.MsgNotificationVO;
 import com.aeisp.message.vo.PushTargetUserVO;
+import com.aeisp.system.entity.SysUser;
 import com.aeisp.system.entity.SysUserRole;
+import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.mapper.UsrUserMapper;
@@ -39,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -58,6 +63,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     private final MsgUserNotificationMapper msgUserNotificationMapper;
     private final UsrUserMapper usrUserMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
+    private final SysUserMapper sysUserMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -68,6 +74,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
     private static final int STATUS_SENT = 2;
     private static final int STATUS_REVOKED = 3;
     private static final int STATUS_SCHEDULED = 4;
+    private static final int STATUS_EXPIRED = 6;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -75,6 +82,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         MsgNotification notification = new MsgNotification();
         notification.setTitle(request.getTitle());
         notification.setContent(request.getContent());
+        notification.setSummary(request.getSummary());
         notification.setMsgType(request.getMsgType());
         notification.setPushScope(request.getPushScope());
         notification.setPushTarget(request.getPushTarget());
@@ -93,6 +101,33 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         }
 
         return save(notification);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateNotification(Long id, UpdateNotificationRequest request) {
+        MsgNotification notification = getById(id);
+        if (notification == null) {
+            throw new BizException(MessageErrorCode.NOTIFICATION_NOT_FOUND);
+        }
+        if (!Objects.equals(notification.getStatus(), STATUS_DRAFT)) {
+            throw new BizException(MessageErrorCode.NOTIFICATION_ONLY_DRAFT_CAN_PUSH);
+        }
+        notification.setTitle(request.getTitle());
+        notification.setSummary(request.getSummary());
+        notification.setContent(request.getContent());
+        notification.setMsgType(request.getMsgType());
+        notification.setPushScope(request.getPushScope());
+        notification.setPushTarget(request.getPushTarget());
+        notification.setPushType(request.getPushType());
+        notification.setPushTime(request.getPushTime());
+        notification.setExpireTime(request.getExpireTime());
+
+        Long adminId = getCurrentAdminId();
+        if (adminId != null) {
+            notification.setUpdatedBy(adminId);
+        }
+        return updateById(notification);
     }
 
     /**
@@ -267,6 +302,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         vo.setId(notification.getId());
         vo.setTitle(notification.getTitle());
         vo.setContent(notification.getContent());
+        vo.setSummary(notification.getSummary());
         vo.setMsgType(notification.getMsgType());
         vo.setMsgTypeLabel(getMsgTypeLabel(notification.getMsgType()));
         vo.setPushScope(notification.getPushScope());
@@ -302,6 +338,44 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         }
         vo.setTargetUsers(targetUsers);
         return vo;
+    }
+
+    private static final Pattern IMAGE_PATTERN = Pattern.compile("\\[图片:(https?://[^\\]]+)\\]");
+
+    @Override
+    public List<ClientAnnouncementVO> listClientAnnouncements() {
+        List<MsgNotification> list = msgNotificationMapper.selectClientAnnouncements();
+        return list.stream().map(this::convertToClientVO).collect(Collectors.toList());
+    }
+
+    /**
+     * 转换为客户端公告 VO，并从 content 中提取图片 URL。
+     */
+    private ClientAnnouncementVO convertToClientVO(MsgNotification notification) {
+        ClientAnnouncementVO vo = new ClientAnnouncementVO();
+        vo.setId(notification.getId());
+        vo.setTitle(notification.getTitle());
+        vo.setContent(notification.getContent());
+        vo.setSummary(notification.getSummary());
+        vo.setPushTime(notification.getPushTime());
+        vo.setCreatedAt(notification.getCreatedAt());
+        vo.setImageUrls(extractImageUrls(notification.getContent()));
+        return vo;
+    }
+
+    /**
+     * 从公告内容中提取 [图片:URL] 占位符的 URL 列表。
+     */
+    private static List<String> extractImageUrls(String content) {
+        if (content == null || content.isEmpty()) {
+            return Collections.emptyList();
+        }
+        java.util.regex.Matcher matcher = IMAGE_PATTERN.matcher(content);
+        List<String> urls = new ArrayList<>();
+        while (matcher.find()) {
+            urls.add(matcher.group(1));
+        }
+        return urls;
     }
 
     /**
@@ -377,6 +451,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         MsgNotificationVO vo = new MsgNotificationVO();
         vo.setId(notification.getId());
         vo.setTitle(notification.getTitle());
+        vo.setSummary(notification.getSummary());
         vo.setMsgType(notification.getMsgType());
         vo.setMsgTypeLabel(getMsgTypeLabel(notification.getMsgType()));
         vo.setPushScope(notification.getPushScope());
@@ -389,6 +464,11 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
         vo.setTotalCount(notification.getTotalCount());
         vo.setIsTop(notification.getIsTop());
         vo.setCreatedAt(notification.getCreatedAt());
+        // 查询发布人
+        if (notification.getCreatedBy() != null) {
+            SysUser publisher = sysUserMapper.selectById(notification.getCreatedBy());
+            vo.setPublisherName(publisher != null ? publisher.getUsername() : "");
+        }
         return vo;
     }
 
@@ -414,6 +494,7 @@ public class MsgNotificationServiceImpl extends ServiceImpl<MsgNotificationMappe
             case STATUS_REVOKED -> "已撤回";
             case STATUS_SCHEDULED -> "定时发送";
             case STATUS_ARCHIVED -> "已归档";
+            case STATUS_EXPIRED -> "已过期";
             default -> "";
         };
     }

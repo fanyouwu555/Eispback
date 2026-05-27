@@ -61,6 +61,9 @@ resource-server:
   users:
     upload-path: D:/Users/admin/Desktop/EISP/Users/
     base-url: http://192.168.50.215/EISP/Users/
+  notification:
+    upload-path: D:/Users/admin/Desktop/EISP/Notification/
+    base-url: http://192.168.50.215/EISP/Notification/
 
 logging:
   level:

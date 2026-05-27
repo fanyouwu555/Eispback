@@ -12,6 +12,10 @@ export function createNotification(data) {
   return request.post('/messages', data)
 }
 
+export function updateNotification(id, data) {
+  return request.put(`/messages/${id}`, data)
+}
+
 export function pushNotification(id) {
   return request.post(`/messages/${id}/push`)
 }
@@ -26,4 +30,10 @@ export function archiveNotification(id) {
 
 export function toggleTop(id, isTop) {
   return request.post(`/messages/${id}/top`, null, { params: { isTop } })
+}
+
+export function uploadImage(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/messages/upload-image', formData)
 }

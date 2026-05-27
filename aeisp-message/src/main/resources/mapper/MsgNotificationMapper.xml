@@ -6,6 +6,7 @@
         <id column="id" property="id"/>
         <result column="title" property="title"/>
         <result column="content" property="content"/>
+        <result column="summary" property="summary"/>
         <result column="msg_type" property="msgType"/>
         <result column="push_scope" property="pushScope"/>
         <result column="push_target" property="pushTarget"/>
@@ -34,7 +35,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, title, content, msg_type, push_scope, push_target, push_type, push_time, expire_time,
+        id, title, content, summary, msg_type, push_scope, push_target, push_type, push_time, expire_time,
         status, is_top, read_count, total_count, priority, channels, target_user_ids, target_group_ids,
         need_read_confirmation, target_count, success_count, failed_count, sent_at, revoked_at,
         created_at, updated_at, created_by, updated_by, deleted
@@ -65,6 +66,16 @@
     </select>
 
     <!-- 查询已到推送时间的定时消息；push_type = 2 对应定时推送，status = 1 对应草稿状态 -->
+    <select id="selectClientAnnouncements" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM msg_notification
+        WHERE status = 2
+          AND (expire_time IS NULL OR expire_time &gt; NOW())
+          AND deleted = 0
+        ORDER BY is_top DESC, push_time DESC
+    </select>
+
     <select id="selectScheduledNotificationsToPush" resultMap="BaseResultMap">
         SELECT
             <include refid="Base_Column_List"/>
@@ -75,5 +86,15 @@
           AND deleted = 0
         ORDER BY push_time ASC
     </select>
+
+    <!-- 将已发送但已过期的公告标记为已过期；status = 2 已发送，status = 6 已过期 -->
+    <update id="markExpired">
+        UPDATE msg_notification
+        SET status = 6
+        WHERE status = 2
+          AND expire_time IS NOT NULL
+          AND expire_time &lt; #{now}
+          AND deleted = 0
+    </update>
 
 </mapper>

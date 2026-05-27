@@ -85,6 +85,16 @@ public class MsgNotificationVO implements Serializable {
     private Integer isTop;
 
     /**
+     * 消息摘要/简介。
+     */
+    private String summary;
+
+    /**
+     * 发布人用户名。
+     */
+    private String publisherName;
+
+    /**
      * 创建时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

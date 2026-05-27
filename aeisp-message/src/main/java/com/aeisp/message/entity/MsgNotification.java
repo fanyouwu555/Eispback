@@ -34,6 +34,11 @@ public class MsgNotification extends BaseEntity {
     private String content;
 
     /**
+     * 消息摘要/简介。
+     */
+    private String summary;
+
+    /**
      * 消息类型枚举值。
      *
      * @see com.aeisp.message.enums.MsgTypeEnum
