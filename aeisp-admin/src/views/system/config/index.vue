@@ -109,11 +109,13 @@ const editForm = ref({
 
 const fetchConfigs = async (category) => {
   const res = await listConfigsByCategory(category)
-  configList.value = res || []
+  if (category === activeTab.value) {
+    configList.value = res || []
+  }
 }
 
-const handleTabClick = () => {
-  fetchConfigs(activeTab.value)
+const handleTabClick = (tab) => {
+  fetchConfigs(tab.props.name)
 }
 
 const handleQuickSave = async (row) => {
