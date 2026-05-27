@@ -3,7 +3,9 @@ package com.aeisp.system.controller;
 import com.aeisp.common.Result;
 import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.annotation.OperationLog;
+import com.aeisp.system.service.SysConfigLogService;
 import com.aeisp.system.service.SysConfigService;
+import com.aeisp.system.vo.SysConfigLogVO;
 import com.aeisp.system.vo.SysConfigVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +27,7 @@ import java.util.Map;
 public class SysConfigController {
 
     private final SysConfigService sysConfigService;
+    private final SysConfigLogService sysConfigLogService;
 
     @org.springframework.beans.factory.annotation.Value("${spring.profiles.active:dev}")
     private String activeProfile;
@@ -71,5 +74,34 @@ public class SysConfigController {
         }
         boolean success = sysConfigService.updateConfig(key, value, activeProfile);
         return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "更新配置失败，配置键不存在");
+    }
+
+    /**
+     * 按分类查询系统配置。
+     *
+     * @param category 配置分类
+     * @return 配置列表
+     */
+    @GetMapping("/category/{category}")
+    @PreAuthorize("hasAuthority('system:config')")
+    @OperationLog(module = "系统配置", operation = "按分类查询")
+    public Result<List<SysConfigVO>> listByCategory(@PathVariable String category) {
+        return Result.success(sysConfigService.listByCategory(category));
+    }
+
+    /**
+     * 查看配置变更历史。
+     *
+     * @param configType 配置类型
+     * @param refId      关联 ID
+     * @return 变更历史列表
+     */
+    @GetMapping("/logs")
+    @PreAuthorize("hasAuthority('system:config')")
+    @OperationLog(module = "系统配置", operation = "查看变更历史")
+    public Result<List<SysConfigLogVO>> listLogs(
+            @RequestParam String configType,
+            @RequestParam Long refId) {
+        return Result.success(sysConfigLogService.listByRef(configType, refId));
     }
 }

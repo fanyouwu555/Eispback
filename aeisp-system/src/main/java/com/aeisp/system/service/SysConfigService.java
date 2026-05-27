@@ -36,4 +36,12 @@ public interface SysConfigService {
      * @return 配置 VO 列表
      */
     List<SysConfigVO> listAll();
+
+    /**
+     * 按分类查询配置列表。
+     *
+     * @param category 配置分类
+     * @return 配置 VO 列表
+     */
+    List<SysConfigVO> listByCategory(String category);
 }

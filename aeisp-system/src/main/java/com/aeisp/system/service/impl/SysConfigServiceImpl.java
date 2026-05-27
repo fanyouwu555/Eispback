@@ -50,6 +50,14 @@ public class SysConfigServiceImpl implements SysConfigService {
                 .toList();
     }
 
+    @Override
+    public List<SysConfigVO> listByCategory(String category) {
+        List<SysConfig> list = sysConfigMapper.selectByCategory(category);
+        return list.stream()
+                .map(SysConfigServiceImpl::convertToVO)
+                .toList();
+    }
+
     private static SysConfigVO convertToVO(SysConfig config) {
         SysConfigVO vo = new SysConfigVO();
         vo.setId(config.getId());
