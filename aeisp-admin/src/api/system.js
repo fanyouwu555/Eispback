@@ -51,3 +51,18 @@ export function listConfigs(params) {
 export function updateConfig(key, data) {
   return request.put(`/system/configs/${key}`, data)
 }
+export function listConfigsByCategory(category) {
+  return request.get(`/system/configs/category/${category}`)
+}
+export function listConfigLogs(configType, refId) {
+  return request.get('/system/configs/logs', { params: { configType, refId } })
+}
+export function listFeatures() {
+  return request.get('/system/features')
+}
+export function toggleFeature(id) {
+  return request.put(`/system/features/${id}/toggle`)
+}
+export function toggleMaintenance(enabled) {
+  return request.put('/system/features/maintenance', { enabled })
+}
