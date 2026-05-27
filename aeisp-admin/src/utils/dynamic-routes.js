@@ -18,6 +18,9 @@ function convertMenu(menu) {
   // 按钮 → 不生成路由
   if (menuType === 2) return null
 
+  // 移除系统配置子页签
+  if (permissionName === '系统配置') return null
+
   const route = {
     path: routePath || `/${permissionCode?.replace(/:/g, '-') || id}`,
     meta: {
