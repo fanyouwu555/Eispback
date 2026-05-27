@@ -3,6 +3,7 @@ package com.aeisp.system.service.impl;
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.entity.SysConfig;
 import com.aeisp.system.mapper.SysConfigMapper;
+import com.aeisp.system.service.SysConfigLogService;
 import com.aeisp.system.service.SysConfigService;
 import com.aeisp.system.vo.SysConfigVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -22,6 +23,7 @@ import java.util.List;
 public class SysConfigServiceImpl implements SysConfigService {
 
     private final SysConfigMapper sysConfigMapper;
+    private final SysConfigLogService sysConfigLogService;
 
     @Override
     public String getConfigValue(String key, String environment) {
@@ -35,8 +37,13 @@ public class SysConfigServiceImpl implements SysConfigService {
         if (config == null) {
             return false;
         }
+        String oldValue = config.getConfigValue();
         config.setConfigValue(value);
-        return sysConfigMapper.updateById(config) > 0;
+        boolean updated = sysConfigMapper.updateById(config) > 0;
+        if (updated) {
+            sysConfigLogService.recordChange("config", config.getId(), key, oldValue, value, environment);
+        }
+        return updated;
     }
 
     @Override
@@ -64,6 +71,10 @@ public class SysConfigServiceImpl implements SysConfigService {
         vo.setConfigKey(config.getConfigKey());
         vo.setConfigValue(config.getConfigValue());
         vo.setDescription(config.getDescription());
+        vo.setCategory(config.getCategory());
+        vo.setFieldType(config.getFieldType());
+        vo.setEnvironment(config.getEnvironment());
+        vo.setIsEditable(config.getIsEditable());
         vo.setCreatedAt(config.getCreatedAt());
         vo.setUpdatedAt(config.getUpdatedAt());
         return vo;
