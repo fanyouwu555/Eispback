@@ -43,4 +43,14 @@ public class SysConfig extends BaseEntity {
      * 是否可通过后台编辑：0-只读，1-可编辑。
      */
     private Integer isEditable;
+
+    /**
+     * 配置分类: storage/backup/platform/timeout/threshold/general
+     */
+    private String category;
+
+    /**
+     * 控件类型: text/boolean/number/password
+     */
+    private String fieldType;
 }
