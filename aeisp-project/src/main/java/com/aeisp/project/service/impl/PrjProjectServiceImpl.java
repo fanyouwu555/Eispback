@@ -103,6 +103,16 @@ public class PrjProjectServiceImpl implements PrjProjectService {
         BeanUtils.copyProperties(project, vo);
         ProjectStatusEnum statusEnum = ProjectStatusEnum.fromCode(project.getStatus());
         vo.setStatusLabel(statusEnum != null ? statusEnum.getDescription() : "未知");
+
+        // 填充模板名称
+        if (project.getTemplateId() != null) {
+            try {
+                String templateName = templateMapper.selectById(project.getTemplateId()).getTemplateName();
+                vo.setTemplateName(templateName);
+            } catch (Exception e) {
+                log.warn("获取模板名称失败: templateId={}, error={}", project.getTemplateId(), e.getMessage());
+            }
+        }
         return vo;
     }
 

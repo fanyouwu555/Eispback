@@ -351,7 +351,9 @@
             <el-table-column label="金额" width="80">
               <template #default="{ row }">¥{{ ((row.amount || 0) / 100).toFixed(2) }}</template>
             </el-table-column>
-            <el-table-column label="时长(分)" prop="durationMinutes" width="80" />
+            <el-table-column label="时长(分)" width="80">
+              <template #default="{ row }">{{ (row.durationHours || 0) * 60 }}</template>
+            </el-table-column>
             <el-table-column label="状态" width="80">
               <template #default="{ row }">
                 <el-tag v-if="row.status === 0" size="small">待支付</el-tag>
@@ -360,7 +362,7 @@
                 <el-tag v-else size="small" type="info">已取消</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="下单时间" prop="createdAt" width="170" />
+            <el-table-column label="下单时间" prop="orderTime" width="170" />
           </el-table>
           <h4 style="margin:15px 0 10px;">时长变更</h4>
           <el-table v-loading="durationLogLoading" :data="durationLogList" border size="small">
@@ -378,9 +380,10 @@
         </el-tab-pane>
         <el-tab-pane label="项目列表" name="projects">
           <el-table v-loading="projectLoading" :data="projectList" border size="small">
-            <el-table-column label="项目名称" prop="name" />
+            <el-table-column label="项目名称" prop="projectName" />
+            <el-table-column label="模板名称" prop="templateName" />
             <el-table-column label="创建时间" prop="createdAt" width="170" />
-            <el-table-column label="状态" prop="status" width="80" />
+            <el-table-column label="状态" prop="statusLabel" width="80" />
           </el-table>
           <Pagination :total="projectTotal" :page-num="projectQuery.pageNum" :page-size="projectQuery.pageSize" @pagination="loadProjects" />
         </el-tab-pane>
@@ -400,10 +403,10 @@
         </el-tab-pane>
         <el-tab-pane label="AI对话" name="aiSessions">
           <el-table v-loading="sessionLoading" :data="sessionList" border size="small">
-            <el-table-column label="会话标题" prop="title" />
+            <el-table-column label="会话标题" prop="sessionTitle" />
             <el-table-column label="消息条数" prop="messageCount" width="80" />
             <el-table-column label="创建时间" prop="createdAt" width="170" />
-            <el-table-column label="最后对话" prop="lastMessageAt" width="170" />
+            <el-table-column label="最后对话" prop="endedAt" width="170" />
           </el-table>
           <Pagination :total="sessionTotal" :page-num="sessionQuery.pageNum" :page-size="sessionQuery.pageSize" @pagination="loadSessions" />
         </el-tab-pane>
