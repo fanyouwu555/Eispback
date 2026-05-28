@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" class="login-form">
-      <h3 class="login-title">AEISP 后台管理</h3>
+      <h3 class="login-title">{{ platformName }}</h3>
       <el-form-item prop="username">
         <el-input v-model="loginForm.username" placeholder="用户名" prefix-icon="User" />
       </el-form-item>
@@ -25,16 +25,18 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import request from '@/utils/request'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const loginFormRef = ref(null)
 const loading = ref(false)
+const platformName = ref('AEISP 后台管理')
 
 const loginForm = reactive({
   username: '',
@@ -46,6 +48,17 @@ const loginRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+onMounted(async () => {
+  try {
+    const res = await request.get('/platform/info')
+    if (res && res.name) {
+      platformName.value = res.name + ' 后台管理'
+    }
+  } catch {
+    // 忽略平台信息加载失败
+  }
+})
+
 async function handleLogin() {
   try {
     await loginFormRef.value.validate()
@@ -55,7 +68,11 @@ async function handleLogin() {
     const redirect = route.query.redirect
     router.push(redirect || '/')
   } catch (error) {
-    ElMessage.error(error?.message || '登录失败')
+    if (error?.response?.status === 503 || error?.message?.includes('维护')) {
+      ElMessage.error('系统维护中，请稍后再试')
+    } else {
+      ElMessage.error(error?.message || '登录失败')
+    }
   } finally {
     loading.value = false
   }

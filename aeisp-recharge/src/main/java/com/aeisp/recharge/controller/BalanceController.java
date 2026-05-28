@@ -6,6 +6,7 @@ import com.aeisp.common.exception.BizException;
 import com.aeisp.recharge.dto.BalanceVO;
 import com.aeisp.recharge.service.BalanceService;
 import com.aeisp.system.annotation.OperationLog;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class BalanceController {
 
     private final BalanceService balanceService;
     private final PasswordEncoder passwordEncoder;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 获取用户余额。
@@ -58,6 +60,9 @@ public class BalanceController {
     @Operation(summary = "余额充值")
     @PostMapping("/{userId}/recharge")
     public Result<Boolean> rechargeBalance(@PathVariable Long userId, @RequestParam Integer amount) {
+        if (!featureSwitchService.isEnabled("recharge")) {
+            return Result.error(503, "充值功能已关闭");
+        }
         return Result.success(balanceService.rechargeBalance(userId, amount));
     }
 
@@ -77,6 +82,9 @@ public class BalanceController {
                                            @RequestParam Integer amount,
                                            @RequestParam String reason,
                                            @RequestParam String adminPassword) {
+        if (!featureSwitchService.isEnabled("balance.deduct")) {
+            return Result.error(503, "余额扣费功能已关闭");
+        }
         verifyAdminPassword(adminPassword);
         return Result.success(balanceService.deductBalance(userId, amount, reason));
     }

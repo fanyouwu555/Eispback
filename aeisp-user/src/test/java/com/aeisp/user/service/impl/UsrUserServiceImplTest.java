@@ -5,12 +5,15 @@ import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.common.exception.BizException;
 import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.mapper.SysRoleMapper;
+import com.aeisp.system.service.SysConfigService;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import com.aeisp.user.entity.*;
 import com.aeisp.user.mapper.*;
 import com.aeisp.user.request.*;
 import com.aeisp.user.vo.UsrUserVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -47,9 +50,19 @@ class UsrUserServiceImplTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @Mock
+    private SysFeatureSwitchService featureSwitchService;
+    @Mock
+    private SysConfigService sysConfigService;
 
     @InjectMocks
     private UsrUserServiceImpl usrUserService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(featureSwitchService.isEnabled(anyString())).thenReturn(true);
+        lenient().when(sysConfigService.getConfigValue(anyString(), anyString())).thenReturn(null);
+    }
 
     @Test
     void testRegisterSuccess() {

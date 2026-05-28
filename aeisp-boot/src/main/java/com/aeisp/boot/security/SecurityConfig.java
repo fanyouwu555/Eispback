@@ -80,6 +80,9 @@ public class SecurityConfig {
             // ===== 认证接口 =====
             "/api/v1/auth/**",                  // 登录/注册/刷新 token
 
+            // ===== 平台公开信息 =====
+            "/api/v1/platform/info",            // 平台名称/版权等
+
             // ===== API 文档 =====
             "/swagger-ui/**",
             "/v3/api-docs/**",

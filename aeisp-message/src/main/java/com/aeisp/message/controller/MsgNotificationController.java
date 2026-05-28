@@ -8,6 +8,7 @@ import com.aeisp.message.request.NotificationQueryRequest;
 import com.aeisp.message.service.MsgNotificationService;
 import com.aeisp.message.vo.MsgNotificationDetailVO;
 import com.aeisp.message.vo.MsgNotificationVO;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MsgNotificationController {
 
     private final MsgNotificationService msgNotificationService;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 创建消息通知（草稿状态）。
@@ -63,6 +65,9 @@ public class MsgNotificationController {
     @PostMapping("/{id}/push")
     public Result<Boolean> push(
             @Parameter(description = "消息 ID") @PathVariable("id") Long id) {
+        if (!featureSwitchService.isEnabled("notify.system")) {
+            return Result.error(503, "系统通知推送功能已关闭");
+        }
         boolean success = msgNotificationService.pushNotification(id);
         return Result.success(success);
     }

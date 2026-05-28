@@ -54,6 +54,14 @@ public class JwtUtil {
     private long accessExpiration;
     private long refreshExpiration;
 
+    public void setAccessExpiration(long accessExpiration) {
+        this.accessExpiration = accessExpiration;
+    }
+
+    public void setRefreshExpiration(long refreshExpiration) {
+        this.refreshExpiration = refreshExpiration;
+    }
+
     /**
      * 初始化密钥和过期时间。
      *

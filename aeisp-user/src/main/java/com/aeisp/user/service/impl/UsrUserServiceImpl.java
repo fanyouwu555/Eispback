@@ -7,6 +7,8 @@ import com.aeisp.common.exception.BizException;
 import com.aeisp.user.code.UserErrorCode;
 import com.aeisp.system.entity.SysRole;
 import com.aeisp.system.mapper.SysRoleMapper;
+import com.aeisp.system.service.SysConfigService;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import com.aeisp.user.entity.*;
 import com.aeisp.user.mapper.*;
 import com.aeisp.user.request.*;
@@ -63,6 +65,8 @@ public class UsrUserServiceImpl implements UsrUserService {
     private final SysRoleMapper sysRoleMapper;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final SysFeatureSwitchService featureSwitchService;
+    private final SysConfigService sysConfigService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -77,6 +81,9 @@ public class UsrUserServiceImpl implements UsrUserService {
         if (StringUtils.hasText(user.getEmail()) && usrUserMapper.selectByEmail(user.getEmail()) != null) {
             throw new BizException(UserErrorCode.EMAIL_EXISTS);
         }
+
+        // 密码复杂度校验
+        validatePassword(user.getPassword());
 
         // 加密密码并设置默认值
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -119,6 +126,7 @@ public class UsrUserServiceImpl implements UsrUserService {
         if (!StringUtils.hasText(rawPassword)) {
             rawPassword = "123456";
         }
+        validatePassword(rawPassword);
         UsrUser user = new UsrUser();
         user.setUsername(request.getUsername());
         user.setPhone(request.getPhone());
@@ -333,9 +341,15 @@ public class UsrUserServiceImpl implements UsrUserService {
         UsrUser update = new UsrUser();
         update.setId(userId);
         update.setFailedLoginAttempts(attempts);
-        if (attempts >= 5) {
-            update.setStatus(CommonConstants.USER_STATUS_LOCKED);
-            update.setLockedUntil(LocalDateTime.now().plusMinutes(30));
+
+        // 登录失败锁定：检查功能开关
+        if (featureSwitchService.isEnabled("security.lock")) {
+            int maxAttempts = parseConfigInt("login_max_fail_attempts", 5);
+            int lockDuration = parseConfigInt("threshold.login_lock_duration", 30);
+            if (attempts >= maxAttempts) {
+                update.setStatus(CommonConstants.USER_STATUS_LOCKED);
+                update.setLockedUntil(LocalDateTime.now().plusMinutes(lockDuration));
+            }
         }
         usrUserMapper.updateById(update);
     }
@@ -926,5 +940,38 @@ public class UsrUserServiceImpl implements UsrUserService {
         vo.setCreatedAt(user.getCreatedAt());
         vo.setUpdatedAt(user.getUpdatedAt());
         return vo;
+    }
+
+    /**
+     * 密码复杂度校验。
+     * 当 security.password 开关关闭时，仅检查非空和最小长度兜底。
+     */
+    private void validatePassword(String password) {
+        if (!StringUtils.hasText(password)) {
+            throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED, "密码不能为空");
+        }
+        int minLength = parseConfigInt("password_min_length", 6);
+        if (password.length() < minLength) {
+            throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED,
+                    "密码长度不能少于 " + minLength + " 位");
+        }
+        if (featureSwitchService.isEnabled("security.password")) {
+            if (!password.matches("^(?=.*[A-Za-z])(?=.*\\d).*+$")) {
+                throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED,
+                        "密码必须同时包含字母和数字");
+            }
+        }
+    }
+
+    private int parseConfigInt(String key, int defaultValue) {
+        String value = sysConfigService.getConfigValue(key, "all");
+        if (!StringUtils.hasText(value)) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 }

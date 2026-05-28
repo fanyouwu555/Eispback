@@ -8,6 +8,7 @@ import com.aeisp.recharge.service.OrderService;
 import com.aeisp.system.annotation.OperationLog;
 import com.aeisp.system.entity.SysUserBehaviorLog;
 import com.aeisp.system.mapper.SysUserBehaviorLogMapper;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,6 +51,7 @@ public class OrderController {
     private final PasswordEncoder passwordEncoder;
     private final SysUserBehaviorLogMapper behaviorLogMapper;
     private final ObjectMapper objectMapper;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 创建订单。
@@ -61,6 +63,9 @@ public class OrderController {
     @Operation(summary = "创建订单")
     @PostMapping
     public Result<OrderVO> createOrder(@RequestParam Long userId, @RequestParam Long packageId) {
+        if (!featureSwitchService.isEnabled("recharge")) {
+            return Result.error(503, "充值功能已关闭");
+        }
         OrderVO order = orderService.createOrder(userId, packageId);
         saveBehaviorLog(userId, "RECHARGE", Map.of("orderNo", order.getOrderNo(), "amount", order.getAmount()));
         return Result.success(order);
@@ -76,6 +81,9 @@ public class OrderController {
     @Operation(summary = "支付订单")
     @PostMapping("/{orderNo}/pay")
     public Result<Boolean> payOrder(@PathVariable String orderNo, @RequestParam String payType) {
+        if (!featureSwitchService.isEnabled("order.pay")) {
+            return Result.error(503, "订单支付功能已关闭");
+        }
         return Result.success(orderService.payOrder(orderNo, payType));
     }
 

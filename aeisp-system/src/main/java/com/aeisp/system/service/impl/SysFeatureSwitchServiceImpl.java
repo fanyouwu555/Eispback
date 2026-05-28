@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +23,18 @@ public class SysFeatureSwitchServiceImpl implements SysFeatureSwitchService {
 
     private final SysFeatureSwitchMapper sysFeatureSwitchMapper;
     private final SysConfigLogService sysConfigLogService;
+    private final ConcurrentHashMap<String, Boolean> switchCache = new ConcurrentHashMap<>();
+
+    @Override
+    public boolean isEnabled(String featureKey) {
+        return switchCache.computeIfAbsent(featureKey, key -> {
+            LambdaQueryWrapper<SysFeatureSwitch> wrapper = Wrappers.lambdaQuery(SysFeatureSwitch.class)
+                    .eq(SysFeatureSwitch::getFeatureKey, key)
+                    .eq(SysFeatureSwitch::getDeleted, 0);
+            SysFeatureSwitch entity = sysFeatureSwitchMapper.selectOne(wrapper);
+            return entity == null || Boolean.TRUE.equals(entity.getEnabled());
+        });
+    }
 
     @Override
     public List<SysFeatureSwitchVO> listAll() {
@@ -41,6 +54,7 @@ public class SysFeatureSwitchServiceImpl implements SysFeatureSwitchService {
         boolean oldValue = entity.getEnabled();
         entity.setEnabled(!oldValue);
         sysFeatureSwitchMapper.updateById(entity);
+        switchCache.remove(entity.getFeatureKey());
         sysConfigLogService.recordChange("feature", id, entity.getFeatureKey(),
                 String.valueOf(oldValue), String.valueOf(!oldValue), "all");
     }
@@ -72,6 +86,7 @@ public class SysFeatureSwitchServiceImpl implements SysFeatureSwitchService {
             // Enable maintenance
             maintenance.setEnabled(true);
             sysFeatureSwitchMapper.updateById(maintenance);
+            switchCache.clear();
             sysConfigLogService.recordChange("feature", maintenance.getId(), "maintenance",
                     "false", "true", "all");
         } else {
@@ -93,6 +108,7 @@ public class SysFeatureSwitchServiceImpl implements SysFeatureSwitchService {
             // Disable maintenance
             maintenance.setEnabled(false);
             sysFeatureSwitchMapper.updateById(maintenance);
+            switchCache.clear();
             sysConfigLogService.recordChange("feature", maintenance.getId(), "maintenance",
                     "true", "false", "all");
         }

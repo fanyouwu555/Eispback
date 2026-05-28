@@ -2,6 +2,7 @@ package com.aeisp.message.controller;
 
 import com.aeisp.common.Result;
 import com.aeisp.common.security.CustomUserDetails;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import com.aeisp.message.service.MsgNotificationService;
 import com.aeisp.message.vo.ClientAnnouncementVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,7 @@ import java.util.List;
 public class ClientAnnouncementController {
 
     private final MsgNotificationService msgNotificationService;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 获取当前可用的公告列表（已发送且未过期）。
@@ -36,6 +38,9 @@ public class ClientAnnouncementController {
     @Operation(summary = "公告列表", description = "获取当前已发送且未过期的公告列表")
     public Result<List<ClientAnnouncementVO>> listAnnouncements(
             @AuthenticationPrincipal CustomUserDetails user) {
+        if (!featureSwitchService.isEnabled("notify.announcement")) {
+            return Result.success(List.of());
+        }
         List<ClientAnnouncementVO> list = msgNotificationService.listClientAnnouncements();
         return Result.success(list);
     }

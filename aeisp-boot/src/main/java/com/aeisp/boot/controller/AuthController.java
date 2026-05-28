@@ -13,6 +13,7 @@ import com.aeisp.common.util.JwtUtil;
 import com.aeisp.common.util.TokenBlacklistUtil;
 import com.aeisp.system.entity.SysOperationLog;
 import com.aeisp.system.service.SysOperationLogService;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import com.aeisp.user.entity.UsrLoginLog;
 import com.aeisp.user.entity.UsrUser;
 import com.aeisp.system.entity.SysUserBehaviorLog;
@@ -59,6 +60,7 @@ public class AuthController {
     private final UsrUserService usrUserService;
     private final com.aeisp.system.service.SysUserService sysUserService;
     private final SysUserBehaviorLogMapper sysUserBehaviorLogMapper;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 用户登录。
@@ -81,6 +83,11 @@ public class AuthController {
 
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             List<String> roles = userDetails.getRoles();
+
+            // 检查用户登录开关（仅对前端用户）
+            if ("user".equals(userDetails.getUserType()) && !featureSwitchService.isEnabled("user.login")) {
+                return Result.error(CommonErrorCode.SYSTEM_ERROR, "账号登录功能已关闭");
+            }
 
             // 前端用户：检查并自动解除过期锁定，清零失败次数，更新登录统计
             if ("user".equals(userDetails.getUserType())) {

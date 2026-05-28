@@ -3,6 +3,7 @@ package com.aeisp.template.controller;
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
 import com.aeisp.common.code.CommonErrorCode;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
@@ -53,6 +54,7 @@ public class TemplateController {
     private final TplTemplateUsageLogMapper tplTemplateUsageLogMapper;
     private final com.aeisp.template.mapper.TplTemplateMapper templateMapper;
     private final com.aeisp.template.mapper.TplTemplateVersionMapper versionMapper;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 创建模板（含首个版本 ZIP）。
@@ -319,6 +321,9 @@ public class TemplateController {
     @PostMapping("/{id}/purchase")
     @Operation(summary = "购买模板", description = "用户购买指定付费模板，扣减余额")
     public Result<Boolean> purchaseTemplate(@PathVariable Long id) {
+        if (!featureSwitchService.isEnabled("template.purchase")) {
+            return Result.error(503, "付费模板购买功能已关闭");
+        }
         Long userId = extractUserId(SecurityContextHolder.getContext().getAuthentication().getPrincipal());
         if (userId == null) {
             return Result.error(CommonErrorCode.ACCESS_DENIED, "用户未登录");

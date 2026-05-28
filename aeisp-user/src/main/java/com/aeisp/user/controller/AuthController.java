@@ -2,11 +2,13 @@ package com.aeisp.user.controller;
 
 import com.aeisp.common.Result;
 import com.aeisp.common.code.CommonErrorCode;
+import com.aeisp.common.exception.BizException;
 import com.aeisp.user.entity.UsrUser;
 import com.aeisp.user.request.UserRegisterRequest;
 import com.aeisp.user.service.CaptchaService;
 import com.aeisp.user.service.UsrUserService;
 import com.aeisp.user.vo.CaptchaVO;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class AuthController {
 
     private final UsrUserService usrUserService;
     private final CaptchaService captchaService;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 获取图形验证码。
@@ -51,6 +54,9 @@ public class AuthController {
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody UserRegisterRequest request,
                                  HttpServletRequest httpRequest) {
+        if (!featureSwitchService.isEnabled("user.register")) {
+            return Result.error(CommonErrorCode.SYSTEM_ERROR, "注册功能已关闭");
+        }
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, "两次输入的密码不一致");
         }

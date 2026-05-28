@@ -2,11 +2,13 @@ package com.aeisp.project.controller;
 
 import com.aeisp.common.PageResult;
 import com.aeisp.common.Result;
+import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.common.security.CustomUserDetails;
 import com.aeisp.project.dto.request.CreateProjectRequest;
 import com.aeisp.project.dto.request.UpdateProjectRequest;
 import com.aeisp.project.dto.vo.ClientProjectVO;
 import com.aeisp.project.service.PrjProjectService;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,12 +44,16 @@ import java.util.Map;
 public class ClientProjectController {
 
     private final PrjProjectService projectService;
+    private final SysFeatureSwitchService featureSwitchService;
 
     @PostMapping
     @Operation(summary = "创建项目", description = "用户创建新项目，返回 projectId 和资源 URL")
     public Result<ClientProjectVO> createProject(
             @AuthenticationPrincipal CustomUserDetails user,
             @Valid @RequestBody CreateProjectRequest request) {
+        if (!featureSwitchService.isEnabled("project.create")) {
+            return Result.error(503, "项目创建功能已关闭");
+        }
         ClientProjectVO vo = projectService.createClientProject(
                 user.getUserId(), request.getTemplateId(), request.getProjectName());
         return Result.success(vo);
@@ -75,6 +81,9 @@ public class ClientProjectController {
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long projectId,
             @RequestParam("file") MultipartFile file) throws IOException {
+        if (!featureSwitchService.isEnabled("file.upload")) {
+            return Result.error(503, "文件上传功能已关闭");
+        }
         String storageUrl = projectService.uploadProjectZip(
                 projectId, user.getUserId(), file.getBytes());
         return Result.success(Map.of("storageUrl", storageUrl));

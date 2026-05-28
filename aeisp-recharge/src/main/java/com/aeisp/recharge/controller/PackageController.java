@@ -6,6 +6,7 @@ import com.aeisp.recharge.dto.PackageDTO;
 import com.aeisp.recharge.dto.PackageQueryRequest;
 import com.aeisp.recharge.dto.PackageVO;
 import com.aeisp.recharge.service.PackageService;
+import com.aeisp.system.service.SysFeatureSwitchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ import java.util.List;
 public class PackageController {
 
     private final PackageService packageService;
+    private final SysFeatureSwitchService featureSwitchService;
 
     /**
      * 创建套餐。
@@ -85,6 +87,9 @@ public class PackageController {
     @Operation(summary = "有效套餐列表")
     @GetMapping("/active")
     public Result<List<PackageVO>> listActivePackages() {
+        if (!featureSwitchService.isEnabled("recharge")) {
+            return Result.success(List.of());
+        }
         return Result.success(packageService.listActivePackages());
     }
 
