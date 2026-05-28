@@ -65,8 +65,16 @@ public class MsgNotificationController {
     @PostMapping("/{id}/push")
     public Result<Boolean> push(
             @Parameter(description = "消息 ID") @PathVariable("id") Long id) {
-        if (!featureSwitchService.isEnabled("notify.system")) {
-            return Result.error(503, "系统通知推送功能已关闭");
+        MsgNotificationDetailVO detail = msgNotificationService.getDetail(id);
+        Integer msgType = detail != null ? detail.getMsgType() : null;
+
+        // 时长预警(5) 和 违规提醒(7) 属于预警消息，其余为系统通知
+        boolean isAlert = msgType != null && (msgType == 5 || msgType == 7);
+        String switchKey = isAlert ? "notify.alert" : "notify.system";
+        String switchName = isAlert ? "预警消息推送" : "系统通知推送";
+
+        if (!featureSwitchService.isEnabled(switchKey)) {
+            return Result.error(503, switchName + "功能已关闭");
         }
         boolean success = msgNotificationService.pushNotification(id);
         return Result.success(success);

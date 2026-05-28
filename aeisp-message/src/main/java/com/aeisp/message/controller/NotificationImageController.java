@@ -1,12 +1,15 @@
 package com.aeisp.message.controller;
 
 import com.aeisp.common.Result;
+import com.aeisp.system.service.SysConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,12 +28,14 @@ import java.util.UUID;
 /**
  * 公告图片上传 Controller。
  *
- * <p>上传图片到通知专用目录，返回可访问的 URL。</p>
+ * <p>上传图片到通知专用目录，返回可访问的 URL。
+ * 上传路径优先从 sys_config (storage.upload) 读取，未配置时回退到 application.yml 默认值。</p>
  */
 @Slf4j
 @Tag(name = "公告图片上传", description = "系统公告图片上传接口")
 @RestController
 @RequestMapping("/api/v1/messages")
+@RequiredArgsConstructor
 public class NotificationImageController {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -44,11 +49,18 @@ public class NotificationImageController {
         ALLOWED_EXTENSIONS.add(".webp");
     }
 
+    private final SysConfigService sysConfigService;
+
     @Value("${resource-server.notification.upload-path}")
-    private String uploadPath;
+    private String defaultUploadPath;
 
     @Value("${resource-server.notification.base-url}")
     private String baseUrl;
+
+    private String getUploadPath() {
+        String path = sysConfigService.getConfigValue("storage.upload", "all");
+        return StringUtils.hasText(path) ? path : defaultUploadPath;
+    }
 
     @PreAuthorize("hasAuthority('notification:create')")
     @Operation(summary = "上传公告图片", description = "上传图片到公告目录，返回图片 URL")
@@ -76,6 +88,7 @@ public class NotificationImageController {
         }
 
         String newFilename = UUID.randomUUID().toString() + ext;
+        String uploadPath = getUploadPath();
         try {
             File dir = new File(uploadPath);
             if (!dir.exists()) {

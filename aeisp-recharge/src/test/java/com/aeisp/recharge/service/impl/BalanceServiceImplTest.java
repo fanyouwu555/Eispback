@@ -4,6 +4,7 @@ import com.aeisp.common.exception.BizException;
 import com.aeisp.recharge.dto.BalanceVO;
 import com.aeisp.recharge.entity.UsrBalanceChangeLog;
 import com.aeisp.recharge.mapper.UsrBalanceChangeLogMapper;
+import com.aeisp.system.service.SysConfigService;
 import com.aeisp.user.entity.UsrUserBalance;
 import com.aeisp.user.mapper.UsrUserBalanceMapper;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -28,6 +30,9 @@ class BalanceServiceImplTest {
 
     @Mock
     private UsrBalanceChangeLogMapper balanceChangeLogMapper;
+
+    @Mock
+    private SysConfigService sysConfigService;
 
     @InjectMocks
     private BalanceServiceImpl balanceService;
@@ -96,6 +101,7 @@ class BalanceServiceImplTest {
         when(userBalanceMapper.selectByUserId(1L)).thenReturn(balance);
         when(userBalanceMapper.updateById(any(UsrUserBalance.class))).thenReturn(1);
         when(balanceChangeLogMapper.insert(any(UsrBalanceChangeLog.class))).thenReturn(1);
+        when(sysConfigService.getConfigValue(eq("threshold.balance"), eq("all"))).thenReturn(null);
 
         assertTrue(balanceService.deductBalance(1L, 2000, "消费扣减"));
         verify(userBalanceMapper).updateById(argThat((UsrUserBalance b) -> b.getBalanceCents() == 3000));
@@ -124,6 +130,7 @@ class BalanceServiceImplTest {
         when(userBalanceMapper.selectByUserId(1L)).thenReturn(balance);
         when(userBalanceMapper.updateById(any(UsrUserBalance.class))).thenReturn(1);
         when(balanceChangeLogMapper.insert(any(UsrBalanceChangeLog.class))).thenReturn(1);
+        when(sysConfigService.getConfigValue(eq("threshold.balance"), eq("all"))).thenReturn(null);
 
         assertTrue(balanceService.deductBalance(1L, 2000, "全部消费"));
         verify(userBalanceMapper).updateById(argThat((UsrUserBalance b) -> b.getBalanceCents() == 0));

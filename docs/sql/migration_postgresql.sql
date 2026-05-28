@@ -430,10 +430,10 @@ COMMENT ON COLUMN sys_feature_switch.sort_order IS '排序号';
 
 -- 7d. 插入分类后的新配置项（已有行的 category 通过 DEFAULT 'general' 自动填充）
 INSERT INTO sys_config (config_key, config_value, description, environment, is_editable, category, field_type) VALUES
-('storage.project', 'D:/projects/', '项目文件存储路径', 'all', 1, 'storage', 'text'),
-('storage.template', 'D:/templates/', '模板资源存储路径', 'all', 1, 'storage', 'text'),
-('storage.upload', 'D:/uploads/', '上传文件存储路径', 'all', 1, 'storage', 'text'),
-('storage.cache', 'D:/cache/', '缓存文件存储路径', 'all', 1, 'storage', 'text'),
+('storage.project', 'D:/Users/admin/Desktop/EISP/Users/', '项目文件存储路径', 'all', 1, 'storage', 'text'),
+('storage.template', 'D:/Users/admin/Desktop/EISP/Resource/Template/', '模板资源存储路径', 'all', 1, 'storage', 'text'),
+('storage.upload', 'D:/Users/admin/Desktop/EISP/Notification/', '上传文件存储路径', 'all', 1, 'storage', 'text'),
+('storage.cache', 'D:/Users/admin/Desktop/EISP/Cache/', '缓存文件存储路径', 'all', 1, 'storage', 'text'),
 ('backup.enabled', 'false', '云端自动备份开关', 'all', 1, 'backup', 'boolean'),
 ('backup.interval', '7', '备份周期（天）', 'all', 1, 'backup', 'number'),
 ('backup.retention', '30', '保留备份份数', 'all', 1, 'backup', 'number'),
