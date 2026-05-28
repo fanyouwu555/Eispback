@@ -3,7 +3,6 @@
     <Sidebar class="sidebar-container" />
     <div class="main-container" :class="{ 'sidebar-hide': !appStore.sidebar.opened }">
       <Navbar />
-      <TagsView />
       <AppMain />
     </div>
   </div>
@@ -14,7 +13,6 @@ import { useAppStore } from '@/stores/app'
 import Sidebar from '@/components/Sidebar/index.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppMain from '@/components/AppMain.vue'
-import TagsView from '@/components/TagsView/index.vue'
 
 const appStore = useAppStore()
 </script>

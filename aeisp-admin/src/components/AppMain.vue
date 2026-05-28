@@ -15,7 +15,7 @@
 
 <style scoped>
 .app-main {
-  min-height: calc(100vh - 50px - 34px);
+  min-height: calc(100vh - 50px);
   padding: 20px;
   background: #f0f2f5;
 }
