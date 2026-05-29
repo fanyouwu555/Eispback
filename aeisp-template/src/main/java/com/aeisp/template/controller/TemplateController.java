@@ -392,4 +392,24 @@ public class TemplateController {
                                          @RequestParam String reason) {
         return Result.success(templateService.markViolation(id, reason));
     }
+
+    /**
+     * 设置模板关联的库资源（覆盖式更新）。
+     */
+    @PreAuthorize("hasAuthority('template:update')")
+    @PostMapping("/{id}/libraries")
+    @Operation(summary = "设置关联库资源", description = "覆盖式更新模板关联的库资源列表")
+    public Result<Boolean> setTemplateLibraries(@PathVariable Long id, @RequestBody List<Long> libraryIds) {
+        return Result.success(templateService.setTemplateLibraries(id, libraryIds));
+    }
+
+    /**
+     * 查询模板关联的库资源 ID 列表。
+     */
+    @PreAuthorize("hasAuthority('template:read')")
+    @GetMapping("/{id}/libraries")
+    @Operation(summary = "查询关联库资源", description = "查询模板关联的库资源 ID 列表")
+    public Result<List<Long>> getTemplateLibraryIds(@PathVariable Long id) {
+        return Result.success(templateService.getTemplateLibraryIds(id));
+    }
 }

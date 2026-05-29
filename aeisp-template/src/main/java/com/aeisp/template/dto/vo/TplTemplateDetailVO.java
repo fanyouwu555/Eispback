@@ -87,4 +87,9 @@ public class TplTemplateDetailVO implements Serializable {
     private Integer difficulty;
 
     private String violationReason;
+
+    /**
+     * 关联库资源 ID 列表。
+     */
+    private List<Long> libraryIds;
 }

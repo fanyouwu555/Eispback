@@ -54,6 +54,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     private final TemplateStorageService templateStorageService;
     private final TplTemplateCategoryService categoryService;
     private final ResourceServerService resourceServerService;
+    private final com.aeisp.template.mapper.TemplateLibraryRelationMapper templateLibraryRelationMapper;
 
     @Override
     public boolean createTemplate(CreateTemplateRequest request) {
@@ -182,7 +183,14 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setProduceDate(parseDate(request.getProduceDate()));
         template.setDetailDesc(request.getDetailDesc());
         template.setDifficulty(request.getDifficulty());
-        return templateMapper.updateById(template) > 0;
+        boolean updated = templateMapper.updateById(template) > 0;
+
+        // 更新库资源关联
+        if (request.getLibraryIds() != null) {
+            setTemplateLibraries(templateId, request.getLibraryIds());
+        }
+
+        return updated;
     }
 
     @Override
@@ -401,6 +409,9 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         } else {
             vo.setFileTree(new ArrayList<>());
         }
+
+        // 关联库资源
+        vo.setLibraryIds(getTemplateLibraryIds(templateId));
 
         return vo;
     }
@@ -707,5 +718,38 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             // ignore
         }
         return null;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public boolean setTemplateLibraries(Long templateId, java.util.List<Long> libraryIds) {
+        // 删除旧关联
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.template.entity.TemplateLibraryRelation> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(com.aeisp.template.entity.TemplateLibraryRelation::getTemplateId, templateId);
+        templateLibraryRelationMapper.delete(wrapper);
+
+        // 插入新关联
+        if (libraryIds != null && !libraryIds.isEmpty()) {
+            for (Long libraryId : libraryIds) {
+                com.aeisp.template.entity.TemplateLibraryRelation relation =
+                        new com.aeisp.template.entity.TemplateLibraryRelation();
+                relation.setTemplateId(templateId);
+                relation.setLibraryId(libraryId);
+                templateLibraryRelationMapper.insert(relation);
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public java.util.List<Long> getTemplateLibraryIds(Long templateId) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.template.entity.TemplateLibraryRelation> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(com.aeisp.template.entity.TemplateLibraryRelation::getTemplateId, templateId);
+        return templateLibraryRelationMapper.selectList(wrapper)
+                .stream()
+                .map(com.aeisp.template.entity.TemplateLibraryRelation::getLibraryId)
+                .toList();
     }
 }

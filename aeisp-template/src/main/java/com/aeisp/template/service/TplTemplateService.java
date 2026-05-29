@@ -91,4 +91,21 @@ public interface TplTemplateService {
      * @return 分类树，三级分类节点下包含模板列表
      */
     List<TplTemplateCategoryVO> listCategoryTreeWithTemplates();
+
+    /**
+     * 设置模板关联的库资源（覆盖式更新）。
+     *
+     * @param templateId 模板 ID
+     * @param libraryIds 库资源 ID 列表
+     * @return 是否成功
+     */
+    boolean setTemplateLibraries(Long templateId, List<Long> libraryIds);
+
+    /**
+     * 查询模板关联的库资源 ID 列表。
+     *
+     * @param templateId 模板 ID
+     * @return 库资源 ID 列表
+     */
+    List<Long> getTemplateLibraryIds(Long templateId);
 }
