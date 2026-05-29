@@ -52,4 +52,21 @@ public class ResourceServerConfig {
         }
         return new NfsResourceServerServiceImpl(uploadPath, baseUrl);
     }
+
+    @Bean("libraryResourceServer")
+    @ConditionalOnProperty(name = "resource-server.type", havingValue = "nfs", matchIfMissing = true)
+    public ResourceServerService libraryResourceServer(
+            SysConfigService sysConfigService,
+            @Value("${resource-server.library.upload-path:./uploads/library/}") String defaultUploadPath,
+            @Value("${resource-server.library.base-url:http://localhost/library/}") String baseUrl) {
+        String uploadPath = sysConfigService.getConfigValue("storage.library.path", "all");
+        if (!StringUtils.hasText(uploadPath)) {
+            uploadPath = defaultUploadPath;
+        }
+        String libraryBaseUrl = sysConfigService.getConfigValue("storage.library.baseUrl", "all");
+        if (!StringUtils.hasText(libraryBaseUrl)) {
+            libraryBaseUrl = baseUrl;
+        }
+        return new NfsResourceServerServiceImpl(uploadPath, libraryBaseUrl);
+    }
 }
