@@ -43,6 +43,7 @@
         <module>aeisp-model</module>
         <module>aeisp-project</module>
         <module>aeisp-recharge</module>
+        <module>aeisp-library</module>
         <module>aeisp-boot</module>
     </modules>
 
