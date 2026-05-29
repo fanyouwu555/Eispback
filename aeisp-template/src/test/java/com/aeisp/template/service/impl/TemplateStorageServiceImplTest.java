@@ -18,9 +18,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class TemplateStorageServiceImplTest {
 
     private TemplateStorageServiceImpl storageService;
+    private String mockUploadPath;
 
     @BeforeEach
     void setUp() throws Exception {
+        mockUploadPath = System.getProperty("java.io.tmpdir");
         ResourceServerService mockResourceServerService = new ResourceServerService() {
             @Override public String uploadFile(String relativePath, byte[] data) { return null; }
             @Override public java.util.List<String> uploadExtractedFiles(Long templateId, String versionNo, java.io.File extractDir) { return java.util.List.of(); }
@@ -28,7 +30,7 @@ class TemplateStorageServiceImplTest {
             @Override public void deleteVersionFiles(Long templateId, String versionNo) { }
             @Override public String getUrl(String relativePath) { return "http://localhost/" + relativePath; }
             @Override public String getBaseUrl() { return "http://localhost/"; }
-            @Override public String getUploadPath() { return System.getProperty("java.io.tmpdir"); }
+            @Override public String getUploadPath() { return mockUploadPath; }
             @Override public boolean fileExists(String relativePath) { return false; }
             @Override public void deleteDirectory(String relativePath) { }
         };
@@ -68,9 +70,14 @@ class TemplateStorageServiceImplTest {
 
     @Test
     void testStoreAndReadFile(@TempDir Path tempDir) throws Exception {
+        String basePath = tempDir.toString() + "/";
+
+        // 让 resourceServerService.getUploadPath() 和 basePath 使用相同路径
+        mockUploadPath = basePath;
+
         java.lang.reflect.Field basePathField = TemplateStorageServiceImpl.class.getDeclaredField("basePath");
         basePathField.setAccessible(true);
-        basePathField.set(storageService, tempDir.toString() + "/");
+        basePathField.set(storageService, basePath);
 
         MultipartFile file = new MockMultipartFile(
                 "file", "template.zip", "application/zip", "fake-zip-content".getBytes());
