@@ -174,6 +174,16 @@
         <el-form-item label="创作时间" prop="produceDate">
           <el-date-picker v-model="createForm.produceDate" type="date" placeholder="选择创作时间" style="width: 200px" value-format="YYYY-MM-DD" />
         </el-form-item>
+        <el-form-item label="关联库资源" prop="libraryIds">
+          <el-select v-model="createLibraryIds" multiple clearable placeholder="选择关联的库资源" style="width: 100%">
+            <el-option
+              v-for="item in onlineLibraryOptions"
+              :key="item.id"
+              :label="item.resourceName"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-divider>初始版本</el-divider>
         <el-form-item label="版本号" prop="versionNo">
           <el-input v-model="createForm.versionNo" placeholder="如 1.0.0" style="width: 200px" />
@@ -266,6 +276,16 @@
         <el-form-item label="创作时间" prop="produceDate">
           <el-date-picker v-model="editForm.produceDate" type="date" placeholder="选择创作时间" style="width: 200px" value-format="YYYY-MM-DD" />
         </el-form-item>
+        <el-form-item label="关联库资源" prop="libraryIds">
+          <el-select v-model="editLibraryIds" multiple clearable placeholder="选择关联的库资源" style="width: 100%">
+            <el-option
+              v-for="item in onlineLibraryOptions"
+              :key="item.id"
+              :label="item.resourceName"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
@@ -301,6 +321,12 @@
           <el-descriptions-item label="有效截止" :span="1">{{ currentDetail.validTime || '-' }}</el-descriptions-item>
           <el-descriptions-item label="当前版本" :span="2">
             {{ currentDetail.currentVersion?.versionNo || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="关联库资源" :span="2">
+            <template v-if="detailLibraryNames.length > 0">
+              <el-tag v-for="name in detailLibraryNames" :key="name" size="small" class="mr-1">{{ name }}</el-tag>
+            </template>
+            <span v-else>-</span>
           </el-descriptions-item>
           <el-descriptions-item v-if="currentDetail.status === 3" label="违规原因" :span="2">
             <el-tag type="danger">{{ currentDetail.violationReason }}</el-tag>
@@ -420,6 +446,7 @@ import {
   purchaseTemplate
 } from '@/api/template'
 import { getCategoryTree } from '@/api/template/category'
+import { listOnlineLibraries, setTemplateLibraries, getTemplateLibraries, getLibraryDetail } from '@/api/library'
 import Pagination from '@/components/Pagination.vue'
 
 const { options: templateStatusOptions, label: templateStatusLabel, color: templateStatusColor } = useDict('template_status')
@@ -453,6 +480,10 @@ const versionUploadRef = ref(null)
 
 const categoryPath = ref(null)
 const categoryTreeOptions = ref([])
+const onlineLibraryOptions = ref([])
+const createLibraryIds = ref([])
+const editLibraryIds = ref([])
+const detailLibraryNames = ref([])
 
 const queryParams = reactive({
   pageNum: 1,
@@ -634,6 +665,7 @@ function handleAdd() {
   createForm.creator = ''
   createForm.produceDate = undefined
   createCategoryPath.value = []
+  createLibraryIds.value = []
   zipFile.value = null
   coverImageFile.value = null
   thumbnailFile.value = null
@@ -673,7 +705,12 @@ function handleCreateSubmit() {
   fd.append('zipFile', zipFile.value)
   if (coverImageFile.value) fd.append('coverImage', coverImageFile.value)
   if (thumbnailFile.value) fd.append('thumbnail', thumbnailFile.value)
-  createTemplate(fd).then(() => {
+  createTemplate(fd).then(res => {
+    const templateId = res?.id
+    if (templateId && createLibraryIds.value.length > 0) {
+      return setTemplateLibraries(templateId, { libraryIds: createLibraryIds.value })
+    }
+  }).then(() => {
     ElMessage.success('创建成功')
     createVisible.value = false
     getList()
@@ -705,6 +742,11 @@ function handleEdit(row) {
   // Build cascader path from category IDs
   const leafId = row.secondCategoryId || row.firstCategoryId || row.topCategoryId
   editCategoryPath.value = leafId ? (findPathToNode(categoryTreeOptions.value, leafId) || []) : []
+  // Load associated libraries
+  editLibraryIds.value = []
+  getTemplateLibraries(row.id).then(res => {
+    editLibraryIds.value = (res || []).map(item => item.libraryId)
+  }).catch(() => {})
   editVisible.value = true
 }
 
@@ -739,6 +781,10 @@ function handleEditSubmit() {
       })
     }
   }).then(() => {
+    if (editLibraryIds.value.length > 0) {
+      return setTemplateLibraries(editId.value, { libraryIds: editLibraryIds.value })
+    }
+  }).then(() => {
     ElMessage.success('保存成功')
     editVisible.value = false
     getList()
@@ -753,6 +799,18 @@ function handleView(row) {
     currentDetail.value = res
     versionList.value = [res.currentVersion, ...(res.historyVersions || [])].filter(Boolean)
     fileTree.value = res.fileTree || []
+    detailLibraryNames.value = []
+    getTemplateLibraries(row.id).then(libRes => {
+      const libIds = (libRes || []).map(item => item.libraryId)
+      if (libIds.length > 0) {
+        Promise.all(libIds.map(id => getLibraryDetail(id).catch(() => null)))
+          .then(details => {
+            detailLibraryNames.value = details
+              .filter(d => d && d.resourceName)
+              .map(d => d.resourceName)
+          })
+      }
+    }).catch(() => {})
     detailVisible.value = true
   })
 }
@@ -846,6 +904,14 @@ function loadCategories() {
   })
 }
 
+function loadOnlineLibraries() {
+  listOnlineLibraries().then(res => {
+    onlineLibraryOptions.value = res || []
+  }).catch(() => {
+    onlineLibraryOptions.value = []
+  })
+}
+
 function handleCategoryChange(val) {
   queryParams.topCategoryId = undefined
   queryParams.firstCategoryId = undefined
@@ -916,9 +982,11 @@ function handlePurchase(row) {
 onMounted(() => {
   getList()
   loadCategories()
+  loadOnlineLibraries()
 })
 
 onActivated(() => {
   loadCategories()
+  loadOnlineLibraries()
 })
 </script>
