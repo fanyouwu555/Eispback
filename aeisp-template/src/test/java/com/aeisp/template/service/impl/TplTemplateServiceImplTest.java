@@ -45,6 +45,8 @@ class TplTemplateServiceImplTest {
     private TemplateStorageService templateStorageService;
     @Mock
     private ResourceServerService resourceServerService;
+    @Mock
+    private com.aeisp.template.mapper.TemplateLibraryRelationMapper templateLibraryRelationMapper;
 
     @InjectMocks
     private TplTemplateServiceImpl tplTemplateService;
