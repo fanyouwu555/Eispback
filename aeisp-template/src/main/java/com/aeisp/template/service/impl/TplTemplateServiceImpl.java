@@ -97,6 +97,16 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             }
         }
 
+        // 上传缩略图到资源服务器（使用模板 ID 作为路径）
+        if (request.getThumbnail() != null && !request.getThumbnail().isEmpty()) {
+            try {
+                String thumbnailUrl = templateStorageService.storeThumbnail(template.getId(), request.getThumbnail());
+                template.setThumbnail(thumbnailUrl);
+            } catch (Exception e) {
+                log.error("上传缩略图失败: templateId={}", template.getId(), e);
+            }
+        }
+
         // 1. 暂存 ZIP 到本地临时目录
         String relativePath = templateStorageService.storeZip(template.getId(), request.getVersionNo(), request.getZipFile());
 

@@ -672,6 +672,7 @@ function handleCreateSubmit() {
   fd.append('difficulty', createForm.difficulty !== undefined && createForm.difficulty !== null ? createForm.difficulty : '')
   fd.append('zipFile', zipFile.value)
   if (coverImageFile.value) fd.append('coverImage', coverImageFile.value)
+  if (thumbnailFile.value) fd.append('thumbnail', thumbnailFile.value)
   createTemplate(fd).then(() => {
     ElMessage.success('创建成功')
     createVisible.value = false

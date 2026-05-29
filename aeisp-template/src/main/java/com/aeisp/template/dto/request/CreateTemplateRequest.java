@@ -31,6 +31,11 @@ public class CreateTemplateRequest {
     private MultipartFile coverImage;
 
     /**
+     * 缩略图文件（上传到资源服务器，客户端列表展示用）。
+     */
+    private MultipartFile thumbnail;
+
+    /**
      * 排序权重。
      */
     @NotNull(message = "排序权重不能为空")
