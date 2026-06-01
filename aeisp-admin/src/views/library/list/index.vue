@@ -365,11 +365,34 @@ function handleEditSubmit() {
   })
 }
 
+function buildFileTree(paths) {
+  const root = []
+  for (const path of paths) {
+    const parts = path.split('/')
+    let current = root
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      let node = current.find(n => n.name === part)
+      if (!node) {
+        node = { name: part, type: i === parts.length - 1 ? 'file' : 'dir' }
+        if (node.type === 'dir') {
+          node.children = []
+        }
+        current.push(node)
+      }
+      if (node.type === 'dir') {
+        current = node.children
+      }
+    }
+  }
+  return root
+}
+
 function handleView(row) {
   getLibraryDetail(row.id).then(res => {
     currentDetail.value = res
     versionList.value = [res.currentVersion, ...(res.historyVersions || [])].filter(Boolean)
-    fileTree.value = res.fileTree || []
+    fileTree.value = buildFileTree(res.fileTree || [])
     detailVisible.value = true
   })
 }

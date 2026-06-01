@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import com.aeisp.common.service.ResourceServerService;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,6 +31,11 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
         this.baseUrl = baseUrl;
     }
 
+    @PostConstruct
+    public void init() {
+        log.info("NfsResourceServerServiceImpl initialized: uploadPath={}, baseUrl={}", uploadPath, baseUrl);
+    }
+
     @Override
     public String uploadFile(String relativePath, byte[] data) {
         if (!isPathSafe(relativePath)) {
@@ -46,6 +52,25 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
         FileUtil.mkdir(new File(absolutePath).getParent());
         FileUtil.writeBytes(data, absolutePath);
         log.debug("NFS 上传文件完成: {}", absolutePath);
+        return getUrl(normalizedPath);
+    }
+
+    @Override
+    public String uploadFile(String relativePath, File sourceFile) {
+        if (!isPathSafe(relativePath)) {
+            log.warn("非法文件路径: {}", relativePath);
+            throw new SecurityException("非法文件路径");
+        }
+        String normalizedPath = normalizePath(relativePath);
+        String absolutePath = FileUtil.normalize(uploadPath + "/" + normalizedPath);
+        if (!isWithinBaseDir(absolutePath)) {
+            log.warn("路径超出允许范围: {}", absolutePath);
+            throw new SecurityException("非法文件路径");
+        }
+        // 确保父目录存在
+        FileUtil.mkdir(new File(absolutePath).getParent());
+        FileUtil.copy(sourceFile.getAbsolutePath(), absolutePath, true);
+        log.info("NFS 流式上传文件完成: {} -> {}", sourceFile.getAbsolutePath(), absolutePath);
         return getUrl(normalizedPath);
     }
 
@@ -71,10 +96,9 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
                         String subPath = baseDir.relativize(filePath).toString().replace("\\", "/");
                         String relativePath = versionDir + subPath;
                         try {
-                            byte[] bytes = Files.readAllBytes(filePath);
-                            uploadFile(relativePath, bytes);
+                            uploadFile(relativePath, filePath.toFile());
                             uploadedPaths.add(relativePath);
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             log.error("上传提取文件失败: {}", relativePath, e);
                         }
                     });

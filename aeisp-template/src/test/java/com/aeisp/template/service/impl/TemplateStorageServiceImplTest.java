@@ -25,6 +25,7 @@ class TemplateStorageServiceImplTest {
         mockUploadPath = System.getProperty("java.io.tmpdir");
         ResourceServerService mockResourceServerService = new ResourceServerService() {
             @Override public String uploadFile(String relativePath, byte[] data) { return null; }
+            @Override public String uploadFile(String relativePath, java.io.File sourceFile) { return null; }
             @Override public java.util.List<String> uploadExtractedFiles(Long templateId, String versionNo, java.io.File extractDir) { return java.util.List.of(); }
             @Override public void deleteFile(String relativePath) { }
             @Override public void deleteVersionFiles(Long templateId, String versionNo) { }

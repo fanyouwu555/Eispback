@@ -21,6 +21,15 @@ public interface ResourceServerService {
     String uploadFile(String relativePath, byte[] data);
 
     /**
+     * 上传单个文件到资源服务器（流式，避免大文件内存拷贝）。
+     *
+     * @param relativePath 相对路径，如 "1/v1.0.0/template.zip"
+     * @param sourceFile   本地源文件
+     * @return 完整的可访问 URL
+     */
+    String uploadFile(String relativePath, java.io.File sourceFile);
+
+    /**
      * 批量上传解压后的所有文件到资源服务器。
      *
      * @param templateId 模板 ID

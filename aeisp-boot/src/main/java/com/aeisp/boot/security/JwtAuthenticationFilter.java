@@ -121,8 +121,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             } catch (Exception e) {
                 log.warn("JWT 认证失败: {}", e.getMessage());
-                writeUnauthorized(response, BootErrorCode.TOKEN_MISSING);
-                return;
+                // 清除认证上下文，继续过滤器链，由 Spring Security 的 authorizeHttpRequests 决定是否放行
+                // 白名单路径（如 /api/v1/auth/**）应被 permitAll() 放行，不受 Token 无效影响
+                SecurityContextHolder.clearContext();
             }
         }
 

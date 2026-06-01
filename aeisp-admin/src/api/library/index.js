@@ -10,6 +10,7 @@ export function listOnlineLibraries() {
 
 export function createLibrary(data) {
   return request.post('/library-resources', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000
   })
 }
@@ -20,6 +21,7 @@ export function updateLibrary(id, data) {
 
 export function uploadLibraryVersion(id, data) {
   return request.post(`/library-resources/${id}/versions`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000
   })
 }

@@ -18,9 +18,9 @@ import com.aeisp.library.service.LibraryResourceService;
 import com.aeisp.library.service.LibraryStorageService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -38,13 +39,23 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class LibraryResourceServiceImpl implements LibraryResourceService {
 
     private final LibResourceMapper resourceMapper;
     private final LibResourceVersionMapper versionMapper;
     private final LibraryStorageService libraryStorageService;
     private final ResourceServerService resourceServerService;
+
+    public LibraryResourceServiceImpl(LibResourceMapper resourceMapper,
+                                      LibResourceVersionMapper versionMapper,
+                                      LibraryStorageService libraryStorageService,
+                                      @Qualifier("libraryResourceServer") ResourceServerService resourceServerService) {
+        this.resourceMapper = resourceMapper;
+        this.versionMapper = versionMapper;
+        this.libraryStorageService = libraryStorageService;
+        this.resourceServerService = resourceServerService;
+        log.info("LibraryResourceServiceImpl initialized with resourceServer type: {}", resourceServerService.getClass().getSimpleName());
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -62,14 +73,18 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
         // 2. 存储 ZIP 到本地
         String relativePath = libraryStorageService.storeZip(resource.getId(), request.getVersionNo(), request.getZipFile());
         String zipAbsPath = libraryStorageService.getZipAbsolutePath(resource.getId(), request.getVersionNo());
+        log.info("库资源 ZIP 本地存储完成: resourceId={}, zipAbsPath={}", resource.getId(), zipAbsPath);
 
         // 3. 上传 ZIP 到资源服务器
         String storageUrl = uploadZipToServer(resource.getId(), request.getVersionNo(), zipAbsPath, relativePath);
+        log.info("库资源 ZIP 上传服务器完成: resourceId={}, storageUrl={}", resource.getId(), storageUrl);
 
         // 4. 解压并上传提取文件
         String extractDir = new File(zipAbsPath).getParent() + "/extracted";
         libraryStorageService.extractZip(zipAbsPath, extractDir);
-        resourceServerService.uploadExtractedFiles(resource.getId(), request.getVersionNo(), new File(extractDir));
+        log.info("库资源 ZIP 解压完成: extractDir={}", extractDir);
+        List<String> uploadedFiles = resourceServerService.uploadExtractedFiles(resource.getId(), request.getVersionNo(), new File(extractDir));
+        log.info("库资源提取文件上传完成: resourceId={}, fileCount={}", resource.getId(), uploadedFiles.size());
 
         // 5. 计算 MD5
         String fileHash = calcFileHash(request.getZipFile());
@@ -356,9 +371,8 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
 
     private String uploadZipToServer(Long resourceId, String versionNo, String zipAbsPath, String relativePath) {
         try {
-            byte[] zipBytes = Files.readAllBytes(java.nio.file.Paths.get(zipAbsPath));
-            return resourceServerService.uploadFile(relativePath, zipBytes);
-        } catch (IOException e) {
+            return resourceServerService.uploadFile(relativePath, new File(zipAbsPath));
+        } catch (Exception e) {
             log.error("上传 ZIP 到资源服务器失败: resourceId={}, versionNo={}", resourceId, versionNo, e);
             throw new BizException(LibraryErrorCode.FILE_UPLOAD_FAILED);
         }
@@ -367,8 +381,14 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
     private String calcFileHash(MultipartFile file) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] bytes = file.getBytes();
-            byte[] digest = md.digest(bytes);
+            try (InputStream is = file.getInputStream()) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = is.read(buffer)) != -1) {
+                    md.update(buffer, 0, read);
+                }
+            }
+            byte[] digest = md.digest();
             StringBuilder sb = new StringBuilder();
             for (byte b : digest) {
                 sb.append(String.format("%02x", b));

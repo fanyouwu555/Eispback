@@ -83,6 +83,11 @@ public class SecurityConfig {
             // ===== 平台公开信息 =====
             "/api/v1/platform/info",            // 平台名称/版权等
 
+            // ===== 公开数据接口 =====
+            "/api/v1/templates/public/**",      // 上线模板列表/分类树/详情
+            "/api/v1/library-resources/public", // 上线库资源列表
+            "/api/v1/template-categories/**",   // 模板分类（全部公开）
+
             // ===== API 文档 =====
             "/swagger-ui/**",
             "/v3/api-docs/**",

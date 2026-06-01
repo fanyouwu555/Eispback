@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.aeisp.library.mapper.LibResourceMapper">
+
+    <select id="selectMaxResourceCode" resultType="java.lang.String">
+        SELECT MAX(resource_code) FROM lib_resource
+        WHERE resource_code LIKE CONCAT(#{prefix}, '%') AND deleted = 0
+    </select>
+
 </mapper>

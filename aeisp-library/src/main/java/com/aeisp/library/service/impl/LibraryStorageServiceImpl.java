@@ -4,10 +4,9 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ZipUtil;
 import com.aeisp.common.service.ResourceServerService;
 import com.aeisp.library.service.LibraryStorageService;
-import com.aeisp.system.service.SysConfigService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,17 +21,20 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Slf4j
-@RequiredArgsConstructor
 @Service
 public class LibraryStorageServiceImpl implements LibraryStorageService {
 
-    private final SysConfigService sysConfigService;
-    @Qualifier("libraryResourceServer")
+    @Value("${library.upload-path:./uploads/library/}")
+    private String basePath;
+
     private final ResourceServerService resourceServerService;
 
+    public LibraryStorageServiceImpl(@Qualifier("libraryResourceServer") ResourceServerService resourceServerService) {
+        this.resourceServerService = resourceServerService;
+    }
+
     private String getBasePath() {
-        String path = sysConfigService.getConfigValue("storage.library.path", "all");
-        return path != null ? path : "./uploads/library/";
+        return basePath;
     }
 
     @Override
@@ -118,6 +120,10 @@ public class LibraryStorageServiceImpl implements LibraryStorageService {
         }
         String baseDir = resourceServerService.getUploadPath();
         String absolutePath = FileUtil.normalize(baseDir + "/" + resourceId + "/" + versionNo + "/" + filePath);
+        if (!isWithinBaseDir(absolutePath)) {
+            log.warn("路径超出允许范围: {}", absolutePath);
+            throw new SecurityException("非法文件路径");
+        }
         File file = new File(absolutePath);
         if (!file.exists() || !file.isFile()) {
             log.warn("文件不存在: {}", absolutePath);

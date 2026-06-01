@@ -154,6 +154,8 @@ CREATE TABLE IF NOT EXISTS sys_config (
     description VARCHAR(255) DEFAULT NULL,
     environment VARCHAR(10) NOT NULL DEFAULT 'all',
     is_editable SMALLINT NOT NULL DEFAULT 1,
+    category VARCHAR(20) NOT NULL DEFAULT 'general',
+    field_type VARCHAR(20) NOT NULL DEFAULT 'text',
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
@@ -162,9 +164,12 @@ CREATE TABLE IF NOT EXISTS sys_config (
     CONSTRAINT uk_sys_config_key UNIQUE (config_key)
 );
 CREATE INDEX IF NOT EXISTS idx_sys_config_environment ON sys_config (environment);
+CREATE INDEX IF NOT EXISTS idx_sys_config_category ON sys_config (category);
 COMMENT ON TABLE sys_config IS '系统配置表';
 COMMENT ON COLUMN sys_config.environment IS '适用环境：all/dev/test/prod';
 COMMENT ON COLUMN sys_config.is_editable IS '是否可通过后台编辑：0-只读，1-可编辑';
+COMMENT ON COLUMN sys_config.category IS '配置分类: storage/backup/platform/timeout/threshold/general';
+COMMENT ON COLUMN sys_config.field_type IS '控件类型: text/boolean/number/password';
 
 -- 用户行为日志表
 CREATE TABLE IF NOT EXISTS sys_user_behavior_log (
@@ -887,8 +892,8 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 (33, '数据大盘', 'operations:dashboard', 'operations', 'read', NULL, 9, 1, 1, NULL, '/operations/dashboard', 'operations/dashboard/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 (34, '系统监控', 'operations:monitor', 'operations', 'read', NULL, 9, 1, 2, NULL, '/operations/monitor', 'operations/monitor/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 -- 系统配置模块 -> 菜单
-(35, '基础配置', 'sysconfig:base', 'sysconfig', 'read', NULL, 10, 1, 1, NULL, '/sysconfig/base', 'system/config/index.vue', 1, 1, NOW(), NOW(), 1, 1),
-(36, '功能开关', 'sysconfig:feature', 'sysconfig', 'read', NULL, 10, 1, 2, NULL, '/sysconfig/feature', 'system/feature/index.vue', 1, 1, NOW(), NOW(), 1, 1),
+(35, '基础配置', 'system:config', 'sysconfig', 'read', NULL, 10, 1, 1, NULL, '/sysconfig/base', 'system/config/index.vue', 1, 1, NOW(), NOW(), 1, 1),
+(36, '功能开关', 'system:feature:view', 'sysconfig', 'read', NULL, 10, 1, 2, NULL, '/sysconfig/feature', 'system/feature/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 -- 系统管理 -> 菜单管理 -> 按钮
 (37, '菜单列表', 'system:menu:list', 'system', 'list', NULL, 12, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (38, '菜单管理操作', 'system:menu:manage', 'system', 'manage', NULL, 12, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
@@ -982,28 +987,28 @@ INSERT INTO sys_user_role (user_id, role_id, created_at) VALUES
 (1, 1, NOW());
 
 -- 初始化常用系统配置
-INSERT INTO sys_config (config_key, config_value, environment, description, created_at, updated_at) VALUES
-('system.name', 'AEISP 后端管理系统', 'all', '系统名称', NOW(), NOW()),
-('system.version', '1.0.0', 'all', '系统版本号', NOW(), NOW()),
-('system.copyright', '© 2026 AEISP Team', 'all', '系统版权信息', NOW(), NOW()),
-('official_website_url', 'https://www.example.com', 'prod', '生产环境官网地址', NOW(), NOW()),
-('official_website_url', 'https://test.example.com', 'test', '测试环境官网地址', NOW(), NOW()),
-('official_website_url', 'https://dev.example.com', 'dev', '开发环境官网地址', NOW(), NOW()),
-('contact_email', 'contact@example.com', 'all', '联系邮箱', NOW(), NOW()),
-('contact_phone', '400-123-4567', 'all', '客服电话', NOW(), NOW()),
-('default_register_duration', '120', 'all', '注册默认赠送时长（分钟）', NOW(), NOW()),
-('default_duration_expiry_days', '90', 'all', '赠送时长有效期（天）', NOW(), NOW()),
-('duration_warning_threshold', '120', 'all', '时长预警阈值（分钟）', NOW(), NOW()),
-('login_max_fail_attempts', '5', 'all', '登录最大失败次数', NOW(), NOW()),
-('login_lockout_minutes', '30', 'all', '登录锁定持续时间（分钟）', NOW(), NOW()),
-('password_min_length', '8', 'all', '密码最小长度', NOW(), NOW()),
-('password_max_length', '20', 'all', '密码最大长度', NOW(), NOW()),
-('verify_code_ttl_seconds', '300', 'all', '验证码有效期（秒）', NOW(), NOW()),
-('verify_code_cooldown_seconds', '60', 'all', '验证码发送冷却时间（秒）', NOW(), NOW()),
-('default_model_max_qps', '10', 'all', '默认模型QPS限制', NOW(), NOW()),
-('model_failure_rate_threshold', '10', 'all', '模型失败率告警阈值（%）', NOW(), NOW()),
-('notification_archive_days', '90', 'all', '消息归档天数', NOW(), NOW()),
-('recharge_order_timeout_minutes', '30', 'all', '充值订单超时时间（分钟）', NOW(), NOW());
+INSERT INTO sys_config (config_key, config_value, environment, description, category, field_type, created_at, updated_at) VALUES
+('system.name', 'AEISP 后端管理系统', 'all', '系统名称', 'platform', 'text', NOW(), NOW()),
+('system.version', '1.0.0', 'all', '系统版本号', 'platform', 'text', NOW(), NOW()),
+('system.copyright', '© 2026 AEISP Team', 'all', '系统版权信息', 'platform', 'text', NOW(), NOW()),
+('official_website_url', 'https://www.example.com', 'prod', '生产环境官网地址', 'platform', 'text', NOW(), NOW()),
+('official_website_url', 'https://test.example.com', 'test', '测试环境官网地址', 'platform', 'text', NOW(), NOW()),
+('official_website_url', 'https://dev.example.com', 'dev', '开发环境官网地址', 'platform', 'text', NOW(), NOW()),
+('contact_email', 'contact@example.com', 'all', '联系邮箱', 'platform', 'text', NOW(), NOW()),
+('contact_phone', '400-123-4567', 'all', '客服电话', 'platform', 'text', NOW(), NOW()),
+('default_register_duration', '120', 'all', '注册默认赠送时长（分钟）', 'threshold', 'number', NOW(), NOW()),
+('default_duration_expiry_days', '90', 'all', '赠送时长有效期（天）', 'timeout', 'number', NOW(), NOW()),
+('duration_warning_threshold', '120', 'all', '时长预警阈值（分钟）', 'threshold', 'number', NOW(), NOW()),
+('login_max_fail_attempts', '5', 'all', '登录最大失败次数', 'threshold', 'number', NOW(), NOW()),
+('login_lockout_minutes', '30', 'all', '登录锁定持续时间（分钟）', 'timeout', 'number', NOW(), NOW()),
+('password_min_length', '8', 'all', '密码最小长度', 'threshold', 'number', NOW(), NOW()),
+('password_max_length', '20', 'all', '密码最大长度', 'threshold', 'number', NOW(), NOW()),
+('verify_code_ttl_seconds', '300', 'all', '验证码有效期（秒）', 'timeout', 'number', NOW(), NOW()),
+('verify_code_cooldown_seconds', '60', 'all', '验证码发送冷却时间（秒）', 'timeout', 'number', NOW(), NOW()),
+('default_model_max_qps', '10', 'all', '默认模型QPS限制', 'threshold', 'number', NOW(), NOW()),
+('model_failure_rate_threshold', '10', 'all', '模型失败率告警阈值（%）', 'threshold', 'number', NOW(), NOW()),
+('notification_archive_days', '90', 'all', '消息归档天数', 'timeout', 'number', NOW(), NOW()),
+('recharge_order_timeout_minutes', '30', 'all', '充值订单超时时间（分钟）', 'timeout', 'number', NOW(), NOW());
 
 -- --------------------------------------------------------
 -- 字典类型种子数据

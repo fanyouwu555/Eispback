@@ -81,8 +81,7 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 (14, '管理员管理', 'system:user', 'system', 'read', NULL, 2, 1, 3, NULL, '/system/user', 'system/user/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 (15, '操作日志', 'system:log', 'system', 'read', NULL, 2, 1, 4, NULL, '/system/log', 'system/log/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 (16, '登录日志', 'system:login-log', 'system', 'read', NULL, 2, 1, 5, NULL, '/system/login-log', 'system/login-log/index.vue', 1, 1, NOW(), NOW(), 1, 1),
-(17, '数据字典', 'system:dict', 'system', 'read', NULL, 2, 1, 6, NULL, '/system/dict', 'system/dict/index.vue', 1, 1, NOW(), NOW(), 1, 1),
-(18, '系统配置', 'system:config', 'system', 'read', NULL, 2, 1, 7, NULL, '/system/config', 'system/config/index.vue', 1, 1, NOW(), NOW(), 1, 1);
+(17, '数据字典', 'system:dict', 'system', 'read', NULL, 2, 1, 6, NULL, '/system/dict', 'system/dict/index.vue', 1, 1, NOW(), NOW(), 1, 1);
 
 -- 用户与权限 -> 菜单
 INSERT INTO sys_permission (id, permission_name, permission_code, resource_type, action, description, parent_id, menu_type, sort_order, icon, route_path, component, is_visible, is_cache, created_at, updated_at, created_by, updated_by) VALUES
@@ -123,7 +122,7 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 
 -- 系统配置模块 -> 菜单
 INSERT INTO sys_permission (id, permission_name, permission_code, resource_type, action, description, parent_id, menu_type, sort_order, icon, route_path, component, is_visible, is_cache, created_at, updated_at, created_by, updated_by) VALUES
-(35, '基础配置', 'sysconfig:base', 'sysconfig', 'read', NULL, 10, 1, 1, NULL, '/sysconfig/base', 'system/config/index.vue', 1, 1, NOW(), NOW(), 1, 1),
+(35, '基础配置', 'system:config', 'sysconfig', 'read', NULL, 10, 1, 1, NULL, '/sysconfig/base', 'system/config/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 (36, '功能开关', 'system:feature:view', 'sysconfig', 'read', NULL, 10, 1, 2, NULL, '/sysconfig/feature', 'system/feature/index.vue', 1, 1, NOW(), NOW(), 1, 1);
 
 -- 按钮权限
@@ -140,8 +139,6 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 -- 系统管理 -> 数据字典 -> 按钮
 (42, '字典列表', 'system:dict:list', 'system', 'list', NULL, 17, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (43, '字典管理操作', 'system:dict:manage', 'system', 'manage', NULL, 17, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
--- 系统管理 -> 系统配置 -> 按钮
-(44, '系统配置操作', 'system:config:update', 'system', 'update', NULL, 18, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 -- 用户与权限 -> 用户管理 -> 按钮
 (45, '创建用户', 'user:create', 'user', 'create', NULL, 19, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (46, '查看用户', 'user:read', 'user', 'read', NULL, 19, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
@@ -192,10 +189,10 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 -- 超级管理员：拥有全部 78 个权限
 INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
 (1, 1, NOW()), (1, 2, NOW()), (1, 3, NOW()), (1, 4, NOW()), (1, 5, NOW()), (1, 6, NOW()), (1, 7, NOW()), (1, 8, NOW()), (1, 9, NOW()), (1, 10, NOW()),
-(1, 11, NOW()), (1, 12, NOW()), (1, 13, NOW()), (1, 14, NOW()), (1, 15, NOW()), (1, 16, NOW()), (1, 17, NOW()), (1, 18, NOW()), (1, 19, NOW()), (1, 20, NOW()),
+(1, 11, NOW()), (1, 12, NOW()), (1, 13, NOW()), (1, 14, NOW()), (1, 15, NOW()), (1, 16, NOW()), (1, 17, NOW()), (1, 19, NOW()), (1, 20, NOW()),
 (1, 21, NOW()), (1, 22, NOW()), (1, 23, NOW()), (1, 24, NOW()), (1, 25, NOW()), (1, 26, NOW()), (1, 27, NOW()), (1, 28, NOW()), (1, 29, NOW()), (1, 30, NOW()),
 (1, 31, NOW()), (1, 32, NOW()), (1, 33, NOW()), (1, 34, NOW()), (1, 35, NOW()), (1, 36, NOW()), (1, 37, NOW()), (1, 38, NOW()), (1, 39, NOW()), (1, 40, NOW()),
-(1, 41, NOW()), (1, 42, NOW()), (1, 43, NOW()), (1, 44, NOW()), (1, 45, NOW()), (1, 46, NOW()), (1, 47, NOW()), (1, 48, NOW()), (1, 49, NOW()), (1, 50, NOW()),
+(1, 41, NOW()), (1, 42, NOW()), (1, 43, NOW()), (1, 45, NOW()), (1, 46, NOW()), (1, 47, NOW()), (1, 48, NOW()), (1, 49, NOW()), (1, 50, NOW()),
 (1, 51, NOW()), (1, 52, NOW()), (1, 53, NOW()), (1, 54, NOW()), (1, 55, NOW()), (1, 56, NOW()), (1, 57, NOW()), (1, 58, NOW()), (1, 59, NOW()), (1, 60, NOW()),
 (1, 61, NOW()), (1, 62, NOW()), (1, 63, NOW()), (1, 64, NOW()), (1, 65, NOW()), (1, 66, NOW()), (1, 67, NOW()), (1, 68, NOW()), (1, 69, NOW()), (1, 70, NOW()),
 (1, 71, NOW()), (1, 72, NOW()), (1, 73, NOW()), (1, 74, NOW()), (1, 75, NOW()), (1, 76, NOW()), (1, 77, NOW()), (1, 78, NOW());
