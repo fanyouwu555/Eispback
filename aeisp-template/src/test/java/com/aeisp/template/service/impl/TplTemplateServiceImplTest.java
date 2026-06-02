@@ -81,7 +81,9 @@ class TplTemplateServiceImplTest {
             request.setDifficulty(3);
             request.setZipFile(new MockMultipartFile("file", "test.zip", "application/zip", "content".getBytes()));
 
-            assertTrue(tplTemplateService.createTemplate(request));
+            Long createdId = tplTemplateService.createTemplate(request);
+            assertNotNull(createdId);
+            assertEquals(1L, createdId);
             // 验证模板编码自动生成
             verify(templateMapper).selectMaxTemplateCode(anyString());
             verify(templateMapper).insert(any(TplTemplate.class));

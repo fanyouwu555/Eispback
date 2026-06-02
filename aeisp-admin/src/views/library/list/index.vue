@@ -136,7 +136,7 @@
           <el-table-column label="操作" width="100" align="center">
             <template #default="{ row }">
               <el-button
-                v-if="row.id !== currentDetail.currentVersion?.id"
+                v-if="!row.isCurrent"
                 type="warning"
                 link
                 size="small"
@@ -391,7 +391,8 @@ function buildFileTree(paths) {
 function handleView(row) {
   getLibraryDetail(row.id).then(res => {
     currentDetail.value = res
-    versionList.value = [res.currentVersion, ...(res.historyVersions || [])].filter(Boolean)
+    // 后端返回 versionList（所有版本，每个版本有 isCurrent 标记）
+    versionList.value = res.versionList || []
     fileTree.value = buildFileTree(res.fileTree || [])
     detailVisible.value = true
   })

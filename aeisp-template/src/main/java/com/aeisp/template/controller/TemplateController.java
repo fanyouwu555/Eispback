@@ -6,6 +6,7 @@ import com.aeisp.common.code.CommonErrorCode;
 import com.aeisp.system.service.SysFeatureSwitchService;
 import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
+import com.aeisp.template.dto.request.SetTemplateLibrariesRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
 import com.aeisp.template.dto.request.UpdateTemplateRequest;
 import com.aeisp.template.dto.vo.TplTemplateDetailVO;
@@ -62,7 +63,7 @@ public class TemplateController {
     @PreAuthorize("hasAuthority('template:create')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "创建模板", description = "创建模板并上传首个版本的 ZIP 文件")
-    public Result<Boolean> createTemplate(@Valid @ModelAttribute CreateTemplateRequest request) {
+    public Result<Long> createTemplate(@Valid @ModelAttribute CreateTemplateRequest request) {
         return Result.success(templateService.createTemplate(request));
     }
 
@@ -399,8 +400,8 @@ public class TemplateController {
     @PreAuthorize("hasAuthority('template:update')")
     @PostMapping("/{id}/libraries")
     @Operation(summary = "设置关联库资源", description = "覆盖式更新模板关联的库资源列表")
-    public Result<Boolean> setTemplateLibraries(@PathVariable Long id, @RequestBody List<Long> libraryIds) {
-        return Result.success(templateService.setTemplateLibraries(id, libraryIds));
+    public Result<Boolean> setTemplateLibraries(@PathVariable Long id, @RequestBody SetTemplateLibrariesRequest request) {
+        return Result.success(templateService.setTemplateLibraries(id, request.getLibraryIds()));
     }
 
     /**

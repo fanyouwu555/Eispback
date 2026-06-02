@@ -705,9 +705,8 @@ function handleCreateSubmit() {
   fd.append('zipFile', zipFile.value)
   if (coverImageFile.value) fd.append('coverImage', coverImageFile.value)
   if (thumbnailFile.value) fd.append('thumbnail', thumbnailFile.value)
-  createTemplate(fd).then(res => {
-    const templateId = res?.id
-    if (templateId && createLibraryIds.value.length > 0) {
+  createTemplate(fd).then(templateId => {
+    if (templateId) {
       return setTemplateLibraries(templateId, { libraryIds: createLibraryIds.value })
     }
   }).then(() => {
@@ -742,10 +741,10 @@ function handleEdit(row) {
   // Build cascader path from category IDs
   const leafId = row.secondCategoryId || row.firstCategoryId || row.topCategoryId
   editCategoryPath.value = leafId ? (findPathToNode(categoryTreeOptions.value, leafId) || []) : []
-  // Load associated libraries
+  // Load associated libraries (backend returns List<Long>)
   editLibraryIds.value = []
   getTemplateLibraries(row.id).then(res => {
-    editLibraryIds.value = (res || []).map(item => item.libraryId)
+    editLibraryIds.value = Array.isArray(res) ? res : []
   }).catch(() => {})
   editVisible.value = true
 }
@@ -781,9 +780,7 @@ function handleEditSubmit() {
       })
     }
   }).then(() => {
-    if (editLibraryIds.value.length > 0) {
-      return setTemplateLibraries(editId.value, { libraryIds: editLibraryIds.value })
-    }
+    return setTemplateLibraries(editId.value, { libraryIds: editLibraryIds.value })
   }).then(() => {
     ElMessage.success('保存成功')
     editVisible.value = false
@@ -801,7 +798,7 @@ function handleView(row) {
     fileTree.value = res.fileTree || []
     detailLibraryNames.value = []
     getTemplateLibraries(row.id).then(libRes => {
-      const libIds = (libRes || []).map(item => item.libraryId)
+      const libIds = Array.isArray(libRes) ? libRes : []
       if (libIds.length > 0) {
         Promise.all(libIds.map(id => getLibraryDetail(id).catch(() => null)))
           .then(details => {

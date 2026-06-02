@@ -18,7 +18,13 @@ import java.util.List;
  */
 public interface TplTemplateService {
 
-    boolean createTemplate(CreateTemplateRequest request);
+    /**
+     * 创建模板。
+     *
+     * @param request 创建请求
+     * @return 新创建的模板 ID
+     */
+    Long createTemplate(CreateTemplateRequest request);
 
     boolean updateTemplateInfo(Long templateId, UpdateTemplateRequest request);
 

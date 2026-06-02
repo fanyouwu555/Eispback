@@ -57,7 +57,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
     private final com.aeisp.template.mapper.TemplateLibraryRelationMapper templateLibraryRelationMapper;
 
     @Override
-    public boolean createTemplate(CreateTemplateRequest request) {
+    public Long createTemplate(CreateTemplateRequest request) {
         // 保存模板主表
         TplTemplate template = new TplTemplate();
         template.setTemplateName(request.getTemplateName());
@@ -157,7 +157,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             templateStorageService.deleteVersionFiles(template.getId(), request.getVersionNo());
         }
 
-        return true;
+        return template.getId();
     }
 
     @Override
