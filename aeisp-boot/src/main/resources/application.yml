@@ -2,6 +2,8 @@ server:
   port: 8080
   tomcat:
     uri-encoding: UTF-8
+    max-swallow-size: 500MB
+    connection-timeout: 120000
   servlet:
     encoding:
       charset: UTF-8
@@ -29,8 +31,8 @@ spring:
           min-idle: 0
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 500MB
+      max-request-size: 500MB
 
 mybatis-plus:
   configuration:
