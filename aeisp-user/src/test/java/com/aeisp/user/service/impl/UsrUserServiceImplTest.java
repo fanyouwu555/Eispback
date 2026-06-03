@@ -723,4 +723,254 @@ class UsrUserServiceImplTest {
         when(usrUserMapper.selectById(1L)).thenReturn(null);
         assertNull(usrUserService.getUserDetail(1L));
     }
+
+    // ==================== 密码相关测试 ====================
+
+    @Test
+    void testCreateByAdminDefaultPassword123456() {
+        // 测试：不传密码时使用默认密码 123456
+        when(usrUserMapper.selectByUsername("defaultuser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("123456")).thenReturn("encoded_123456");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("defaultuser");
+        request.setPassword(null); // 不传密码
+
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("123456", password); // 返回的是明文默认密码
+        verify(passwordEncoder).encode("123456");
+    }
+
+    @Test
+    void testCreateByAdminEmptyPasswordDefaultsTo123456() {
+        // 测试：空字符串密码也使用默认密码 123456
+        when(usrUserMapper.selectByUsername("emptyuser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("123456")).thenReturn("encoded_123456");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("emptyuser");
+        request.setPassword(""); // 空字符串
+
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("123456", password);
+        verify(passwordEncoder).encode("123456");
+    }
+
+    @Test
+    void testCreateByAdminBlankPasswordDefaultsTo123456() {
+        // 测试：空白字符串密码也使用默认密码 123456
+        when(usrUserMapper.selectByUsername("blankuser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("123456")).thenReturn("encoded_123456");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("blankuser");
+        request.setPassword("   "); // 空白字符串
+
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("123456", password);
+        verify(passwordEncoder).encode("123456");
+    }
+
+    @Test
+    void testValidatePassword123456SkipsComplexityCheck() {
+        // 测试：默认密码 123456 跳过复杂度验证
+        // 即使 security.password 开关开启，123456 也不需要包含字母和数字
+        // 注意：当密码是 "123456" 时，validatePassword 方法会提前返回，不会调用 featureSwitchService
+        when(usrUserMapper.selectByUsername("simpleuser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("123456")).thenReturn("encoded_123456");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("simpleuser");
+        request.setPassword("123456"); // 只有数字，没有字母
+
+        // 不应抛出异常
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("123456", password);
+    }
+
+    @Test
+    void testValidatePasswordRequiresComplexityWhenEnabled() {
+        // 测试：非默认密码在开启安全开关时需要复杂度
+        when(featureSwitchService.isEnabled("security.password")).thenReturn(true);
+        when(usrUserMapper.selectByUsername("complexuser")).thenReturn(null);
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("complexuser");
+        request.setPassword("password"); // 只有字母，没有数字
+
+        // 应抛出异常：密码必须同时包含字母和数字
+        BizException ex = assertThrows(BizException.class, () -> usrUserService.createByAdmin(request));
+        assertTrue(ex.getMessage().contains("密码必须同时包含字母和数字"));
+    }
+
+    @Test
+    void testValidatePasswordAcceptsComplexPasswordWhenEnabled() {
+        // 测试：符合复杂度要求的密码可以正常创建
+        when(featureSwitchService.isEnabled("security.password")).thenReturn(true);
+        when(usrUserMapper.selectByUsername("gooduser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("password123")).thenReturn("encoded_pwd");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("gooduser");
+        request.setPassword("password123"); // 有字母和数字
+
+        // 不应抛出异常
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("password123", password);
+    }
+
+    @Test
+    void testValidatePasswordNoComplexityCheckWhenSwitchDisabled() {
+        // 测试：关闭安全开关时，简单密码也可以通过（只要满足最小长度）
+        when(featureSwitchService.isEnabled("security.password")).thenReturn(false);
+        when(sysConfigService.getConfigValue("password_min_length", "all")).thenReturn("6");
+        when(usrUserMapper.selectByUsername("simplepwduser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("abcdef")).thenReturn("encoded_abcdef");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("simplepwduser");
+        request.setPassword("abcdef"); // 只有字母，没有数字
+
+        // 不应抛出异常
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("abcdef", password);
+    }
+
+    @Test
+    void testValidatePasswordRejectsTooShortPassword() {
+        // 测试：密码长度小于最小长度时被拒绝
+        when(sysConfigService.getConfigValue("password_min_length", "all")).thenReturn("6");
+        when(usrUserMapper.selectByUsername("shortuser")).thenReturn(null);
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("shortuser");
+        request.setPassword("12345"); // 只有5位，最小要6位
+
+        BizException ex = assertThrows(BizException.class, () -> usrUserService.createByAdmin(request));
+        assertTrue(ex.getMessage().contains("密码长度不能少于 6 位"));
+    }
+
+    @Test
+    void testValidatePasswordUsesDefaultMinLengthWhenConfigMissing() {
+        // 测试：配置缺失时使用默认最小长度6
+        when(sysConfigService.getConfigValue("password_min_length", "all")).thenReturn(null);
+        when(usrUserMapper.selectByUsername("shortuser2")).thenReturn(null);
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("shortuser2");
+        request.setPassword("12345");
+
+        BizException ex = assertThrows(BizException.class, () -> usrUserService.createByAdmin(request));
+        assertTrue(ex.getMessage().contains("密码长度不能少于 6 位"));
+    }
+
+    @Test
+    void testValidatePasswordAcceptsCustomMinLength() {
+        // 测试：自定义最小长度配置生效
+        when(sysConfigService.getConfigValue("password_min_length", "all")).thenReturn("8");
+        when(featureSwitchService.isEnabled("security.password")).thenReturn(true);
+        when(usrUserMapper.selectByUsername("customlenuser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("password123")).thenReturn("encoded_pwd");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("customlenuser");
+        request.setPassword("password123"); // 10位，包含字母和数字
+
+        // 10位符合配置的最小长度8位，且包含字母和数字，不应抛出异常
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("password123", password);
+    }
+
+    @Test
+    void testRegisterPassword123456AlsoSkipsComplexityCheck() {
+        // 测试：注册时 123456 也跳过复杂度验证
+        when(usrUserMapper.selectByUsername("reguser123")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("123456")).thenReturn("encoded_123456");
+
+        UsrUser user = new UsrUser();
+        user.setUsername("reguser123");
+        user.setPassword("123456");
+
+        // 不应抛出异常
+        assertTrue(usrUserService.register(user));
+    }
+
+    @Test
+    void testCreateByAdminStatusDefaultsToNormal() {
+        // 测试：不传状态时默认为正常
+        when(usrUserMapper.selectByUsername("statususer")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("123456")).thenReturn("encoded_123456");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("statususer");
+        request.setStatus(null); // 不传状态
+
+        usrUserService.createByAdmin(request);
+        verify(usrUserMapper).insert(argThat((UsrUser u) ->
+                u.getStatus() != null && u.getStatus() == CommonConstants.USER_STATUS_NORMAL));
+    }
+
+    @Test
+    void testCreateByAdminSetsNeedChangePassword() {
+        // 测试：管理员创建的用户需要修改密码
+        when(usrUserMapper.selectByUsername("needchangeuser")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("123456")).thenReturn("encoded_123456");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("needchangeuser");
+
+        usrUserService.createByAdmin(request);
+        verify(usrUserMapper).insert(argThat((UsrUser u) ->
+                u.getNeedChangePassword() != null && u.getNeedChangePassword() == 1));
+    }
 }
