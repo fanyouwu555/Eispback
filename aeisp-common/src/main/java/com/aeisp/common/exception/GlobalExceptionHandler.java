@@ -9,8 +9,11 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -82,6 +85,45 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining("; "));
         log.warn("参数校验失败: {}", message);
         return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, message);
+    }
+
+    /**
+     * 处理数据库唯一键冲突异常。
+     *
+     * @param e 唯一键冲突异常
+     * @return 标准错误响应
+     */
+    @ExceptionHandler(DuplicateKeyException.class)
+    public Result<Void> handleDuplicateKeyException(DuplicateKeyException e) {
+        log.warn("数据库唯一键冲突: {}", e.getMessage());
+        String message = "数据已存在，无法重复添加";
+        // 尝试提取更具体的错误信息
+        if (e.getMessage() != null) {
+            if (e.getMessage().contains("username")) {
+                message = "用户名已存在";
+            } else if (e.getMessage().contains("email")) {
+                message = "邮箱已存在";
+            } else if (e.getMessage().contains("phone")) {
+                message = "手机号已存在";
+            }
+        }
+        return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, message);
+    }
+
+    /**
+     * 处理数据库访问异常（包括 DuplicateKeyException 等）。
+     *
+     * @param e 数据库访问异常
+     * @return 标准错误响应
+     */
+    @ExceptionHandler(DataAccessException.class)
+    public Result<Void> handleDataAccessException(DataAccessException e) {
+        log.warn("数据库访问异常: {}", e.getMessage());
+        // 检查是否是唯一键冲突
+        if (e instanceof DuplicateKeyException) {
+            return handleDuplicateKeyException((DuplicateKeyException) e);
+        }
+        return Result.error(CommonErrorCode.SYSTEM_ERROR, "数据库操作失败");
     }
 
     /**
@@ -165,6 +207,61 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理事务系统异常（包括可能被包装的 DuplicateKeyException）。
+     *
+     * @param e 事务系统异常
+     * @return 标准错误响应
+     */
+    @ExceptionHandler(TransactionSystemException.class)
+    public Result<Void> handleTransactionSystemException(TransactionSystemException e) {
+        log.error("事务系统异常: {}", e.getMessage(), e);
+        // 检查是否是 DuplicateKeyException（可能被包装）
+        Throwable cause = e.getOriginalException();
+        if (cause != null) {
+            String errorMsg = cause.getMessage();
+            if (errorMsg != null && (errorMsg.contains("duplicate key") || errorMsg.contains("duplicate key value"))) {
+                String message = "数据已存在，无法重复添加";
+                if (errorMsg.contains("username")) {
+                    message = "用户名已存在";
+                } else if (errorMsg.contains("email")) {
+                    message = "邮箱已存在";
+                } else if (errorMsg.contains("phone")) {
+                    message = "手机号已存在";
+                }
+                return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, message);
+            }
+        }
+        saveErrorLog(e, 3);
+        return Result.error(CommonErrorCode.SYSTEM_ERROR);
+    }
+
+    /**
+     * 处理运行时异常（包括可能被包装的 DuplicateKeyException）。
+     *
+     * @param e 运行时异常
+     * @return 标准错误响应
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public Result<Void> handleRuntimeException(RuntimeException e) {
+        log.error("运行时异常: {}", e.getMessage(), e);
+        // 检查是否是 DuplicateKeyException（可能被包装）
+        String errorMsg = e.getMessage();
+        if (errorMsg != null && (errorMsg.contains("duplicate key") || errorMsg.contains("duplicate key value"))) {
+            String message = "数据已存在，无法重复添加";
+            if (errorMsg.contains("username")) {
+                message = "用户名已存在";
+            } else if (errorMsg.contains("email")) {
+                message = "邮箱已存在";
+            } else if (errorMsg.contains("phone")) {
+                message = "手机号已存在";
+            }
+            return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, message);
+        }
+        saveErrorLog(e, 3);
+        return Result.error(CommonErrorCode.SYSTEM_ERROR);
+    }
+
+    /**
      * 处理其他未知异常。
      *
      * @param e 未知异常
@@ -173,6 +270,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("未知异常: {}", e.getMessage(), e);
+        // 检查是否是 DuplicateKeyException（可能被包装）
+        String errorMsg = e.getMessage();
+        if (errorMsg != null && (errorMsg.contains("duplicate key") || errorMsg.contains("duplicate key value"))) {
+            String message = "数据已存在，无法重复添加";
+            if (errorMsg.contains("username")) {
+                message = "用户名已存在";
+            } else if (errorMsg.contains("email")) {
+                message = "邮箱已存在";
+            } else if (errorMsg.contains("phone")) {
+                message = "手机号已存在";
+            }
+            return Result.error(CommonErrorCode.PARAM_VALIDATION_FAILED, message);
+        }
         saveErrorLog(e, 3);
         return Result.error(CommonErrorCode.SYSTEM_ERROR);
     }
