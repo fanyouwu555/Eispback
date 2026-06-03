@@ -60,10 +60,12 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean createUser(SysUser user, List<Long> roleIds) {
-        // 密码加密
-        if (StringUtils.hasText(user.getPassword())) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        // 密码加密（如果未提供则使用默认密码）
+        String rawPassword = user.getPassword();
+        if (!StringUtils.hasText(rawPassword)) {
+            rawPassword = "123456";
         }
+        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setStatus(CommonConstants.STATUS_ENABLED);
         int rows = sysUserMapper.insert(user);
         if (rows <= 0) {
