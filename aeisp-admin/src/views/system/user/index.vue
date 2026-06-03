@@ -11,7 +11,8 @@
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="请选择" clearable>
           <el-option label="正常" :value="1" />
-          <el-option label="禁用" :value="0" />
+          <el-option label="禁用" :value="2" />
+          <el-option label="冻结" :value="3" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -31,7 +32,7 @@
     <el-table v-loading="loading" :data="userList" border>
       <el-table-column type="index" width="50" />
       <el-table-column label="用户名" prop="username" />
-      <el-table-column label="昵称" prop="realName" />
+      <el-table-column label="真实姓名" prop="realName" />
       <el-table-column label="手机号" prop="phone" />
       <el-table-column label="邮箱" prop="email" />
       <el-table-column label="绑定角色" width="180">
@@ -41,16 +42,18 @@
       </el-table-column>
       <el-table-column label="状态" align="center" width="100">
         <template #default="{ row }">
-          <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+            {{ row.status === 1 ? '正常' : (row.status === 2 ? '禁用' : '冻结') }}
+          </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" prop="createdAt" width="180" />
+      <el-table-column label="注册时间" prop="registerTime" width="180" />
       <el-table-column label="登录信息" width="160">
         <template #default="{ row }">
           <span>{{ row.lastLoginIp || '-' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="280">
+      <el-table-column label="操作" align="center" width="360">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">编辑</el-button>
           <el-button link type="warning" icon="Key" @click="handleResetPwd(row)">重置密码</el-button>
@@ -66,24 +69,24 @@
     <el-dialog v-model="open" :title="title" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" :disabled="!!form.id" />
+          <el-input v-model="form.username" :disabled="!!form.id" placeholder="用户名" />
         </el-form-item>
         <el-form-item label="密码" prop="password" v-if="!form.id">
-          <el-input v-model="form.password" type="password" show-password />
+          <el-input v-model="form.password" type="password" show-password placeholder="留空默认为123456" />
         </el-form-item>
-        <el-form-item label="真实姓名" prop="nickname">
-          <el-input v-model="form.nickname" />
+        <el-form-item label="真实姓名" prop="realName">
+          <el-input v-model="form.realName" placeholder="真实姓名" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
-          <el-input v-model="form.phone" />
+          <el-input v-model="form.phone" placeholder="手机号" />
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" />
+          <el-input v-model="form.email" placeholder="邮箱" />
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item label="状态" prop="status" v-if="form.id">
           <el-radio-group v-model="form.status">
             <el-radio :label="1">正常</el-radio>
-            <el-radio :label="0">禁用</el-radio>
+            <el-radio :label="2">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="绑定角色" v-if="roleOptions.length > 0">
@@ -99,8 +102,11 @@
     </el-dialog>
 
     <!-- 重置密码弹窗 -->
-    <el-dialog v-model="pwdOpen" title="重置密码" width="400px">
+    <el-dialog v-model="pwdOpen" title="重置密码" width="500px">
       <p>确认重置用户 "{{ currentUser?.username }}" 的密码？</p>
+      <div style="margin: 15px 0;">
+        <el-input v-model="adminPassword" type="password" show-password placeholder="请输入管理员密码（必填）" />
+      </div>
       <div style="margin: 15px 0;">
         <el-input v-model="newPassword" type="password" show-password placeholder="输入新密码（留空自动生成）" />
       </div>
@@ -119,8 +125,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listSysUsers, addSysUser, updateSysUser, deleteSysUser, listRoles } from '@/api/system'
+import { listSysUsers, getSysUser, addSysUser, updateSysUser, deleteSysUser } from '@/api/system'
+import { listRoles } from '@/api/system'
 import Pagination from '@/components/Pagination.vue'
+import { WarningFilled } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const userList = ref([])
@@ -133,6 +141,7 @@ const roleOptions = ref([])
 const pwdOpen = ref(false)
 const currentUser = ref(null)
 const newPassword = ref('')
+const adminPassword = ref('')
 const generatedPassword = ref('')
 
 const queryParams = reactive({
@@ -147,7 +156,7 @@ const form = reactive({
   id: undefined,
   username: '',
   password: '',
-  nickname: '',
+  realName: '',
   phone: '',
   email: '',
   status: 1,
@@ -155,8 +164,8 @@ const form = reactive({
 })
 
 const rules = {
-  username: [{ required: true, message: '用户名不能为空', trigger: 'blur' }],
-  password: [{ required: true, message: '密码不能为空', trigger: 'blur' }]
+  username: [{ required: true, message: '用户名不能为空', trigger: 'blur' }]
+  // 密码不需要必填，后端会默认给123456
 }
 
 async function getList(pagination = null) {
@@ -189,7 +198,7 @@ function resetForm() {
     id: undefined,
     username: '',
     password: '',
-    nickname: '',
+    realName: '',
     phone: '',
     email: '',
     status: 1,
@@ -203,51 +212,56 @@ function handleAdd() {
   title.value = '新增用户'
 }
 
-function handleUpdate(row) {
+async function handleUpdate(row) {
   resetForm()
-  Object.assign(form, {
-    id: row.id,
-    username: row.username,
-    nickname: row.realName || row.nickname,
-    phone: row.phone,
-    email: row.email,
-    status: row.status ?? 1,
-    roleIds: row.roles?.map(r => r.id) || []
-  })
+  try {
+    const detail = await getSysUser(row.id)
+    Object.assign(form, {
+      id: detail.id,
+      username: detail.username,
+      realName: detail.realName,
+      phone: detail.phone,
+      email: detail.email,
+      status: detail.status ?? 1,
+      roleIds: detail.roles?.map(r => r.id) || []
+    })
+  } catch {
+    // 如果获取详情失败，使用表格数据
+    Object.assign(form, {
+      id: row.id,
+      username: row.username,
+      realName: row.realName,
+      phone: row.phone,
+      email: row.email,
+      status: row.status ?? 1,
+      roleIds: row.roles?.map(r => r.id) || []
+    })
+  }
   open.value = true
   title.value = '编辑用户'
-}
-
-async function handleStatusChange(row) {
-  try {
-    await updateSysUser(row.id, { status: row.status })
-    ElMessage.success('状态修改成功')
-  } catch {
-    row.status = row.status === 1 ? 0 : 1
-  }
 }
 
 function handleResetPwd(row) {
   currentUser.value = row
   newPassword.value = ''
+  adminPassword.value = ''
   generatedPassword.value = ''
   pwdOpen.value = true
 }
 
 async function submitResetPwd() {
-  const pwd = newPassword.value || generateRandomPwd()
-  await updateSysUser(currentUser.value.id, { password: pwd })
-  generatedPassword.value = pwd
-  ElMessage.success('密码重置成功')
-}
-
-function generateRandomPwd() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%'
-  let result = ''
-  for (let i = 0; i < 12; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  if (!adminPassword.value) {
+    ElMessage.warning('请输入管理员密码')
+    return
   }
-  return result
+  const res = await resetUserPassword(currentUser.value.id, {
+    adminPassword: adminPassword.value,
+    newPassword: newPassword.value || undefined
+  })
+  if (res) {
+    generatedPassword.value = res
+    ElMessage.success('密码重置成功')
+  }
 }
 
 function handleDelete(row) {
@@ -256,36 +270,50 @@ function handleDelete(row) {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    await deleteSysUser(row.id)
-    ElMessage.success('删除成功')
-    getList()
+    try {
+      await deleteSysUser(row.id)
+      ElMessage.success('删除成功')
+      getList()
+    } catch (error) {
+      ElMessage.error('删除失败：' + (error.message || '未知错误'))
+    }
   })
 }
 
 async function submitForm() {
   try {
     await formRef.value.validate()
-    const data = {
-      realName: form.nickname,
-      phone: form.phone,
-      email: form.email,
-      status: form.status,
-      roleIds: form.roleIds.length ? form.roleIds : undefined
-    }
     if (form.id) {
-      if (form.password) data.password = form.password
+      // 更新管理员
+      const data = {
+        realName: form.realName,
+        phone: form.phone,
+        email: form.email,
+        status: form.status,
+        roleIds: form.roleIds.length ? form.roleIds : undefined
+      }
       await updateSysUser(form.id, data)
       ElMessage.success('修改成功')
     } else {
-      data.username = form.username
-      data.password = form.password
+      // 新增管理员
+      const data = {
+        username: form.username,
+        password: form.password || undefined,
+        realName: form.realName,
+        phone: form.phone,
+        email: form.email,
+        roleIds: form.roleIds.length ? form.roleIds : undefined
+      }
       await addSysUser(data)
       ElMessage.success('新增成功')
     }
     open.value = false
     getList()
   } catch (error) {
-    console.error(error)
+    console.error('用户操作失败:', error)
+    // 显示具体的错误信息给用户
+    const errorMessage = error.message || error.response?.data?.message || '操作失败，请稍后重试'
+    ElMessage.error(errorMessage)
   }
 }
 
