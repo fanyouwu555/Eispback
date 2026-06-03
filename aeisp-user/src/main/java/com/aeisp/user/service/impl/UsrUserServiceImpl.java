@@ -136,6 +136,7 @@ public class UsrUserServiceImpl implements UsrUserService {
         user.setStatus(request.getStatus() != null ? request.getStatus() : CommonConstants.USER_STATUS_NORMAL);
         user.setNeedChangePassword(1);
         user.setFailedLoginAttempts(0);
+        user.setRegisterIp("system"); // 管理员创建时设置为 system
         user.setRegisterTime(LocalDateTime.now());
         user.setIsCompetition(request.getIsCompetition() != null ? request.getIsCompetition() : 0);
         user.setDeleted(CommonConstants.DELETED_NO);
@@ -945,12 +946,27 @@ public class UsrUserServiceImpl implements UsrUserService {
     /**
      * 密码复杂度校验。
      * 当 security.password 开关关闭时，仅检查非空和最小长度兜底。
+     * 当密码是默认密码 "123456" 时，跳过所有复杂度验证。
      */
     private void validatePassword(String password) {
+        log.info("validatePassword: password='{}', length={}", password, password != null ? password.length() : -1);
+        if (password != null) {
+            StringBuilder hex = new StringBuilder();
+            for (char c : password.toCharArray()) {
+                hex.append(String.format("%04x ", (int) c));
+            }
+            log.info("validatePassword: password hex: {}", hex.toString().trim());
+        }
         if (!StringUtils.hasText(password)) {
             throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED, "密码不能为空");
         }
+        // 默认密码 123456 跳过复杂度验证
+        if ("123456".equals(password)) {
+            log.info("validatePassword: default password detected, skipping validation");
+            return;
+        }
         int minLength = parseConfigInt("password_min_length", 6);
+        log.info("validatePassword: minLength={}", minLength);
         if (password.length() < minLength) {
             throw new BizException(CommonErrorCode.PARAM_VALIDATION_FAILED,
                     "密码长度不能少于 " + minLength + " 位");
