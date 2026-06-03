@@ -26,10 +26,8 @@ public class CreateUserRequest implements Serializable {
     private String username;
 
     /**
-     * 登录密码。
+     * 登录密码（不传则默认 123456）。
      */
-    @NotBlank(message = "密码不能为空")
-    @Size(min = 6, max = 100, message = "密码长度必须在 6-100 之间")
     private String password;
 
     /**
@@ -52,7 +50,7 @@ public class CreateUserRequest implements Serializable {
     private String phone;
 
     /**
-     * 角色 ID 列表。
+     * 角色ID列表。
      */
     private List<Long> roleIds;
 }
