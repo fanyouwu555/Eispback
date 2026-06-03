@@ -139,7 +139,7 @@
         </el-form-item>
         <el-form-item label="分类" prop="categoryPath">
           <el-cascader
-            v-model="createCategoryPath"
+            v-model="createForm.categoryPath"
             :options="categoryTreeOptions"
             :props="{ value: 'id', label: 'name', children: 'children', emitPath: true }"
             placeholder="选择分类"
@@ -241,7 +241,7 @@
         </el-form-item>
         <el-form-item label="分类" prop="categoryPath">
           <el-cascader
-            v-model="editCategoryPath"
+            v-model="editForm.categoryPath"
             :options="categoryTreeOptions"
             :props="{ value: 'id', label: 'name', children: 'children', emitPath: true }"
             placeholder="选择分类"
@@ -505,6 +505,7 @@ const createForm = reactive({
   difficulty: undefined,
   versionNo: '1.0.0',
   changelog: '',
+  categoryPath: [],
   topCategoryId: undefined,
   firstCategoryId: undefined,
   secondCategoryId: undefined,
@@ -525,6 +526,7 @@ const editForm = reactive({
   description: '',
   detailDesc: '',
   difficulty: undefined,
+  categoryPath: [],
   topCategoryId: undefined,
   firstCategoryId: undefined,
   secondCategoryId: undefined,
@@ -549,10 +551,7 @@ const versionForm = reactive({
   price: undefined
 })
 
-const createCategoryPath = ref([])
-const editCategoryPath = ref([])
-
-watch(createCategoryPath, (val) => {
+watch(() => createForm.categoryPath, (val) => {
   if (val && val.length > 0) {
     createForm.topCategoryId = val[0]
     createForm.firstCategoryId = val.length > 1 ? val[1] : undefined
@@ -564,7 +563,7 @@ watch(createCategoryPath, (val) => {
   }
 })
 
-watch(editCategoryPath, (val) => {
+watch(() => editForm.categoryPath, (val) => {
   if (val && val.length > 0) {
     editForm.topCategoryId = val[0]
     editForm.firstCategoryId = val.length > 1 ? val[1] : undefined
@@ -579,7 +578,14 @@ watch(editCategoryPath, (val) => {
 const templateRules = {
   templateName: [{ required: true, message: '模板名称不能为空', trigger: 'blur' }],
   sortWeight: [{ required: true, message: '请输入权重', trigger: 'blur' }],
-  versionNo: [{ required: true, message: '请输入版本号', trigger: 'blur' }]
+  versionNo: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
+  categoryPath: [{ required: true, message: '请选择完整的三级分类', trigger: 'change', validator: (rule, value, callback) => {
+    if (!value || value.length !== 3) {
+      callback(new Error('请选择完整的三级分类'))
+    } else {
+      callback()
+    }
+  } }]
 }
 
 const versionRules = {
@@ -664,7 +670,7 @@ function handleAdd() {
   createForm.validTime = undefined
   createForm.creator = ''
   createForm.produceDate = undefined
-  createCategoryPath.value = []
+  createForm.categoryPath = []
   createLibraryIds.value = []
   zipFile.value = null
   coverImageFile.value = null
@@ -740,7 +746,7 @@ function handleEdit(row) {
   editForm.secondCategoryId = row.secondCategoryId
   // Build cascader path from category IDs
   const leafId = row.secondCategoryId || row.firstCategoryId || row.topCategoryId
-  editCategoryPath.value = leafId ? (findPathToNode(categoryTreeOptions.value, leafId) || []) : []
+  editForm.categoryPath = leafId ? (findPathToNode(categoryTreeOptions.value, leafId) || []) : []
   // Load associated libraries (backend returns List<Long>)
   editLibraryIds.value = []
   getTemplateLibraries(row.id).then(res => {

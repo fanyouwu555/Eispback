@@ -327,6 +327,11 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         LambdaQueryWrapper<TplTemplateVersion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TplTemplateVersion::getTemplateId, templateId);
         versionMapper.delete(wrapper);
+        // 删除库资源关联（物理删除，关联表无 deleted 字段）
+        LambdaQueryWrapper<com.aeisp.template.entity.TemplateLibraryRelation> relationWrapper =
+                new LambdaQueryWrapper<>();
+        relationWrapper.eq(com.aeisp.template.entity.TemplateLibraryRelation::getTemplateId, templateId);
+        templateLibraryRelationMapper.delete(relationWrapper);
         // 清理资源服务器文件
         LambdaQueryWrapper<TplTemplateVersion> versionQuery = new LambdaQueryWrapper<>();
         versionQuery.eq(TplTemplateVersion::getTemplateId, templateId);
