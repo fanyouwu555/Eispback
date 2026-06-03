@@ -45,7 +45,6 @@ public class UserCreateRequest {
     /**
      * 初始密码（不传则默认 123456）。
      */
-    @Size(min = 6, max = 32, message = "密码长度需在 6-32 位之间")
     private String password;
 
     /**
