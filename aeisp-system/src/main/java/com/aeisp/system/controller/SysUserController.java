@@ -18,6 +18,7 @@ import com.aeisp.system.vo.SysUserVO;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +33,7 @@ import java.util.List;
  *
  * @author AEISP Team
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/system/users")
 @RequiredArgsConstructor
@@ -107,14 +109,27 @@ public class SysUserController {
     @OperationLog(module = "用户管理", operation = "新增")
     @PostMapping
     public Result<Void> createUser(@Valid @RequestBody CreateUserRequest request) {
-        SysUser user = new SysUser();
-        user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword());
-        user.setRealName(request.getRealName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
-        boolean success = sysUserService.createUser(user, request.getRoleIds());
-        return success ? Result.success() : Result.error(CommonErrorCode.SYSTEM_ERROR, "创建用户失败");
+        log.info("创建用户请求 - username: {}, realName: {}, email: {}, phone: {}, roleIds: {}",
+                request.getUsername(), request.getRealName(), request.getEmail(), request.getPhone(), request.getRoleIds());
+        try {
+            SysUser user = new SysUser();
+            user.setUsername(request.getUsername());
+            user.setPassword(request.getPassword());
+            user.setRealName(request.getRealName());
+            user.setEmail(request.getEmail());
+            user.setPhone(request.getPhone());
+            boolean success = sysUserService.createUser(user, request.getRoleIds());
+            if (success) {
+                log.info("创建用户成功 - username: {}", request.getUsername());
+                return Result.success();
+            } else {
+                log.error("创建用户失败 - username: {}", request.getUsername());
+                return Result.error(CommonErrorCode.SYSTEM_ERROR, "创建用户失败");
+            }
+        } catch (Exception e) {
+            log.error("创建用户异常 - username: {}, error: {}", request.getUsername(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     /**
