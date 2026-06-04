@@ -20,7 +20,7 @@ mvn test -pl aeisp-system            # Single module
 cd aeisp-admin && npm install && npm run dev   # Dev server on :5173, proxies /api to :8080
 
 # DB init (execute against running PostgreSQL, or run DbInitTest.java)
-psql -U postgres -d aeisp -f docs/sql/init-postgresql.sql
+psql -U postgres -d aeisp -f docs/sql/init-postgresql-complete.sql
 
 # Swagger UI: http://localhost:8080/swagger-ui.html
 # Default admin: admin / admin123
@@ -52,9 +52,7 @@ psql -U postgres -d aeisp -f docs/sql/init-postgresql.sql
 
 - **PostgreSQL 14+** via Docker Compose (also handles Redis)
 - **No ORM migration tool** — schema changes via raw SQL in `docs/sql/`
-  - `init-postgresql.sql` — full schema + seed data (78 hierarchical permissions: dirs/menus/buttons)
-  - `migration_postgresql.sql` — incremental changes
-  - `migration_2026_05_21_user_permission.sql` — user permission additions
+  - `init-postgresql-complete.sql` — full schema + seed data (唯一初始化脚本，新旧环境均适用)
 - Table prefixes: `sys_` (RBAC/config), `usr_` (user), `msg_` (message), `tpl_` (template), `ai_`/`model_` (AI), `prj_` (project), `duration_`/`recharge_` (recharge)
 - MyBatis-Plus: logical delete on `deleted` field, auto ID, `classpath*:/mapper/**/*.xml` for mapper XMLs
 

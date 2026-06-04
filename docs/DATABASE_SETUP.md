@@ -24,17 +24,14 @@ docker exec -i aeisp-postgres psql -U postgres -d aeisp < docs/sql/init-postgres
 如果数据库已经有数据，只需要添加缺失的表：
 
 ```bash
-docker exec -i aeisp-postgres psql -U postgres -d aeisp < docs/sql/migration-postgresql.sql
+docker exec -i aeisp-postgres psql -U postgres -d aeisp < docs/sql/init-postgresql-complete.sql
 ```
 
 ## SQL 文件说明
 
 | 文件 | 说明 | 适用场景 |
 |------|------|----------|
-| `init-postgresql.sql` | 基础初始化脚本 | 历史遗留，不推荐新环境使用 |
-| `init-postgresql-complete.sql` | **完整初始化脚本** | **新环境推荐使用** |
-| `migration-postgresql.sql` | 迁移脚本 | 给已存在的数据库添加缺失的表和字段 |
-| `migration_*.sql` | 增量迁移文件 | 单独的功能模块迁移 |
+| `init-postgresql-complete.sql` | **完整初始化脚本** | **唯一脚本，新旧环境均适用** |
 
 ## 数据库表清单
 
@@ -131,10 +128,10 @@ docker exec -i aeisp-postgres psql -U postgres -d aeisp < docs/sql/migration-pos
 
 ### Q: 登录时提示"登录失败，请稍后重试"？
 
-A: 检查数据库是否包含 `sys_feature_switch` 表。如果不存在，执行迁移脚本：
+A: 检查数据库是否包含 `sys_feature_switch` 表。如果不存在，重新执行完整初始化脚本：
 
 ```bash
-docker exec -i aeisp-postgres psql -U postgres -d aeisp < docs/sql/migration-postgresql.sql
+docker exec -i aeisp-postgres psql -U postgres -d aeisp < docs/sql/init-postgresql-complete.sql
 ```
 
 ### Q: 如何完全重置数据库？
@@ -197,9 +194,8 @@ SELECT COUNT(*) FROM sys_permission WHERE deleted = 0;
 
 ### 添加新表时
 
-1. 在 `migration-postgresql.sql` 中添加 `CREATE TABLE IF NOT EXISTS` 语句
-2. 同时在 `init-postgresql-complete.sql` 中添加对应的表定义（保持同步）
-3. 在本文件的"数据库表清单"中添加说明
+1. 在 `init-postgresql-complete.sql` 中添加 `CREATE TABLE IF NOT EXISTS` 语句和种子数据
+2. 在本文件的"数据库表清单"中添加说明
 
 ### 修改现有表时
 

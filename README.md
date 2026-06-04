@@ -49,10 +49,10 @@ aeisp-server/
 CREATE DATABASE aeisp WITH ENCODING = 'UTF8';
 ```
 
-执行初始化 SQL（位于 `docs/sql/init.sql`，待补充）：
+执行初始化 SQL：
 
 ```bash
-psql -U postgres -d aeisp -f docs/sql/init.sql
+psql -U postgres -d aeisp -f docs/sql/init-postgresql-complete.sql
 ```
 
 ### 3. 修改配置

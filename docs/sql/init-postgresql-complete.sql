@@ -65,7 +65,8 @@ CREATE TABLE IF NOT EXISTS sys_role (
     created_by BIGINT DEFAULT NULL,
     updated_by BIGINT DEFAULT NULL,
     deleted SMALLINT NOT NULL DEFAULT 0,
-    CONSTRAINT uk_sys_role_code UNIQUE (role_code)
+    CONSTRAINT uk_sys_role_code UNIQUE (role_code),
+    CONSTRAINT uk_sys_role_name UNIQUE (role_name)
 );
 CREATE INDEX IF NOT EXISTS idx_sys_role_status ON sys_role (status);
 CREATE INDEX IF NOT EXISTS idx_sys_role_is_system ON sys_role (is_system);
@@ -103,7 +104,7 @@ COMMENT ON TABLE sys_permission IS '系统权限点表（菜单树）';
 COMMENT ON COLUMN sys_permission.resource_type IS '资源类型：user/model/template/order/notification/system';
 COMMENT ON COLUMN sys_permission.action IS '操作类型：create/read/update/delete/manage/list/send/config/test';
 COMMENT ON COLUMN sys_permission.parent_id IS '父节点 ID，0 表示根节点';
-COMMENT ON COLUMN sys_permission.menu_type IS '类型：0-目录，1-菜单，2-按钮';
+COMMENT ON COLUMN sys_permission.menu_type IS '类型：0-目录，1-菜单，2-按钮，3-外链';
 COMMENT ON COLUMN sys_permission.sort_order IS '排序值（同级排序）';
 COMMENT ON COLUMN sys_permission.icon IS '图标（仅目录/菜单）';
 COMMENT ON COLUMN sys_permission.route_path IS '路由路径（仅目录/菜单）';
@@ -589,6 +590,21 @@ CREATE INDEX IF NOT EXISTS idx_usr_verification_record_target_scene ON usr_verif
 CREATE INDEX IF NOT EXISTS idx_usr_verification_record_created_at ON usr_verification_record (created_at);
 COMMENT ON TABLE usr_verification_record IS '验证码发送记录表';
 
+-- 用户时长消耗日志表
+CREATE TABLE IF NOT EXISTS usr_duration_log (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    consume_time TIMESTAMP DEFAULT NULL,
+    consume_type INT DEFAULT NULL,
+    consume_duration BIGINT DEFAULT NULL,
+    project_id BIGINT DEFAULT NULL,
+    description VARCHAR(255) DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_usr_duration_log_user_id ON usr_duration_log (user_id);
+COMMENT ON TABLE usr_duration_log IS '用户时长消耗日志表';
+COMMENT ON COLUMN usr_duration_log.consume_type IS '消耗类型：1-模型调用，2-仿真运行，3-编译调试';
+COMMENT ON COLUMN usr_duration_log.consume_duration IS '消耗时长（分钟）';
+
 -- --------------------------------------------------------
 -- 3. 通知消息模块 (aeisp-message)
 -- --------------------------------------------------------
@@ -597,6 +613,7 @@ COMMENT ON TABLE usr_verification_record IS '验证码发送记录表';
 CREATE TABLE IF NOT EXISTS msg_notification (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(128) NOT NULL,
+    summary VARCHAR(256) DEFAULT NULL,
     content TEXT DEFAULT NULL,
     msg_type SMALLINT NOT NULL DEFAULT 1,
     push_scope SMALLINT NOT NULL DEFAULT 1,
@@ -629,7 +646,8 @@ CREATE INDEX IF NOT EXISTS idx_msg_notification_push_time ON msg_notification (p
 CREATE INDEX IF NOT EXISTS idx_msg_notification_priority ON msg_notification (priority);
 CREATE INDEX IF NOT EXISTS idx_msg_notification_sent_at ON msg_notification (sent_at);
 COMMENT ON TABLE msg_notification IS '消息通知主表';
-COMMENT ON COLUMN msg_notification.status IS '状态：1-草稿，2-已发送，3-已撤回，4-定时发送';
+COMMENT ON COLUMN msg_notification.summary IS '消息摘要';
+COMMENT ON COLUMN msg_notification.status IS '状态：1-草稿，2-已发送，3-已撤回，4-定时发送，5-已归档，6-已过期';
 COMMENT ON COLUMN msg_notification.priority IS '优先级：1-低，2-中，3-高，4-紧急';
 COMMENT ON COLUMN msg_notification.channels IS '推送渠道（JSON 数组：site/email/sms/push）';
 COMMENT ON COLUMN msg_notification.target_user_ids IS '目标用户 ID 列表（JSON 数组）';
@@ -1230,17 +1248,27 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 (76, '删除模型', 'model:delete', 'model', 'delete', NULL, 31, 2, 4, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (77, '配置模型', 'model:config', 'model', 'config', NULL, 31, 2, 5, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (78, '测试模型', 'model:test', 'model', 'test', NULL, 31, 2, 6, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+-- 系统管理 -> 管理员管理 -> 按钮（补充）
+(79, '查看权限点列表', 'system:permission:read', 'system', 'read', NULL, 2, 2, 7, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 -- 系统配置模块 -> 功能开关 -> 按钮
 (80, '维护模式操作', 'system:feature:maintenance', 'system', 'update', NULL, 36, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
-(81, '功能开关切换', 'system:feature:toggle', 'system', 'update', NULL, 36, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1)
+(81, '功能开关切换', 'system:feature:toggle', 'system', 'update', NULL, 36, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+-- 库资源模块
+(82, '库资源管理', 'library:manage', 'library', 'manage', NULL, 0, 0, 40, 'Collection', '/library', NULL, 1, 1, NOW(), NOW(), 1, 1),
+(83, '库资源列表', 'library:list', 'library', 'list', NULL, 82, 1, 1, 'List', 'list', 'library/list/index', 1, 1, NOW(), NOW(), 1, 1),
+(84, '新增库资源', 'library:create', 'library', 'create', NULL, 83, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(85, '编辑库资源', 'library:update', 'library', 'update', NULL, 83, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(86, '删除库资源', 'library:delete', 'library', 'delete', NULL, 83, 2, 3, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(87, '查询库资源', 'library:read', 'library', 'read', NULL, 83, 2, 4, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(88, '版本管理', 'library:version:manage', 'library', 'manage', NULL, 83, 2, 5, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- 更新序列
-SELECT setval('sys_permission_id_seq', 81) WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'sys_permission_id_seq');
+SELECT setval('sys_permission_id_seq', 88) WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'sys_permission_id_seq');
 
 -- 初始化角色权限映射
 INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
--- 超级管理员：拥有全部 78 个权限（含 80, 81）
+-- 超级管理员：拥有全部权限（含 79, 80, 81, 82-88）
 (1, 1, NOW()), (1, 2, NOW()), (1, 3, NOW()), (1, 4, NOW()), (1, 5, NOW()), (1, 6, NOW()), (1, 7, NOW()), (1, 8, NOW()), (1, 9, NOW()), (1, 10, NOW()),
 (1, 11, NOW()), (1, 12, NOW()), (1, 13, NOW()), (1, 14, NOW()), (1, 15, NOW()), (1, 16, NOW()), (1, 17, NOW()), (1, 19, NOW()), (1, 20, NOW()),
 (1, 21, NOW()), (1, 22, NOW()), (1, 23, NOW()), (1, 24, NOW()), (1, 25, NOW()), (1, 26, NOW()), (1, 27, NOW()), (1, 28, NOW()), (1, 29, NOW()), (1, 30, NOW()),
@@ -1248,16 +1276,25 @@ INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
 (1, 41, NOW()), (1, 42, NOW()), (1, 43, NOW()), (1, 45, NOW()), (1, 46, NOW()), (1, 47, NOW()), (1, 48, NOW()), (1, 49, NOW()), (1, 50, NOW()),
 (1, 51, NOW()), (1, 52, NOW()), (1, 53, NOW()), (1, 54, NOW()), (1, 55, NOW()), (1, 56, NOW()), (1, 57, NOW()), (1, 58, NOW()), (1, 59, NOW()), (1, 60, NOW()),
 (1, 61, NOW()), (1, 62, NOW()), (1, 63, NOW()), (1, 64, NOW()), (1, 65, NOW()), (1, 66, NOW()), (1, 67, NOW()), (1, 68, NOW()), (1, 69, NOW()), (1, 70, NOW()),
-(1, 71, NOW()), (1, 72, NOW()), (1, 73, NOW()), (1, 74, NOW()), (1, 75, NOW()), (1, 76, NOW()), (1, 77, NOW()), (1, 78, NOW()), (1, 80, NOW()), (1, 81, NOW()),
--- 用户管理员：用户管理相关按钮
+(1, 71, NOW()), (1, 72, NOW()), (1, 73, NOW()), (1, 74, NOW()), (1, 75, NOW()), (1, 76, NOW()), (1, 77, NOW()), (1, 78, NOW()), (1, 79, NOW()), (1, 80, NOW()), (1, 81, NOW()),
+(1, 82, NOW()), (1, 83, NOW()), (1, 84, NOW()), (1, 85, NOW()), (1, 86, NOW()), (1, 87, NOW()), (1, 88, NOW()),
+-- 用户管理员：用户管理相关按钮 + 目录/菜单可见性
+(2, 3, NOW()), (2, 19, NOW()), (2, 20, NOW()),
 (2, 45, NOW()), (2, 46, NOW()), (2, 47, NOW()), (2, 48, NOW()), (2, 49, NOW()), (2, 50, NOW()), (2, 51, NOW()),
--- 模型管理员：AI配置相关按钮
+(2, 52, NOW()), (2, 53, NOW()),
+-- 模型管理员：AI配置相关按钮 + AI菜单可见性
+(3, 8, NOW()), (3, 30, NOW()), (3, 31, NOW()), (3, 32, NOW()),
+(3, 71, NOW()), (3, 72, NOW()),
 (3, 73, NOW()), (3, 74, NOW()), (3, 75, NOW()), (3, 76, NOW()), (3, 77, NOW()), (3, 78, NOW()),
--- 消息管理员：系统通告相关按钮
+-- 消息管理员：系统通告相关按钮 + 消息目录可见性
+(4, 5, NOW()), (4, 26, NOW()),
 (4, 58, NOW()), (4, 59, NOW()), (4, 60, NOW()), (4, 61, NOW()), (4, 62, NOW()),
--- 模板管理员：模板管理相关按钮
+-- 模板管理员：模板管理相关按钮 + 模板目录可见性
+(5, 7, NOW()), (5, 28, NOW()), (5, 29, NOW()),
+(5, 65, NOW()),
 (5, 66, NOW()), (5, 67, NOW()), (5, 68, NOW()), (5, 69, NOW()), (5, 70, NOW()),
--- 财务管理员：资产计费相关按钮
+-- 财务管理员：资产计费相关按钮 + 资产目录可见性
+(6, 4, NOW()), (6, 21, NOW()), (6, 22, NOW()), (6, 23, NOW()), (6, 24, NOW()), (6, 25, NOW()),
 (6, 54, NOW()), (6, 55, NOW()), (6, 56, NOW()), (6, 57, NOW())
 ON CONFLICT DO NOTHING;
 
@@ -1304,7 +1341,20 @@ INSERT INTO sys_config (config_key, config_value, description, environment, is_e
 ('backup.interval', '7', '备份周期（天）', 'all', 1, 'backup', 'number', NOW(), NOW()),
 ('backup.retention', '30', '保留备份份数', 'all', 1, 'backup', 'number', NOW(), NOW()),
 ('backup.path', 'D:/backups/', '备份存储路径', 'all', 1, 'backup', 'text', NOW(), NOW()),
-('backup.alert', 'true', '异常备份告警开关', 'all', 1, 'backup', 'boolean', NOW(), NOW())
+('backup.alert', 'true', '异常备份告警开关', 'all', 1, 'backup', 'boolean', NOW(), NOW()),
+('platform.website', '', '官网地址', 'all', 1, 'platform', 'text', NOW(), NOW()),
+('platform.foredomain', '', '前台域名', 'all', 1, 'platform', 'text', NOW(), NOW()),
+('platform.backdomain', '', '后台域名', 'all', 1, 'platform', 'text', NOW(), NOW()),
+('platform.name', 'AEisp', '平台名称', 'all', 1, 'platform', 'text', NOW(), NOW()),
+('platform.copyright', 'Copyright 2026 AEisp', '版权信息', 'all', 1, 'platform', 'text', NOW(), NOW()),
+('platform.icp', '', '备案号', 'all', 1, 'platform', 'text', NOW(), NOW()),
+('timeout.session', '120', '会话超时（分钟）', 'all', 1, 'timeout', 'number', NOW(), NOW()),
+('timeout.file', '30', '文件过期时间（天）', 'all', 1, 'timeout', 'number', NOW(), NOW()),
+('timeout.order', '30', '未支付订单超时（分钟）', 'all', 1, 'timeout', 'number', NOW(), NOW()),
+('timeout.task', '60', '运行任务超时（分钟）', 'all', 1, 'timeout', 'number', NOW(), NOW()),
+('threshold.balance', '10', '用户余额预警阈值', 'all', 1, 'threshold', 'number', NOW(), NOW()),
+('threshold.runtime', '50', '运行时长预警阈值', 'all', 1, 'threshold', 'number', NOW(), NOW()),
+('threshold.resource', '80', '资源占用告警阈值', 'all', 1, 'threshold', 'number', NOW(), NOW())
 ON CONFLICT (config_key) DO NOTHING;
 
 -- 初始化功能开关
@@ -1344,7 +1394,9 @@ INSERT INTO sys_dict_type (dict_name, dict_code, description, status, is_system,
 ('消息类型', 'msg_type', '通告消息类型', 1, 1, NOW()),
 ('推送范围', 'push_scope', '通告推送范围', 1, 1, NOW()),
 ('推送方式', 'push_type', '通告推送方式', 1, 1, NOW()),
-('余额操作类型', 'balance_op_type', '管理员调整余额/时长操作类型', 1, 1, NOW())
+('余额操作类型', 'balance_op_type', '管理员调整余额/时长操作类型', 1, 1, NOW()),
+('模板状态', 'template_status', '模板上下架及违规状态', 1, 1, NOW()),
+('模板费用类型', 'template_fee_type', '模板付费计费方式', 1, 1, NOW())
 ON CONFLICT (dict_code) DO NOTHING;
 
 -- 字典数据
@@ -1398,6 +1450,13 @@ INSERT INTO sys_dict_data (dict_code, item_label, item_value, sort_order, status
 ('push_type', '定时推送', '2', 2, 1, 'warning', 0),
 ('balance_op_type', '增加', '1', 1, 1, 'success', 1),
 ('balance_op_type', '扣减', '2', 2, 1, 'danger', 0),
-('balance_op_type', '设定', '3', 3, 1, 'primary', 0)
+('balance_op_type', '设定', '3', 3, 1, 'primary', 0),
+('template_status', '正常', '0', 1, 1, 'info', 1),
+('template_status', '上架', '1', 2, 1, 'success', 0),
+('template_status', '下架', '2', 3, 1, 'danger', 0),
+('template_status', '违规', '3', 4, 1, 'warning', 0),
+('template_fee_type', '免费', 'free', 1, 1, 'success', 1),
+('template_fee_type', '一次性付费', 'onetime', 2, 1, 'primary', 0),
+('template_fee_type', '订阅制', 'subscription', 3, 1, 'warning', 0)
 ON CONFLICT DO NOTHING;
 
