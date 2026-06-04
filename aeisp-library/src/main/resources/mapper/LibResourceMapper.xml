@@ -4,7 +4,7 @@
 
     <select id="selectMaxResourceCode" resultType="java.lang.String">
         SELECT MAX(resource_code) FROM lib_resource
-        WHERE resource_code LIKE CONCAT(#{prefix}, '%') AND deleted = 0
+        WHERE resource_code LIKE CONCAT(#{prefix}, '%')
     </select>
 
 </mapper>

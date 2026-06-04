@@ -56,3 +56,4 @@ admin-*.png
 # Error output files
 *.err
 
+uploads/

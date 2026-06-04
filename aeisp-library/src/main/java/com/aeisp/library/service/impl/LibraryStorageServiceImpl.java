@@ -2,10 +2,8 @@ package com.aeisp.library.service.impl;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ZipUtil;
-import com.aeisp.common.service.ResourceServerService;
 import com.aeisp.library.service.LibraryStorageService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,12 +24,6 @@ public class LibraryStorageServiceImpl implements LibraryStorageService {
 
     @Value("${library.upload-path:./uploads/library/}")
     private String basePath;
-
-    private final ResourceServerService resourceServerService;
-
-    public LibraryStorageServiceImpl(@Qualifier("libraryResourceServer") ResourceServerService resourceServerService) {
-        this.resourceServerService = resourceServerService;
-    }
 
     private String getBasePath() {
         return basePath;
@@ -93,7 +85,7 @@ public class LibraryStorageServiceImpl implements LibraryStorageService {
             log.warn("非法版本号: {}", versionNo);
             throw new SecurityException("非法版本号");
         }
-        String baseDir = resourceServerService.getUploadPath();
+        String baseDir = getBasePath();
         String versionDir = FileUtil.normalize(baseDir + "/" + resourceId + "/" + versionNo);
         File dir = new File(versionDir);
         if (!dir.exists() || !dir.isDirectory()) {
@@ -118,7 +110,7 @@ public class LibraryStorageServiceImpl implements LibraryStorageService {
             log.warn("非法版本号或文件路径: versionNo={}, filePath={}", versionNo, filePath);
             throw new SecurityException("非法文件路径");
         }
-        String baseDir = resourceServerService.getUploadPath();
+        String baseDir = getBasePath();
         String absolutePath = FileUtil.normalize(baseDir + "/" + resourceId + "/" + versionNo + "/" + filePath);
         if (!isWithinBaseDir(absolutePath)) {
             log.warn("路径超出允许范围: {}", absolutePath);

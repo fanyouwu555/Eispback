@@ -105,8 +105,13 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
         resource.setCurrentVersionId(version.getId());
         resourceMapper.updateById(resource);
 
-        // 8. 清理临时文件
-        libraryStorageService.deleteVersionFiles(resource.getId(), request.getVersionNo());
+        // 8. 清理解压临时目录（保留 ZIP 和已上传到 NFS 的文件）
+        String extractDirPath = new File(zipAbsPath).getParent() + "/extracted";
+        File extractDirFile = new File(extractDirPath);
+        if (extractDirFile.exists()) {
+            cn.hutool.core.io.FileUtil.del(extractDirFile);
+            log.info("清理解压临时目录: {}", extractDirPath);
+        }
 
         return true;
     }
@@ -172,8 +177,12 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
         resource.setUpdatedAt(LocalDateTime.now());
         resourceMapper.updateById(resource);
 
-        // 清理临时文件
-        libraryStorageService.deleteVersionFiles(resourceId, versionNo);
+        // 清理解压临时目录（保留 ZIP 和已上传到 NFS 的文件）
+        File extractDirFile = new File(extractDir);
+        if (extractDirFile.exists()) {
+            cn.hutool.core.io.FileUtil.del(extractDirFile);
+            log.info("清理解压临时目录: {}", extractDir);
+        }
 
         return true;
     }
@@ -371,7 +380,13 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
 
     private String uploadZipToServer(Long resourceId, String versionNo, String zipAbsPath, String relativePath) {
         try {
-            return resourceServerService.uploadFile(relativePath, new File(zipAbsPath));
+            // 如果文件已在资源服务器路径下（本地存储路径与 NFS 路径相同），直接返回 URL
+            File sourceFile = new File(zipAbsPath);
+            if (resourceServerService.fileExists(relativePath)) {
+                log.info("ZIP 已存在于资源服务器，跳过上传: {}", relativePath);
+                return resourceServerService.getUrl(relativePath);
+            }
+            return resourceServerService.uploadFile(relativePath, sourceFile);
         } catch (Exception e) {
             log.error("上传 ZIP 到资源服务器失败: resourceId={}, versionNo={}", resourceId, versionNo, e);
             throw new BizException(LibraryErrorCode.FILE_UPLOAD_FAILED);

@@ -55,6 +55,9 @@ jwt:
 template:
   upload-path: ./uploads/templates/
 
+library:
+  upload-path: D:/Users/admin/Desktop/EISP/Resource/Library/
+
 resource-server:
   type: nfs    # nfs or oss
   nfs:

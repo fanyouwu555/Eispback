@@ -196,7 +196,7 @@ COMMENT ON TABLE sys_user_behavior_log IS '用户行为日志表';
 -- 异常报错日志表
 CREATE TABLE IF NOT EXISTS sys_error_log (
     id BIGSERIAL PRIMARY KEY,
-    error_type VARCHAR(50) NOT NULL,
+    error_type VARCHAR(200) NOT NULL,
     error_message TEXT NOT NULL,
     stack_trace TEXT DEFAULT NULL,
     request_url VARCHAR(255) DEFAULT NULL,
@@ -959,7 +959,17 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 (77, '配置模型', 'model:config', 'model', 'config', NULL, 31, 2, 5, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (78, '测试模型', 'model:test', 'model', 'test', NULL, 31, 2, 6, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 -- 系统管理 -> 菜单管理 -> 按钮（补充）
-(79, '查看权限点列表', 'system:permission:read', 'system', 'read', NULL, 2, 2, 7, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1);
+(79, '查看权限点列表', 'system:permission:read', 'system', 'read', NULL, 2, 2, 7, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+-- 库资源模块 -> 目录
+(80, '库资源管理', 'library:manage', 'library', 'manage', NULL, 0, 0, 40, 'Collection', '/library', NULL, 1, 1, NOW(), NOW(), 1, 1),
+-- 库资源模块 -> 菜单
+(81, '库资源列表', 'library:list', 'library', 'list', 80, 1, 1, 'List', 'list', 'library/list/index', 1, 1, NOW(), NOW(), 1, 1),
+-- 库资源模块 -> 按钮
+(82, '新增库资源', 'library:create', 'library', 'create', 81, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(83, '编辑库资源', 'library:update', 'library', 'update', 81, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(84, '删除库资源', 'library:delete', 'library', 'delete', 81, 2, 3, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(85, '查询库资源', 'library:read', 'library', 'read', 81, 2, 4, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+(86, '版本管理', 'library:version:manage', 'library', 'manage', 81, 2, 5, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1);
 
 -- 初始化角色权限映射
 -- 超级管理员：拥有全部 78 个权限
@@ -972,6 +982,7 @@ INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
 (1, 51, NOW()), (1, 52, NOW()), (1, 53, NOW()), (1, 54, NOW()), (1, 55, NOW()), (1, 56, NOW()), (1, 57, NOW()), (1, 58, NOW()), (1, 59, NOW()), (1, 60, NOW()),
 (1, 61, NOW()), (1, 62, NOW()), (1, 63, NOW()), (1, 64, NOW()), (1, 65, NOW()), (1, 66, NOW()), (1, 67, NOW()), (1, 68, NOW()), (1, 69, NOW()), (1, 70, NOW()),
 (1, 71, NOW()), (1, 72, NOW()), (1, 73, NOW()), (1, 74, NOW()), (1, 75, NOW()), (1, 76, NOW()), (1, 77, NOW()), (1, 78, NOW()), (1, 79, NOW()),
+(1, 80, NOW()), (1, 81, NOW()), (1, 82, NOW()), (1, 83, NOW()), (1, 84, NOW()), (1, 85, NOW()), (1, 86, NOW()),
 -- 用户管理员：用户管理相关按钮
 (2, 45, NOW()), (2, 46, NOW()), (2, 47, NOW()), (2, 48, NOW()), (2, 49, NOW()), (2, 50, NOW()), (2, 51, NOW()),
 -- 模型管理员：AI配置相关按钮
@@ -984,8 +995,8 @@ INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
 (6, 54, NOW()), (6, 55, NOW()), (6, 56, NOW()), (6, 57, NOW());
 
 -- 更新序列
-SELECT setval('sys_permission_id_seq', 79);
-SELECT setval('sys_role_permission_id_seq', 105);
+SELECT setval('sys_permission_id_seq', 86);
+SELECT setval('sys_role_permission_id_seq', 112);
 
 -- 初始化超级管理员账号（密码明文：admin123，BCrypt 加密后）
 INSERT INTO sys_user (id, username, password, real_name, email, phone, status, created_at, updated_at) VALUES
@@ -1017,7 +1028,9 @@ INSERT INTO sys_config (config_key, config_value, environment, description, cate
 ('default_model_max_qps', '10', 'all', '默认模型QPS限制', 'threshold', 'number', NOW(), NOW()),
 ('model_failure_rate_threshold', '10', 'all', '模型失败率告警阈值（%）', 'threshold', 'number', NOW(), NOW()),
 ('notification_archive_days', '90', 'all', '消息归档天数', 'timeout', 'number', NOW(), NOW()),
-('recharge_order_timeout_minutes', '30', 'all', '充值订单超时时间（分钟）', 'timeout', 'number', NOW(), NOW());
+('recharge_order_timeout_minutes', '30', 'all', '充值订单超时时间（分钟）', 'timeout', 'number', NOW(), NOW()),
+('storage.library.path', 'D:/Users/admin/Desktop/EISP/Resource/Library/', 'all', '库资源本地存储路径', 'storage', 'text', NOW(), NOW()),
+('storage.library.baseUrl', 'http://192.168.50.215/EISP/Resource/Library/', 'all', '库资源访问基础URL', 'storage', 'text', NOW(), NOW());
 
 -- --------------------------------------------------------
 -- 字典类型种子数据
