@@ -56,6 +56,7 @@ import java.util.stream.Collectors;
 public class UsrUserServiceImpl implements UsrUserService {
 
     private static final Long DEFAULT_USER_ROLE_ID = 7L;
+    private static final List<Long> DEFAULT_USER_ROLE_IDS = List.of(DEFAULT_USER_ROLE_ID);
 
     private final UsrUserMapper usrUserMapper;
     private final UsrUserRoleMapper usrUserRoleMapper;
@@ -161,9 +162,8 @@ public class UsrUserServiceImpl implements UsrUserService {
         createDefaultBalance(userId);
 
         // 同步创建角色关联
-        if (!CollectionUtils.isEmpty(request.getRoleIds())) {
-            bindUserRoles(userId, request.getRoleIds(), null);
-        }
+        List<Long> roleIds = CollectionUtils.isEmpty(request.getRoleIds()) ? DEFAULT_USER_ROLE_IDS : request.getRoleIds();
+        bindUserRoles(userId, roleIds, null);
 
         return rawPassword;
     }

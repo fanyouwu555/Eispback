@@ -271,17 +271,17 @@ public class AuthController {
      */
     private void recordFailedLoginLog(String username, String ip, String device) {
         try {
-            UsrLoginLog log = new UsrLoginLog();
-            log.setLoginAccount(username);
-            log.setLoginType(1);
-            log.setLoginResult(2); // 密码错误
-            log.setIpAddress(ip);
-            log.setDeviceType(UserAgentUtil.parseDeviceType(device));
-            log.setOsInfo(UserAgentUtil.parseOs(device));
+            UsrLoginLog loginLog = new UsrLoginLog();
+            loginLog.setLoginAccount(username);
+            loginLog.setLoginType(1);
+            loginLog.setLoginResult(2); // 密码错误
+            loginLog.setIpAddress(ip);
+            loginLog.setDeviceType(UserAgentUtil.parseDeviceType(device));
+            loginLog.setOsInfo(UserAgentUtil.parseOs(device));
             String browser = UserAgentUtil.parseBrowser(device);
-            log.setBrowserInfo(browser != null ? browser : device);
-            log.setCreatedAt(LocalDateTime.now());
-            usrLoginLogService.saveLog(log);
+            loginLog.setBrowserInfo(browser != null ? browser : device);
+            loginLog.setCreatedAt(LocalDateTime.now());
+            usrLoginLogService.saveLog(loginLog);
         } catch (Exception e) {
             log.debug("记录失败登录日志异常: {}", e.getMessage());
         }
@@ -309,28 +309,33 @@ public class AuthController {
         String ip = getClientIp(request);
         String device = request.getHeader("User-Agent");
         if ("user".equals(userDetails.getUserType())) {
-            UsrLoginLog log = new UsrLoginLog();
-            log.setUserId(userDetails.getUserId());
-            log.setLoginAccount(userDetails.getUsername());
-            log.setLoginType(1);
-            log.setLoginResult(success ? 1 : 2);
-            log.setIpAddress(ip);
-            log.setDeviceType(UserAgentUtil.parseDeviceType(device));
-            log.setOsInfo(UserAgentUtil.parseOs(device));
+            UsrLoginLog loginLog = new UsrLoginLog();
+            loginLog.setUserId(userDetails.getUserId());
+            loginLog.setLoginAccount(userDetails.getUsername());
+            loginLog.setLoginType(1);
+            loginLog.setLoginResult(success ? 1 : 2);
+            loginLog.setIpAddress(ip);
+            loginLog.setDeviceType(UserAgentUtil.parseDeviceType(device));
+            loginLog.setOsInfo(UserAgentUtil.parseOs(device));
             String browser = UserAgentUtil.parseBrowser(device);
-            log.setBrowserInfo(browser != null ? browser : device);
-            log.setCreatedAt(LocalDateTime.now());
-            usrLoginLogService.saveLog(log);
+            loginLog.setBrowserInfo(browser != null ? browser : device);
+            loginLog.setCreatedAt(LocalDateTime.now());
+            usrLoginLogService.saveLog(loginLog);
 
             // 记录用户行为日志
             if (success && sysUserBehaviorLogMapper != null) {
-                SysUserBehaviorLog behaviorLog = new SysUserBehaviorLog();
-                behaviorLog.setUserId(userDetails.getUserId());
-                behaviorLog.setBehaviorType("LOGIN");
-                behaviorLog.setIpAddress(ip);
-                behaviorLog.setDeviceInfo(device);
-                behaviorLog.setCreatedAt(LocalDateTime.now());
-                sysUserBehaviorLogMapper.insert(behaviorLog);
+                try {
+                    SysUserBehaviorLog behaviorLog = new SysUserBehaviorLog();
+                    behaviorLog.setUserId(userDetails.getUserId());
+                    behaviorLog.setBehaviorType("LOGIN");
+                    behaviorLog.setIpAddress(ip);
+                    // deviceInfo/behaviorDetail 是 JSONB 字段，暂不设置避免类型转换问题
+                    behaviorLog.setCreatedAt(LocalDateTime.now());
+                    sysUserBehaviorLogMapper.insert(behaviorLog);
+                } catch (Exception e) {
+                    log.warn("记录用户行为日志失败: {}", e.getMessage());
+                    // 不影响主登录流程
+                }
             }
         } else {
             SysOperationLog log = new SysOperationLog();

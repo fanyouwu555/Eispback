@@ -38,7 +38,7 @@ public class SysUserBehaviorLog {
     private String behaviorType;
 
     /**
-     * 行为详情JSON。
+     * 行为详情JSON。（JSONB类型，插入时设为null避免类型转换问题）
      */
     private String behaviorDetail;
 
@@ -48,7 +48,7 @@ public class SysUserBehaviorLog {
     private String ipAddress;
 
     /**
-     * 设备信息JSON。
+     * 设备信息JSON。（JSONB类型，插入时设为null避免类型转换问题）
      */
     private String deviceInfo;
 
