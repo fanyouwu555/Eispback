@@ -963,7 +963,7 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 -- 库资源模块 -> 目录
 (80, '库资源管理', 'library:manage', 'library', 'manage', NULL, 0, 0, 40, 'Collection', '/library', NULL, 1, 1, NOW(), NOW(), 1, 1),
 -- 库资源模块 -> 菜单
-(81, '库资源列表', 'library:list', 'library', 'list', 80, 1, 1, 'List', 'list', 'library/list/index', 1, 1, NOW(), NOW(), 1, 1),
+(81, '库资源列表', 'library:list', 'library', 'list', 80, 1, 1, 'List', 'list', 'library/list/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 -- 库资源模块 -> 按钮
 (82, '新增库资源', 'library:create', 'library', 'create', 81, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (83, '编辑库资源', 'library:update', 'library', 'update', 81, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
