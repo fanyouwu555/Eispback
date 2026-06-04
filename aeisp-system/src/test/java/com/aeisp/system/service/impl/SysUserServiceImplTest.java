@@ -2,10 +2,12 @@ package com.aeisp.system.service.impl;
 
 import com.aeisp.common.constant.CommonConstants;
 import com.aeisp.system.entity.SysUser;
-import com.aeisp.system.entity.SysUserRole;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -40,6 +43,10 @@ class SysUserServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        // 初始化 MyBatis-Plus Lambda 缓存（单元测试无 Spring 上下文）
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), SysUser.class);
+        // 设置 @Value 注入的默认密码（单元测试无 Spring 上下文）
+        ReflectionTestUtils.setField(sysUserService, "defaultPassword", "123456");
         // 设置默认行为
         lenient().when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "encoded_" + inv.getArgument(0));
     }
@@ -193,8 +200,8 @@ class SysUserServiceImplTest {
 
     @Test
     void testUpdateUserSuccess() {
-        // 模拟更新用户成功
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        // 模拟更新用户成功（使用 UpdateWrapper）
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -206,7 +213,7 @@ class SysUserServiceImplTest {
         boolean result = sysUserService.updateUser(user, List.of(1L));
 
         assertTrue(result);
-        verify(sysUserMapper).updateById(any(SysUser.class));
+        verify(sysUserMapper).update(isNull(), any());
         verify(sysUserRoleMapper).deleteByUserId(1L);
         verify(sysUserRoleMapper).batchInsert(1L, List.of(1L));
     }
@@ -214,7 +221,7 @@ class SysUserServiceImplTest {
     @Test
     void testUpdateUserWithPassword() {
         // 测试更新用户时包含密码
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -224,14 +231,14 @@ class SysUserServiceImplTest {
         boolean result = sysUserService.updateUser(user, null);
 
         assertTrue(result);
-        verify(sysUserMapper).updateById(any(SysUser.class));
+        verify(sysUserMapper).update(isNull(), any());
         verify(passwordEncoder).encode("newpassword123");
     }
 
     @Test
     void testUpdateUserWithoutPassword() {
         // 测试更新用户时不包含密码
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -240,7 +247,7 @@ class SysUserServiceImplTest {
         boolean result = sysUserService.updateUser(user, null);
 
         assertTrue(result);
-        verify(sysUserMapper).updateById(any(SysUser.class));
+        verify(sysUserMapper).update(isNull(), any());
         verify(passwordEncoder, never()).encode(anyString());
     }
 
@@ -270,13 +277,8 @@ class SysUserServiceImplTest {
     @Test
     void testDeleteLastSuperAdminThrowsException() {
         // 测试：不能删除最后一个超级管理员
-        // 模拟用户有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenAnswer(inv -> {
-            SysUserRole userRole = new SysUserRole();
-            userRole.setUserId(1L);
-            userRole.setRoleId(1L); // SUPER_ADMIN_ROLE_ID
-            return List.of(userRole);
-        });
+        // 模拟用户有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(1L);
         // 模拟只有一个超级管理员
         when(sysUserRoleMapper.countUsersByRoleId(1L)).thenReturn(1L);
 
@@ -288,8 +290,8 @@ class SysUserServiceImplTest {
     @Test
     void testDeleteNonSuperAdminSuccess() {
         // 测试：可以删除非超级管理员用户
-        // 模拟用户没有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenReturn(List.of());
+        // 模拟用户没有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(0L);
 
         when(sysUserMapper.deleteById(1L)).thenReturn(1);
 
@@ -303,13 +305,8 @@ class SysUserServiceImplTest {
     @Test
     void testDeleteSuperAdminNotLastSuccess() {
         // 测试：可以删除有超级管理员角色但不是最后一个的用户
-        // 模拟用户有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenAnswer(inv -> {
-            SysUserRole userRole = new SysUserRole();
-            userRole.setUserId(1L);
-            userRole.setRoleId(1L); // SUPER_ADMIN_ROLE_ID
-            return List.of(userRole);
-        });
+        // 模拟用户有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(1L);
         // 模拟有多个超级管理员（不是最后一个）
         when(sysUserRoleMapper.countUsersByRoleId(1L)).thenReturn(2L);
         when(sysUserMapper.deleteById(1L)).thenReturn(1);

@@ -3,10 +3,12 @@ package com.aeisp.system.service.impl;
 import com.aeisp.common.exception.BizException;
 import com.aeisp.system.code.SystemErrorCode;
 import com.aeisp.system.entity.SysUser;
-import com.aeisp.system.entity.SysUserRole;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +44,8 @@ class SuperAdminProtectionTest {
 
     @BeforeEach
     void setUp() {
+        // 初始化 MyBatis-Plus Lambda 缓存（单元测试无 Spring 上下文）
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), SysUser.class);
         lenient().when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "encoded_" + inv.getArgument(0));
     }
 
@@ -51,14 +55,8 @@ class SuperAdminProtectionTest {
      */
     @Test
     void testDeleteLastSuperAdminThrowsException() {
-        // 模拟用户有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenAnswer(inv -> {
-            SysUserRole userRole = new SysUserRole();
-            userRole.setUserId(1L);
-            userRole.setRoleId(1L); // SUPER_ADMIN_ROLE_ID
-            return List.of(userRole);
-        });
-
+        // 模拟用户有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(1L);
         // 模拟只有一个超级管理员
         when(sysUserRoleMapper.countUsersByRoleId(1L)).thenReturn(1L);
 
@@ -74,14 +72,8 @@ class SuperAdminProtectionTest {
      */
     @Test
     void testDeleteNonLastSuperAdminSuccess() {
-        // 模拟用户有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenAnswer(inv -> {
-            SysUserRole userRole = new SysUserRole();
-            userRole.setUserId(1L);
-            userRole.setRoleId(1L); // SUPER_ADMIN_ROLE_ID
-            return List.of(userRole);
-        });
-
+        // 模拟用户有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(1L);
         // 模拟有多个超级管理员（不是最后一个）
         when(sysUserRoleMapper.countUsersByRoleId(1L)).thenReturn(2L);
         when(sysUserMapper.deleteById(1L)).thenReturn(1);
@@ -99,8 +91,8 @@ class SuperAdminProtectionTest {
      */
     @Test
     void testDeleteNonSuperAdminSuccess() {
-        // 模拟用户没有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenReturn(List.of());
+        // 模拟用户没有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(0L);
 
         when(sysUserMapper.deleteById(1L)).thenReturn(1);
 
@@ -117,14 +109,8 @@ class SuperAdminProtectionTest {
      */
     @Test
     void testDemoteLastSuperAdminThrowsException() {
-        // 模拟用户有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenAnswer(inv -> {
-            SysUserRole userRole = new SysUserRole();
-            userRole.setUserId(1L);
-            userRole.setRoleId(1L); // SUPER_ADMIN_ROLE_ID
-            return List.of(userRole);
-        });
-
+        // 模拟用户有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(1L);
         // 模拟只有一个超级管理员
         when(sysUserRoleMapper.countUsersByRoleId(1L)).thenReturn(1L);
 
@@ -138,7 +124,7 @@ class SuperAdminProtectionTest {
         // 验证抛出异常
         BizException exception = assertThrows(BizException.class, () -> sysUserService.updateUser(user, newRoleIds));
         assertEquals(SystemErrorCode.USER_CANNOT_DEMOTE_SUPER.getCode(), exception.getCode());
-        verify(sysUserMapper, never()).updateById(any(SysUser.class));
+        verify(sysUserMapper, never()).update(isNull(), any());
     }
 
     /**
@@ -147,17 +133,11 @@ class SuperAdminProtectionTest {
      */
     @Test
     void testDemoteNonLastSuperAdminSuccess() {
-        // 模拟用户有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenAnswer(inv -> {
-            SysUserRole userRole = new SysUserRole();
-            userRole.setUserId(1L);
-            userRole.setRoleId(1L); // SUPER_ADMIN_ROLE_ID
-            return List.of(userRole);
-        });
-
+        // 模拟用户有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(1L);
         // 模拟有多个超级管理员（不是最后一个）
         when(sysUserRoleMapper.countUsersByRoleId(1L)).thenReturn(2L);
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -169,7 +149,7 @@ class SuperAdminProtectionTest {
         boolean result = sysUserService.updateUser(user, newRoleIds);
 
         assertTrue(result);
-        verify(sysUserMapper).updateById(any(SysUser.class));
+        verify(sysUserMapper).update(isNull(), any());
         verify(sysUserRoleMapper).deleteByUserId(1L);
         verify(sysUserRoleMapper).batchInsert(1L, newRoleIds);
     }
@@ -181,8 +161,8 @@ class SuperAdminProtectionTest {
     @Test
     void testUpdateUserKeepSuperAdminRoleSuccess() {
         // 当新角色列表包含超级管理员角色时，不会触发保护逻辑
-        // 因此不需要模拟 selectList 和 countUsersByRoleId
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        // 因此不需要模拟 selectCount 和 countUsersByRoleId
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -194,7 +174,7 @@ class SuperAdminProtectionTest {
         boolean result = sysUserService.updateUser(user, newRoleIds);
 
         assertTrue(result);
-        verify(sysUserMapper).updateById(any(SysUser.class));
+        verify(sysUserMapper).update(isNull(), any());
         verify(sysUserRoleMapper).deleteByUserId(1L);
         verify(sysUserRoleMapper).batchInsert(1L, newRoleIds);
     }
@@ -205,10 +185,10 @@ class SuperAdminProtectionTest {
      */
     @Test
     void testUpdateNonSuperAdminSuccess() {
-        // 模拟用户没有超级管理员角色
-        when(sysUserRoleMapper.selectList(any())).thenReturn(List.of());
+        // 模拟用户没有超级管理员角色（使用 selectCount）
+        when(sysUserRoleMapper.selectCount(any())).thenReturn(0L);
 
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -220,7 +200,7 @@ class SuperAdminProtectionTest {
         boolean result = sysUserService.updateUser(user, newRoleIds);
 
         assertTrue(result);
-        verify(sysUserMapper).updateById(any(SysUser.class));
+        verify(sysUserMapper).update(isNull(), any());
         verify(sysUserRoleMapper).deleteByUserId(1L);
         verify(sysUserRoleMapper).batchInsert(1L, newRoleIds);
     }

@@ -67,6 +67,10 @@ resource-server:
     upload-path: D:/Users/admin/Desktop/EISP/Notification/
     base-url: http://192.168.50.215/EISP/Notification/
 
+aeisp:
+  security:
+    default-password: "123456"  # 新用户默认密码，生产环境应改为更强密码
+
 logging:
   level:
     com.aeisp: debug

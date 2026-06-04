@@ -6,6 +6,8 @@
     email VARCHAR(64) DEFAULT NULL,
     phone VARCHAR(20) DEFAULT NULL,
     status SMALLINT NOT NULL DEFAULT 1,
+    last_login_ip VARCHAR(64) DEFAULT NULL,
+    last_login_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
@@ -24,6 +26,8 @@ COMMENT ON COLUMN sys_user.real_name IS '真实姓名';
 COMMENT ON COLUMN sys_user.email IS '电子邮箱';
 COMMENT ON COLUMN sys_user.phone IS '手机号码';
 COMMENT ON COLUMN sys_user.status IS '状态：0-禁用，1-正常';
+COMMENT ON COLUMN sys_user.last_login_ip IS '最后登录 IP 地址';
+COMMENT ON COLUMN sys_user.last_login_at IS '最后登录时间';
 COMMENT ON COLUMN sys_user.created_at IS '创建时间';
 COMMENT ON COLUMN sys_user.updated_at IS '更新时间';
 COMMENT ON COLUMN sys_user.created_by IS '创建人 ID';
@@ -38,17 +42,20 @@ CREATE TABLE IF NOT EXISTS sys_role (
     description VARCHAR(255) DEFAULT NULL,
     status SMALLINT NOT NULL DEFAULT 1,
     is_system SMALLINT NOT NULL DEFAULT 0,
+    data_scope VARCHAR(20) NOT NULL DEFAULT 'ALL',
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
     updated_by BIGINT DEFAULT NULL,
     deleted SMALLINT NOT NULL DEFAULT 0,
-    CONSTRAINT uk_sys_role_code UNIQUE (role_code)
+    CONSTRAINT uk_sys_role_code UNIQUE (role_code),
+    CONSTRAINT uk_sys_role_name UNIQUE (role_name)
 );
 CREATE INDEX IF NOT EXISTS idx_sys_role_status ON sys_role (status);
 CREATE INDEX IF NOT EXISTS idx_sys_role_is_system ON sys_role (is_system);
 COMMENT ON TABLE sys_role IS '系统角色表';
 COMMENT ON COLUMN sys_role.is_system IS '是否系统内置角色：0-自定义，1-系统内置（不可删除）';
+COMMENT ON COLUMN sys_role.data_scope IS '数据权限范围：ALL-全部数据，SELF-仅本人数据';
 
 -- 权限点表（支持菜单树结构）
 CREATE TABLE IF NOT EXISTS sys_permission (
@@ -80,7 +87,7 @@ COMMENT ON TABLE sys_permission IS '系统权限点表（菜单树）';
 COMMENT ON COLUMN sys_permission.resource_type IS '资源类型：user/model/template/order/notification/system';
 COMMENT ON COLUMN sys_permission.action IS '操作类型：create/read/update/delete/manage/list/send/config/test';
 COMMENT ON COLUMN sys_permission.parent_id IS '父节点 ID，0 表示根节点';
-COMMENT ON COLUMN sys_permission.menu_type IS '类型：0-目录，1-菜单，2-按钮';
+COMMENT ON COLUMN sys_permission.menu_type IS '类型：0-目录，1-菜单，2-按钮，3-外链';
 COMMENT ON COLUMN sys_permission.sort_order IS '排序值（同级排序）';
 COMMENT ON COLUMN sys_permission.icon IS '图标（仅目录/菜单）';
 COMMENT ON COLUMN sys_permission.route_path IS '路由路径（仅目录/菜单）';
@@ -950,7 +957,9 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 (75, '修改模型', 'model:update', 'model', 'update', NULL, 31, 2, 3, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (76, '删除模型', 'model:delete', 'model', 'delete', NULL, 31, 2, 4, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (77, '配置模型', 'model:config', 'model', 'config', NULL, 31, 2, 5, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
-(78, '测试模型', 'model:test', 'model', 'test', NULL, 31, 2, 6, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1);
+(78, '测试模型', 'model:test', 'model', 'test', NULL, 31, 2, 6, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
+-- 系统管理 -> 菜单管理 -> 按钮（补充）
+(79, '查看权限点列表', 'system:permission:read', 'system', 'read', NULL, 2, 2, 7, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1);
 
 -- 初始化角色权限映射
 -- 超级管理员：拥有全部 78 个权限
@@ -962,7 +971,7 @@ INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
 (1, 41, NOW()), (1, 42, NOW()), (1, 43, NOW()), (1, 45, NOW()), (1, 46, NOW()), (1, 47, NOW()), (1, 48, NOW()), (1, 49, NOW()), (1, 50, NOW()),
 (1, 51, NOW()), (1, 52, NOW()), (1, 53, NOW()), (1, 54, NOW()), (1, 55, NOW()), (1, 56, NOW()), (1, 57, NOW()), (1, 58, NOW()), (1, 59, NOW()), (1, 60, NOW()),
 (1, 61, NOW()), (1, 62, NOW()), (1, 63, NOW()), (1, 64, NOW()), (1, 65, NOW()), (1, 66, NOW()), (1, 67, NOW()), (1, 68, NOW()), (1, 69, NOW()), (1, 70, NOW()),
-(1, 71, NOW()), (1, 72, NOW()), (1, 73, NOW()), (1, 74, NOW()), (1, 75, NOW()), (1, 76, NOW()), (1, 77, NOW()), (1, 78, NOW()),
+(1, 71, NOW()), (1, 72, NOW()), (1, 73, NOW()), (1, 74, NOW()), (1, 75, NOW()), (1, 76, NOW()), (1, 77, NOW()), (1, 78, NOW()), (1, 79, NOW()),
 -- 用户管理员：用户管理相关按钮
 (2, 45, NOW()), (2, 46, NOW()), (2, 47, NOW()), (2, 48, NOW()), (2, 49, NOW()), (2, 50, NOW()), (2, 51, NOW()),
 -- 模型管理员：AI配置相关按钮
@@ -975,7 +984,7 @@ INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
 (6, 54, NOW()), (6, 55, NOW()), (6, 56, NOW()), (6, 57, NOW());
 
 -- 更新序列
-SELECT setval('sys_permission_id_seq', 78);
+SELECT setval('sys_permission_id_seq', 79);
 SELECT setval('sys_role_permission_id_seq', 105);
 
 -- 初始化超级管理员账号（密码明文：admin123，BCrypt 加密后）

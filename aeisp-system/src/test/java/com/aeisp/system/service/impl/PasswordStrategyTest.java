@@ -4,6 +4,9 @@ import com.aeisp.system.entity.SysUser;
 import com.aeisp.system.mapper.SysRoleMapper;
 import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -37,6 +41,10 @@ class PasswordStrategyTest {
 
     @BeforeEach
     void setUp() {
+        // 初始化 MyBatis-Plus Lambda 缓存（单元测试无 Spring 上下文）
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), SysUser.class);
+        // 设置 @Value 注入的默认密码（单元测试无 Spring 上下文）
+        ReflectionTestUtils.setField(sysUserService, "defaultPassword", "123456");
         lenient().when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "encoded_" + inv.getArgument(0));
     }
 
@@ -146,8 +154,8 @@ class PasswordStrategyTest {
      */
     @Test
     void testAdminUpdateUserEmptyPassword() {
-        // 模拟更新用户成功
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        // 模拟更新用户成功（使用 UpdateWrapper）
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -167,8 +175,8 @@ class PasswordStrategyTest {
      */
     @Test
     void testAdminUpdateUserNullPassword() {
-        // 模拟更新用户成功
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        // 模拟更新用户成功（使用 UpdateWrapper）
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -188,8 +196,8 @@ class PasswordStrategyTest {
      */
     @Test
     void testAdminUpdateUserNewPassword() {
-        // 模拟更新用户成功
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        // 模拟更新用户成功（使用 UpdateWrapper）
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);

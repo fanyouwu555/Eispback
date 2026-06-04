@@ -44,7 +44,7 @@ public class SysRoleServiceImpl implements SysRoleService {
 
     @Override
     public List<String> getRoleCodesByUserId(Long userId) {
-        return sysRoleMapper.selectRoleCodesByUserId(userId);
+        return sysRoleMapper.selectRoleCodesByUserId(userId, CommonConstants.STATUS_ENABLED);
     }
 
     @Override
@@ -105,7 +105,8 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (userCount > 0) {
             throw new BizException("该角色已绑定 " + userCount + " 个管理员，请先解除绑定后再删除");
         }
-        sysRolePermissionMapper.deleteByRoleId(roleId);
+        // 角色使用逻辑删除，保留权限关联记录，便于恢复
+        // 权限关联会在角色被逻辑删除后通过 JOIN 查询自动过滤
         return sysRoleMapper.deleteById(roleId) > 0;
     }
 }

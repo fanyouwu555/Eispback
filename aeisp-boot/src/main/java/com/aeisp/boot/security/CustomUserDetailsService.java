@@ -49,7 +49,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         // 1. 先查询后台管理员
         SysUser sysUser = sysUserMapper.selectByUsername(username);
         if (sysUser != null) {
-            List<String> roles = sysRoleMapper.selectRoleCodesByUserId(sysUser.getId());
+            List<String> roles = sysRoleMapper.selectRoleCodesByUserId(sysUser.getId(), CommonConstants.STATUS_ENABLED);
             List<Long> roleIds = sysUserRoleMapper.selectList(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.system.entity.SysUserRole>()
                             .eq(com.aeisp.system.entity.SysUserRole::getUserId, sysUser.getId())
@@ -73,7 +73,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         UsrUser usrUser = usrUserMapper.selectByUsername(username);
         if (usrUser != null) {
             boolean enabled = CommonConstants.STATUS_ENABLED == usrUser.getStatus();
-            List<String> roles = sysRoleMapper.selectRoleCodesByFrontendUserId(usrUser.getId());
+            List<String> roles = sysRoleMapper.selectRoleCodesByFrontendUserId(usrUser.getId(), CommonConstants.STATUS_ENABLED);
             if (roles == null || roles.isEmpty()) {
                 roles = List.of(CommonConstants.DEFAULT_FRONTEND_ROLE_CODE);
             }
@@ -106,7 +106,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUserId(Long userId) throws UsernameNotFoundException {
         SysUser sysUser = sysUserMapper.selectById(userId);
         if (sysUser != null) {
-            List<String> roles = sysRoleMapper.selectRoleCodesByUserId(sysUser.getId());
+            List<String> roles = sysRoleMapper.selectRoleCodesByUserId(sysUser.getId(), CommonConstants.STATUS_ENABLED);
             List<Long> roleIds = sysUserRoleMapper.selectList(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.system.entity.SysUserRole>()
                             .eq(com.aeisp.system.entity.SysUserRole::getUserId, sysUser.getId())
@@ -129,7 +129,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         UsrUser usrUser = usrUserMapper.selectById(userId);
         if (usrUser != null) {
             boolean enabled = CommonConstants.STATUS_ENABLED == usrUser.getStatus();
-            List<String> roles = sysRoleMapper.selectRoleCodesByFrontendUserId(usrUser.getId());
+            List<String> roles = sysRoleMapper.selectRoleCodesByFrontendUserId(usrUser.getId(), CommonConstants.STATUS_ENABLED);
             if (roles == null || roles.isEmpty()) {
                 roles = List.of(CommonConstants.DEFAULT_FRONTEND_ROLE_CODE);
             }

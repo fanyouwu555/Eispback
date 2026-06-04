@@ -23,7 +23,7 @@ public interface SysPermissionMapper extends BaseMapper<SysPermission> {
     @Select("<script>" +
             "SELECT DISTINCT p.permission_code FROM sys_permission p " +
             "INNER JOIN sys_role_permission rp ON p.id = rp.permission_id " +
-            "WHERE rp.role_id IN " +
+            "WHERE p.deleted = 0 AND rp.role_id IN " +
             "<foreach collection='roleIds' item='roleId' open='(' separator=',' close=')'>" +
             "#{roleId}" +
             "</foreach>" +
@@ -39,6 +39,6 @@ public interface SysPermissionMapper extends BaseMapper<SysPermission> {
     @Select("SELECT DISTINCT p.permission_code FROM sys_permission p " +
             "INNER JOIN sys_role_permission rp ON p.id = rp.permission_id " +
             "INNER JOIN sys_role r ON r.id = rp.role_id " +
-            "WHERE r.role_code = #{roleCode}")
+            "WHERE p.deleted = 0 AND r.deleted = 0 AND r.role_code = #{roleCode}")
     List<String> selectPermissionCodesByRoleCode(@Param("roleCode") String roleCode);
 }

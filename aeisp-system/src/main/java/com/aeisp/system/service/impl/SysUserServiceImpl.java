@@ -19,6 +19,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,9 @@ public class SysUserServiceImpl implements SysUserService {
 
     private static final Long SUPER_ADMIN_ROLE_ID = 1L;
 
+    @Value("${aeisp.security.default-password:123456}")
+    private String defaultPassword;
+
     private final SysUserMapper sysUserMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
     private final SysRoleMapper sysRoleMapper;
@@ -63,7 +67,7 @@ public class SysUserServiceImpl implements SysUserService {
         // 密码加密（如果未提供则使用默认密码）
         String rawPassword = user.getPassword();
         if (!StringUtils.hasText(rawPassword)) {
-            rawPassword = "123456";
+            rawPassword = defaultPassword;
         }
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setStatus(CommonConstants.STATUS_ENABLED);
@@ -81,19 +85,30 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateUser(SysUser user, List<Long> roleIds) {
-        // 密码加密（如果传了密码）
-        if (StringUtils.hasText(user.getPassword())) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-        } else {
-            user.setPassword(null);
-        }
         // 防止降级最后一个超级管理员
         if (roleIds != null && !roleIds.contains(SUPER_ADMIN_ROLE_ID)) {
             if (hasSuperAdminRole(user.getId()) && isLastSuperAdmin(user.getId())) {
                 throw new BizException(SystemErrorCode.USER_CANNOT_DEMOTE_SUPER);
             }
         }
-        int rows = sysUserMapper.updateById(user);
+
+        // 使用 UpdateWrapper 显式控制更新字段，避免 password 被置 null
+        String newPassword = null;
+        if (StringUtils.hasText(user.getPassword())) {
+            newPassword = passwordEncoder.encode(user.getPassword());
+        }
+
+        LambdaUpdateWrapper<SysUser> updateWrapper = Wrappers.<SysUser>lambdaUpdate()
+                .eq(SysUser::getId, user.getId())
+                .set(SysUser::getRealName, user.getRealName())
+                .set(SysUser::getEmail, user.getEmail())
+                .set(SysUser::getPhone, user.getPhone())
+                .set(SysUser::getStatus, user.getStatus());
+        if (newPassword != null) {
+            updateWrapper.set(SysUser::getPassword, newPassword);
+        }
+        int rows = sysUserMapper.update(null, updateWrapper);
+
         if (rows <= 0) {
             return false;
         }
@@ -131,10 +146,11 @@ public class SysUserServiceImpl implements SysUserService {
     }
 
     private boolean hasSuperAdminRole(Long userId) {
-        List<com.aeisp.system.entity.SysUserRole> userRoles = sysUserRoleMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.system.entity.SysUserRole>()
-                        .eq(com.aeisp.system.entity.SysUserRole::getUserId, userId));
-        return userRoles.stream().anyMatch(ur -> SUPER_ADMIN_ROLE_ID.equals(ur.getRoleId()));
+        return sysUserRoleMapper.selectCount(
+                Wrappers.<SysUserRole>lambdaQuery()
+                        .eq(SysUserRole::getUserId, userId)
+                        .eq(SysUserRole::getRoleId, SUPER_ADMIN_ROLE_ID)
+        ) > 0;
     }
 
     private boolean isLastSuperAdmin(Long userId) {

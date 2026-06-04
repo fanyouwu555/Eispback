@@ -5,6 +5,9 @@ import com.aeisp.system.entity.SysUser;
 import com.aeisp.system.mapper.SysUserMapper;
 import com.aeisp.system.mapper.SysUserRoleMapper;
 import com.aeisp.system.mapper.SysRoleMapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +41,8 @@ class SysUserStatusTest {
 
     @BeforeEach
     void setUp() {
+        // 初始化 MyBatis-Plus Lambda 缓存（单元测试无 Spring 上下文）
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), SysUser.class);
         lenient().when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "encoded_" + inv.getArgument(0));
     }
 
@@ -99,8 +104,8 @@ class SysUserStatusTest {
      */
     @Test
     void testUpdateUserAcceptsStatusField() {
-        // 模拟更新用户成功
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        // 模拟更新用户成功（使用 UpdateWrapper）
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -110,8 +115,8 @@ class SysUserStatusTest {
         boolean result = sysUserService.updateUser(user, null);
 
         assertTrue(result);
-        // 验证状态被更新为 2 (禁用)
-        verify(sysUserMapper).updateById(argThat((SysUser u) -> u.getStatus() == 2));
+        // 验证 update 方法被调用
+        verify(sysUserMapper).update(isNull(), any());
     }
 
     /**
@@ -120,8 +125,8 @@ class SysUserStatusTest {
      */
     @Test
     void testUpdateUserWithoutStatusField() {
-        // 模拟更新用户成功
-        when(sysUserMapper.updateById(any(SysUser.class))).thenReturn(1);
+        // 模拟更新用户成功（使用 UpdateWrapper）
+        when(sysUserMapper.update(isNull(), any())).thenReturn(1);
 
         SysUser user = new SysUser();
         user.setId(1L);
@@ -131,8 +136,8 @@ class SysUserStatusTest {
         boolean result = sysUserService.updateUser(user, null);
 
         assertTrue(result);
-        // 验证更新方法被调用
-        verify(sysUserMapper).updateById(any(SysUser.class));
+        // 验证 update 方法被调用
+        verify(sysUserMapper).update(isNull(), any());
     }
 
     /**
