@@ -207,13 +207,18 @@ public class AuthController {
         }
         // 记录用户行为日志
         if (userId != null && sysUserBehaviorLogMapper != null) {
-            SysUserBehaviorLog behaviorLog = new SysUserBehaviorLog();
-            behaviorLog.setUserId(userId);
-            behaviorLog.setBehaviorType("LOGOUT");
-            behaviorLog.setIpAddress(getClientIp(httpRequest));
-            behaviorLog.setDeviceInfo(httpRequest.getHeader("User-Agent"));
-            behaviorLog.setCreatedAt(LocalDateTime.now());
-            sysUserBehaviorLogMapper.insert(behaviorLog);
+            try {
+                SysUserBehaviorLog behaviorLog = new SysUserBehaviorLog();
+                behaviorLog.setUserId(userId);
+                behaviorLog.setBehaviorType("LOGOUT");
+                behaviorLog.setIpAddress(getClientIp(httpRequest));
+                // device_info 是 JSONB 类型，设为 null 避免类型转换问题
+                behaviorLog.setDeviceInfo(null);
+                behaviorLog.setCreatedAt(LocalDateTime.now());
+                sysUserBehaviorLogMapper.insert(behaviorLog);
+            } catch (Exception e) {
+                log.warn("记录登出行为日志失败: {}", e.getMessage());
+            }
         }
         SecurityContextHolder.clearContext();
         return Result.success(null, "登出成功");

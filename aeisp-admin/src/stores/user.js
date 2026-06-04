@@ -45,6 +45,8 @@ export const useUserStore = defineStore('user', () => {
       roles.value = []
       removeToken()
       removeRefreshToken()
+      // 动态导入避免与 router 的循环依赖
+      import('@/router').then(m => m.resetRoutes()).catch(() => {})
     }
   }
 
