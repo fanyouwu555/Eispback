@@ -25,4 +25,5 @@ public interface SysPermissionService {
      * @return 权限编码列表
      */
     List<String> getPermissionCodesByRoleIds(List<Long> roleIds);
+
 }

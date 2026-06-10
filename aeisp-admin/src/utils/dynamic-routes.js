@@ -56,13 +56,18 @@ function convertMenu(menu) {
 
 function resolveComponent(componentPath) {
   if (!componentPath) return null
-  const normalizedPath = componentPath.startsWith('/')
+  let normalizedPath = componentPath.startsWith('/')
     ? componentPath
     : '/src/views/' + componentPath
 
+  // 自动补全 .vue 后缀（兼容数据库存储时带/不带后缀两种格式）
+  if (!normalizedPath.endsWith('.vue')) {
+    normalizedPath += '.vue'
+  }
+
   if (pageComponents[normalizedPath]) return pageComponents[normalizedPath]
 
-  // 容错匹配
+  // 容错匹配：按原始路径尾部匹配
   const key = Object.keys(pageComponents).find(k => k.endsWith(componentPath))
   return key ? pageComponents[key] : null
 }
