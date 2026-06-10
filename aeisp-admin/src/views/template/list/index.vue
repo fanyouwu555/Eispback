@@ -446,7 +446,7 @@ import {
   purchaseTemplate
 } from '@/api/template'
 import { getCategoryTree } from '@/api/template/category'
-import { listOnlineLibraries, setTemplateLibraries, getTemplateLibraries, getLibraryDetail } from '@/api/library'
+import { listOnlineLibraries, setTemplateLibraries, getLibraryDetail } from '@/api/library'
 import Pagination from '@/components/Pagination.vue'
 
 const { options: templateStatusOptions, label: templateStatusLabel, color: templateStatusColor } = useDict('template_status')
@@ -747,11 +747,8 @@ function handleEdit(row) {
   // Build cascader path from category IDs
   const leafId = row.secondCategoryId || row.firstCategoryId || row.topCategoryId
   editForm.categoryPath = leafId ? (findPathToNode(categoryTreeOptions.value, leafId) || []) : []
-  // Load associated libraries (backend returns List<Long>)
-  editLibraryIds.value = []
-  getTemplateLibraries(row.id).then(res => {
-    editLibraryIds.value = Array.isArray(res) ? res : []
-  }).catch(() => {})
+  // Load associated libraries from list row data
+  editLibraryIds.value = Array.isArray(row.libraryIds) ? row.libraryIds : []
   editVisible.value = true
 }
 
@@ -802,18 +799,17 @@ function handleView(row) {
     currentDetail.value = res
     versionList.value = [res.currentVersion, ...(res.historyVersions || [])].filter(Boolean)
     fileTree.value = res.fileTree || []
+    // 从列表行数据直接获取关联库资源
+    const libIds = Array.isArray(row.libraryIds) ? row.libraryIds : []
     detailLibraryNames.value = []
-    getTemplateLibraries(row.id).then(libRes => {
-      const libIds = Array.isArray(libRes) ? libRes : []
-      if (libIds.length > 0) {
-        Promise.all(libIds.map(id => getLibraryDetail(id).catch(() => null)))
-          .then(details => {
-            detailLibraryNames.value = details
-              .filter(d => d && d.resourceName)
-              .map(d => d.resourceName)
-          })
-      }
-    }).catch(() => {})
+    if (libIds.length > 0) {
+      Promise.all(libIds.map(id => getLibraryDetail(id).catch(() => null)))
+        .then(details => {
+          detailLibraryNames.value = details
+            .filter(d => d && d.resourceName)
+            .map(d => d.resourceName)
+        })
+    }
     detailVisible.value = true
   })
 }

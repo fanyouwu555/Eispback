@@ -99,9 +99,4 @@ public class UpdateTemplateRequest {
      */
     @NotNull(message = "排序权重不能为空")
     private Integer sortWeight;
-
-    /**
-     * 关联库资源 ID 列表。
-     */
-    private java.util.List<Long> libraryIds;
 }

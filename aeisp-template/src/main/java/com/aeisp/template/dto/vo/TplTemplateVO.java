@@ -3,6 +3,7 @@ package com.aeisp.template.dto.vo;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 模板列表项 VO。
@@ -159,4 +160,9 @@ public class TplTemplateVO implements Serializable {
      * 违规原因。
      */
     private String violationReason;
+
+    /**
+     * 关联库资源 ID 列表。
+     */
+    private List<Long> libraryIds;
 }

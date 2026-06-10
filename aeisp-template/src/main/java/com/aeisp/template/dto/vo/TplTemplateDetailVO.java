@@ -1,5 +1,6 @@
 package com.aeisp.template.dto.vo;
 
+import com.aeisp.common.dto.FileNodeVO;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -92,9 +93,4 @@ public class TplTemplateDetailVO implements Serializable {
     private Integer difficulty;
 
     private String violationReason;
-
-    /**
-     * 关联库资源 ID 列表。
-     */
-    private List<Long> libraryIds;
 }

@@ -8,7 +8,7 @@ import com.aeisp.template.dto.TplTemplateCategoryVO;
 import com.aeisp.template.dto.request.CreateTemplateRequest;
 import com.aeisp.template.dto.request.TemplateQueryRequest;
 import com.aeisp.template.dto.request.UpdateTemplateRequest;
-import com.aeisp.template.dto.vo.FileNodeVO;
+import com.aeisp.common.dto.FileNodeVO;
 import com.aeisp.template.dto.vo.TplTemplateDetailVO;
 import com.aeisp.template.dto.vo.TplTemplateVO;
 import com.aeisp.template.dto.vo.TplTemplateVersionVO;
@@ -186,14 +186,7 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         template.setProduceDate(parseDate(request.getProduceDate()));
         template.setDetailDesc(request.getDetailDesc());
         template.setDifficulty(request.getDifficulty());
-        boolean updated = templateMapper.updateById(template) > 0;
-
-        // 更新库资源关联
-        if (request.getLibraryIds() != null) {
-            setTemplateLibraries(templateId, request.getLibraryIds());
-        }
-
-        return updated;
+        return templateMapper.updateById(template) > 0;
     }
 
     @Override
@@ -426,9 +419,6 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             vo.setFileTree(new ArrayList<>());
         }
 
-        // 关联库资源
-        vo.setLibraryIds(getTemplateLibraryIds(templateId));
-
         return vo;
     }
 
@@ -554,6 +544,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
                 vo.setResourceUrl(resourceServerService.getUrl(relativePath));
             }
         }
+        // 关联库资源
+        vo.setLibraryIds(getTemplateLibraryIds(template.getId()));
         return vo;
     }
 
@@ -812,12 +804,6 @@ public class TplTemplateServiceImpl implements TplTemplateService {
 
     @Override
     public java.util.List<Long> getTemplateLibraryIds(Long templateId) {
-        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.aeisp.template.entity.TemplateLibraryRelation> wrapper =
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        wrapper.eq(com.aeisp.template.entity.TemplateLibraryRelation::getTemplateId, templateId);
-        return templateLibraryRelationMapper.selectList(wrapper)
-                .stream()
-                .map(com.aeisp.template.entity.TemplateLibraryRelation::getLibraryId)
-                .toList();
+        return templateLibraryRelationMapper.selectValidLibraryIds(templateId);
     }
 }

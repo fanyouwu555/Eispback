@@ -1,4 +1,4 @@
-package com.aeisp.template.dto.vo;
+package com.aeisp.common.dto;
 
 import lombok.Data;
 
@@ -8,6 +8,8 @@ import java.util.List;
 
 /**
  * 文件树节点 VO。
+ *
+ * <p>通用文件树结构，用于模板/库资源等模块展示 ZIP 解压后的目录结构。</p>
  *
  * @author AEISP Team
  */
