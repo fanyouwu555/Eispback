@@ -92,7 +92,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         if (request.getCoverImage() != null && !request.getCoverImage().isEmpty()) {
             try {
                 String coverUrl = templateStorageService.storeCoverImage(template.getId(), request.getCoverImage());
-                template.setPreviewImage(coverUrl);
+                // 截断为相对路径存入数据库
+                template.setPreviewImage(extractRelativePath(coverUrl));
             } catch (Exception e) {
                 log.error("上传封面图失败: templateId={}", template.getId(), e);
             }
@@ -102,7 +103,8 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         if (request.getThumbnail() != null && !request.getThumbnail().isEmpty()) {
             try {
                 String thumbnailUrl = templateStorageService.storeThumbnail(template.getId(), request.getThumbnail());
-                template.setThumbnail(thumbnailUrl);
+                // 截断为相对路径存入数据库
+                template.setThumbnail(extractRelativePath(thumbnailUrl));
             } catch (Exception e) {
                 log.error("上传缩略图失败: templateId={}", template.getId(), e);
             }
@@ -137,12 +139,12 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             resourceServerService.uploadExtractedFiles(template.getId(), request.getVersionNo(), new java.io.File(destDir));
         }
 
-        // 5. 保存版本记录
+        // 5. 保存版本记录（storageUrl 只存相对路径）
         TplTemplateVersion version = new TplTemplateVersion();
         version.setTemplateId(template.getId());
         version.setVersionNo(request.getVersionNo());
         version.setFilePath(relativePath);
-        version.setStorageUrl(storageUrl);
+        version.setStorageUrl(relativePath); // 存相对路径，VO 返回时动态拼接
         version.setChangelog(request.getChangelog());
         version.setFileSize(request.getZipFile().getSize());
         version.setFileHash(calcFileHash(request.getZipFile()));
@@ -168,8 +170,9 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         }
         template.setTemplateName(request.getTemplateName());
         template.setDescription(request.getDescription());
-        template.setPreviewImage(request.getPreviewImage());
-        template.setThumbnail(request.getThumbnail());
+        // 兼容前端传入的完整 URL，自动截断为相对路径
+        template.setPreviewImage(extractRelativePath(request.getPreviewImage()));
+        template.setThumbnail(extractRelativePath(request.getThumbnail()));
         template.setSortWeight(request.getSortWeight());
         template.setTopCategoryId(request.getTopCategoryId());
         template.setFirstCategoryId(request.getFirstCategoryId());
@@ -237,12 +240,12 @@ public class TplTemplateServiceImpl implements TplTemplateService {
             resourceServerService.uploadExtractedFiles(templateId, versionNo, new java.io.File(destDir));
         }
 
-        // 5. 保存版本记录
+        // 5. 保存版本记录（storageUrl 只存相对路径）
         TplTemplateVersion version = new TplTemplateVersion();
         version.setTemplateId(templateId);
         version.setVersionNo(versionNo);
         version.setFilePath(relativePath);
-        version.setStorageUrl(storageUrl);
+        version.setStorageUrl(relativePath); // 存相对路径，VO 返回时动态拼接
         version.setChangelog(changelog);
         version.setFileSize(zipFile.getSize());
         version.setFileHash(calcFileHash(zipFile));
@@ -375,6 +378,14 @@ public class TplTemplateServiceImpl implements TplTemplateService {
 
         TplTemplateDetailVO vo = new TplTemplateDetailVO();
         BeanUtils.copyProperties(template, vo);
+
+        // 动态拼接完整 URL（DB 中只存相对路径）
+        if (StringUtils.hasText(template.getPreviewImage())) {
+            vo.setPreviewImage(resourceServerService.getUrl(template.getPreviewImage()));
+        }
+        if (StringUtils.hasText(template.getThumbnail())) {
+            vo.setThumbnail(resourceServerService.getUrl(template.getThumbnail()));
+        }
 
         // LocalDateTime → String 手动转换（BeanUtils 无法自动处理类型差异）
         if (template.getOnlineTime() != null) {
@@ -526,11 +537,21 @@ public class TplTemplateServiceImpl implements TplTemplateService {
                 template.getTopCategoryId(),
                 template.getFirstCategoryId(),
                 template.getSecondCategoryId()));
+        // 动态拼接完整 URL（DB 中只存相对路径）
+        if (StringUtils.hasText(template.getPreviewImage())) {
+            vo.setPreviewImage(resourceServerService.getUrl(template.getPreviewImage()));
+        }
+        if (StringUtils.hasText(template.getThumbnail())) {
+            vo.setThumbnail(resourceServerService.getUrl(template.getThumbnail()));
+        }
         if (template.getCurrentVersionId() != null) {
             TplTemplateVersion version = versionMapper.selectById(template.getCurrentVersionId());
             if (version != null) {
                 vo.setCurrentVersionNo(version.getVersionNo());
-                vo.setResourceUrl(version.getStorageUrl());
+                // 从 filePath 拼接完整 URL（storageUrl 现在也是相对路径）
+                String relativePath = StringUtils.hasText(version.getFilePath())
+                        ? version.getFilePath() : version.getStorageUrl();
+                vo.setResourceUrl(resourceServerService.getUrl(relativePath));
             }
         }
         return vo;
@@ -579,12 +600,54 @@ public class TplTemplateServiceImpl implements TplTemplateService {
         return sb.toString();
     }
 
-    private static TplTemplateVersionVO convertToVersionVO(TplTemplateVersion version) {
+    private TplTemplateVersionVO convertToVersionVO(TplTemplateVersion version) {
         TplTemplateVersionVO vo = new TplTemplateVersionVO();
         BeanUtils.copyProperties(version, vo);
         vo.setFileSize(version.getFileSize());
         vo.setFileHash(version.getFileHash());
+        // 动态拼接完整 URL（DB 中只存相对路径）
+        String relativePath = StringUtils.hasText(version.getFilePath())
+                ? version.getFilePath() : version.getStorageUrl();
+        if (StringUtils.hasText(relativePath)) {
+            vo.setStorageUrl(resourceServerService.getUrl(relativePath));
+        }
         return vo;
+    }
+
+    /**
+     * 从完整 URL 中提取相对路径。兼容前端传入的完整 URL 和相对路径。
+     */
+    private String extractRelativePath(String fullUrl) {
+        if (!StringUtils.hasText(fullUrl)) {
+            return fullUrl;
+        }
+        String baseUrl = resourceServerService.getBaseUrl();
+        if (baseUrl != null && fullUrl.startsWith(baseUrl)) {
+            return fullUrl.substring(baseUrl.length());
+        }
+        // 如果已经是相对路径（不以 http 开头），直接返回
+        if (!fullUrl.startsWith("http://") && !fullUrl.startsWith("https://")) {
+            return fullUrl;
+        }
+        // 无法识别的完整 URL，尝试兜底截断
+        int idx = fullUrl.indexOf("/", fullUrl.indexOf("://") + 3);
+        if (idx > 0) {
+            String path = fullUrl.substring(idx + 1);
+            // 跳过路径前缀段（如 EISP/Resource/Template/）
+            int slashCount = 0;
+            int pos = 0;
+            while (pos < path.length() && slashCount < 3) {
+                if (path.charAt(pos) == '/') {
+                    slashCount++;
+                }
+                pos++;
+            }
+            if (slashCount >= 3) {
+                return path.substring(pos);
+            }
+        }
+        log.warn("无法从 URL 中提取相对路径，原样返回: {}", fullUrl);
+        return fullUrl;
     }
 
     private static List<FileNodeVO> buildFileTree(List<String> filePaths) {

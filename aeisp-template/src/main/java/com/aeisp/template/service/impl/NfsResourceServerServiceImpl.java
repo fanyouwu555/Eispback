@@ -19,21 +19,27 @@ import java.util.stream.Stream;
  *
  * <p>NFS 挂载到本地路径后，通过本地文件写入 + URL 拼接实现资源上传。
  * 适用于阿里云 OSS 上线前的临时方案。</p>
+ *
+ * <p>改造后：数据库只存相对路径，{@link #getUrl(String)} 运行时动态拼接完整 URL，
+ * 基础地址变更时无需修改历史数据。</p>
  */
 @Slf4j
 public class NfsResourceServerServiceImpl implements ResourceServerService {
 
     private final String uploadPath;
-    private final String baseUrl;
+    private final String baseAddress;
+    private final String urlPrefix;
 
-    public NfsResourceServerServiceImpl(String uploadPath, String baseUrl) {
+    public NfsResourceServerServiceImpl(String uploadPath, String baseAddress, String urlPrefix) {
         this.uploadPath = uploadPath;
-        this.baseUrl = baseUrl;
+        this.baseAddress = baseAddress;
+        this.urlPrefix = urlPrefix;
     }
 
     @PostConstruct
     public void init() {
-        log.info("NfsResourceServerServiceImpl initialized: uploadPath={}, baseUrl={}", uploadPath, baseUrl);
+        log.info("NfsResourceServerServiceImpl initialized: uploadPath={}, baseAddress={}, urlPrefix={}",
+                uploadPath, baseAddress, urlPrefix);
     }
 
     @Override
@@ -167,22 +173,42 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
         }
     }
 
+    /**
+     * 根据相对路径拼接完整的可访问 URL。
+     *
+     * <p>运行时动态拼接：baseAddress + urlPrefix + relativePath，
+     * 基础地址（IP:端口）变化时无需修改数据库中的相对路径。</p>
+     *
+     * @param relativePath 相对路径，如 "1/v1.0.0/template.zip"
+     * @return 完整的可访问 URL
+     */
     @Override
     public String getUrl(String relativePath) {
-        if (baseUrl == null || baseUrl.isBlank()) {
-            log.warn("baseUrl 未配置，无法生成完整 URL");
-            return null;
-        }
         if (relativePath == null || relativePath.isBlank()) {
             return null;
         }
+        if (baseAddress == null || baseAddress.isBlank()) {
+            log.warn("baseAddress 未配置，无法生成完整 URL");
+            return null;
+        }
+        if (urlPrefix == null || urlPrefix.isBlank()) {
+            log.warn("urlPrefix 未配置，无法生成完整 URL");
+            return null;
+        }
         String normalized = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-        return baseUrl + normalized;
+        String prefix = urlPrefix.endsWith("/") ? urlPrefix : urlPrefix + "/";
+        String address = baseAddress.endsWith("/") ? baseAddress.substring(0, baseAddress.length() - 1) : baseAddress;
+        return address + "/" + prefix + normalized;
     }
 
     @Override
     public String getBaseUrl() {
-        return baseUrl;
+        if (baseAddress == null || baseAddress.isBlank() || urlPrefix == null || urlPrefix.isBlank()) {
+            return null;
+        }
+        String prefix = urlPrefix.endsWith("/") ? urlPrefix : urlPrefix + "/";
+        String address = baseAddress.endsWith("/") ? baseAddress.substring(0, baseAddress.length() - 1) : baseAddress;
+        return address + "/" + prefix;
     }
 
     @Override
@@ -203,6 +229,45 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
             throw new SecurityException("非法文件路径");
         }
         return new File(absolutePath).exists();
+    }
+
+    /**
+     * 从完整 URL 中提取相对路径。
+     *
+     * <p>用于兼容管理员在前端手动输入的完整 URL，保存时自动截断为相对路径。</p>
+     *
+     * @param fullUrl 完整 URL，如 http://192.168.50.215:4050/EISP/Users/18/42/project.zip
+     * @return 相对路径，如 18/42/project.zip；如果已经是相对路径则原样返回
+     */
+    public String extractRelativePath(String fullUrl) {
+        if (fullUrl == null || fullUrl.isBlank()) {
+            return fullUrl;
+        }
+        // 如果已经是相对路径（不以 http 开头），直接返回
+        if (!fullUrl.startsWith("http://") && !fullUrl.startsWith("https://")) {
+            return fullUrl;
+        }
+        String base = getBaseUrl();
+        if (base != null && fullUrl.startsWith(base)) {
+            return fullUrl.substring(base.length());
+        }
+        // 兜底：尝试按 URL 结构截断
+        int lastSlash = fullUrl.indexOf("/", fullUrl.indexOf("://") + 3);
+        if (lastSlash > 0) {
+            // 跳过 IP:port 后的第一段路径（如 /EISP/Users/）
+            String afterHost = fullUrl.substring(lastSlash + 1);
+            int prefixEnd = afterHost.indexOf("/");
+            if (prefixEnd > 0) {
+                String afterPrefix = afterHost.substring(prefixEnd + 1);
+                int secondPrefixEnd = afterPrefix.indexOf("/");
+                if (secondPrefixEnd > 0) {
+                    return afterPrefix.substring(secondPrefixEnd + 1);
+                }
+            }
+        }
+        // 无法识别，原样返回（避免数据丢失）
+        log.warn("无法从 URL 中提取相对路径，原样返回: {}", fullUrl);
+        return fullUrl;
     }
 
     /**

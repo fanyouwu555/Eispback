@@ -1336,7 +1336,7 @@ INSERT INTO sys_config (config_key, config_value, description, environment, is_e
 ('storage.upload', 'D:/Users/admin/Desktop/EISP/Notification/', '上传文件存储路径', 'all', 1, 'storage', 'text', NOW(), NOW()),
 ('storage.cache', 'D:/Users/admin/Desktop/EISP/Cache/', '缓存文件存储路径', 'all', 1, 'storage', 'text', NOW(), NOW()),
 ('storage.library.path', 'D:/Users/admin/Desktop/EISP/Resource/Library/', '库资源本地存储路径', 'all', 1, 'storage', 'text', NOW(), NOW()),
-('storage.library.baseUrl', 'http://192.168.50.215/EISP/Resource/Library/', '库资源访问基础URL', 'all', 1, 'storage', 'text', NOW(), NOW()),
+('storage.library.baseUrl', 'http://192.168.50.215:4050/EISP/Resource/Library/', '库资源访问基础URL', 'all', 1, 'storage', 'text', NOW(), NOW()),
 ('backup.enabled', 'false', '云端自动备份开关', 'all', 1, 'backup', 'boolean', NOW(), NOW()),
 ('backup.interval', '7', '备份周期（天）', 'all', 1, 'backup', 'number', NOW(), NOW()),
 ('backup.retention', '30', '保留备份份数', 'all', 1, 'backup', 'number', NOW(), NOW()),

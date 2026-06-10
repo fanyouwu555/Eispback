@@ -37,6 +37,11 @@ public class TplTemplateDetailVO implements Serializable {
     private String previewImage;
 
     /**
+     * 缩略图 URL。
+     */
+    private String thumbnail;
+
+    /**
      * 排序权重。
      */
     private Integer sortWeight;

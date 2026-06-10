@@ -133,9 +133,9 @@ public class PrjProjectServiceImpl implements PrjProjectService {
             templateMapper.incrementUsageCount(templateId);
         }
 
-        // 生成 resourceUrl: base + {userId}/{projectId}/
-        String resourceUrl = userResourceServer.getUrl(userId + "/" + project.getId() + "/");
-        project.setResourceUrl(resourceUrl);
+        // 只存相对路径，完整 URL 在 VO 返回时动态拼接
+        String relativePath = userId + "/" + project.getId() + "/";
+        project.setResourceUrl(relativePath);
         projectMapper.updateById(project);
 
         return toClientVO(project);
@@ -221,6 +221,10 @@ public class PrjProjectServiceImpl implements PrjProjectService {
         ClientProjectVO vo = new ClientProjectVO();
         BeanUtils.copyProperties(project, vo);
         vo.setProjectId(project.getId());
+        // 动态拼接完整 URL（DB 中只存相对路径）
+        if (StringUtils.hasText(project.getResourceUrl())) {
+            vo.setResourceUrl(userResourceServer.getUrl(project.getResourceUrl()));
+        }
         return vo;
     }
 }

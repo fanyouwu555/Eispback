@@ -89,12 +89,12 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
         // 5. 计算 MD5
         String fileHash = calcFileHash(request.getZipFile());
 
-        // 6. 保存版本记录
+        // 6. 保存版本记录（storageUrl 只存相对路径）
         LibResourceVersion version = new LibResourceVersion();
         version.setResourceId(resource.getId());
         version.setVersionNo(request.getVersionNo());
         version.setFilePath(relativePath);
-        version.setStorageUrl(storageUrl);
+        version.setStorageUrl(relativePath); // 存相对路径，VO 返回时动态拼接
         version.setFileSize(request.getZipFile().getSize());
         version.setFileHash(fileHash);
         version.setChangelog(request.getChangelog());
@@ -160,12 +160,12 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
         // 计算 MD5
         String fileHash = calcFileHash(zipFile);
 
-        // 保存版本记录
+        // 保存版本记录（storageUrl 只存相对路径）
         LibResourceVersion version = new LibResourceVersion();
         version.setResourceId(resourceId);
         version.setVersionNo(versionNo);
         version.setFilePath(relativePath);
-        version.setStorageUrl(storageUrl);
+        version.setStorageUrl(relativePath); // 存相对路径，VO 返回时动态拼接
         version.setFileSize(zipFile.getSize());
         version.setFileHash(fileHash);
         version.setChangelog(changelog);
@@ -284,6 +284,12 @@ public class LibraryResourceServiceImpl implements LibraryResourceService {
             LibResourceVersionVO versionVO = new LibResourceVersionVO();
             BeanUtils.copyProperties(version, versionVO);
             versionVO.setIsCurrent(resource.getCurrentVersionId() != null && resource.getCurrentVersionId().equals(version.getId()));
+            // 动态拼接完整 URL（DB 中只存相对路径）
+            String relativePath = StringUtils.hasText(version.getFilePath())
+                    ? version.getFilePath() : version.getStorageUrl();
+            if (StringUtils.hasText(relativePath)) {
+                versionVO.setStorageUrl(resourceServerService.getUrl(relativePath));
+            }
             versionVOList.add(versionVO);
         }
         detailVO.setVersionList(versionVOList);

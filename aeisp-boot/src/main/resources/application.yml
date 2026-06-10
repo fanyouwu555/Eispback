@@ -60,15 +60,16 @@ library:
 
 resource-server:
   type: nfs    # nfs or oss
+  base-address: http://192.168.50.215:4050   # 全局资源服务器基础地址（IP:端口）
   nfs:
     upload-path: D:/Users/admin/Desktop/EISP/Resource/Template/     # HFS 文件服务路径
-    base-url: http://192.168.50.215/EISP/Resource/Template/
+    url-prefix: EISP/Resource/Template/      # URL 路径前缀（相对路径）
   users:
     upload-path: D:/Users/admin/Desktop/EISP/Users/
-    base-url: http://192.168.50.215/EISP/Users/
+    url-prefix: EISP/Users/                   # URL 路径前缀（相对路径）
   notification:
     upload-path: D:/Users/admin/Desktop/EISP/Notification/
-    base-url: http://192.168.50.215/EISP/Notification/
+    url-prefix: EISP/Notification/            # URL 路径前缀（相对路径）
 
 aeisp:
   security:

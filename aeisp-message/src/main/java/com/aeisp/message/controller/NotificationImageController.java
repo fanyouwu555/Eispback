@@ -51,11 +51,24 @@ public class NotificationImageController {
 
     private final SysConfigService sysConfigService;
 
+    @Value("${resource-server.base-address}")
+    private String baseAddress;
+
     @Value("${resource-server.notification.upload-path}")
     private String defaultUploadPath;
 
-    @Value("${resource-server.notification.base-url}")
-    private String baseUrl;
+    @Value("${resource-server.notification.url-prefix}")
+    private String urlPrefix;
+
+    /**
+     * 动态拼接完整 URL：baseAddress + urlPrefix + filename。
+     * 改造后：端口/IP 变化时无需修改历史数据。
+     */
+    private String buildFullUrl(String filename) {
+        String address = baseAddress.endsWith("/") ? baseAddress.substring(0, baseAddress.length() - 1) : baseAddress;
+        String prefix = urlPrefix.endsWith("/") ? urlPrefix : urlPrefix + "/";
+        return address + "/" + prefix + filename;
+    }
 
     private String getUploadPath() {
         String path = sysConfigService.getConfigValue("storage.upload", "all");
@@ -96,7 +109,7 @@ public class NotificationImageController {
             }
             Path targetPath = Paths.get(uploadPath, newFilename);
             Files.copy(file.getInputStream(), targetPath);
-            String url = baseUrl + newFilename;
+            String url = buildFullUrl(newFilename);
             log.info("公告图片上传成功: {}", url);
             return Result.success(url);
         } catch (IOException e) {
