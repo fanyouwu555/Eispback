@@ -870,46 +870,15 @@ COMMENT ON COLUMN tpl_template_preview_image.sort_order IS '排序顺序';
 -- 库资源主表
 CREATE TABLE IF NOT EXISTS lib_resource (
     id BIGSERIAL PRIMARY KEY,
-    resource_code VARCHAR(30) DEFAULT NULL,
     resource_name VARCHAR(64) NOT NULL,
     description VARCHAR(512) DEFAULT NULL,
-    status SMALLINT NOT NULL DEFAULT 1,
-    current_version_id BIGINT DEFAULT NULL,
-    download_count BIGINT NOT NULL DEFAULT 0,
-    violation_reason VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
     updated_by BIGINT DEFAULT NULL,
-    deleted SMALLINT NOT NULL DEFAULT 0,
-    CONSTRAINT uk_lib_resource_code UNIQUE (resource_code)
+    deleted SMALLINT NOT NULL DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS idx_lib_resource_status ON lib_resource (status);
 COMMENT ON TABLE lib_resource IS '库资源主表';
-COMMENT ON COLUMN lib_resource.resource_code IS '资源编码（自动生成：LIB+yyyyMMdd+4位序号）';
-COMMENT ON COLUMN lib_resource.status IS '状态：0-正常, 1-上架, 2-下架, 3-违规';
-
--- 库资源版本表
-CREATE TABLE IF NOT EXISTS lib_resource_version (
-    id BIGSERIAL PRIMARY KEY,
-    resource_id BIGINT NOT NULL,
-    version_no VARCHAR(16) NOT NULL,
-    file_path VARCHAR(255) DEFAULT NULL,
-    storage_url VARCHAR(255) DEFAULT NULL,
-    file_size BIGINT DEFAULT NULL,
-    file_hash VARCHAR(64) DEFAULT NULL,
-    changelog TEXT DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT NULL,
-    updated_at TIMESTAMP DEFAULT NULL,
-    created_by BIGINT DEFAULT NULL,
-    updated_by BIGINT DEFAULT NULL,
-    deleted SMALLINT NOT NULL DEFAULT 0,
-    CONSTRAINT uk_lib_resource_version UNIQUE (resource_id, version_no)
-);
-CREATE INDEX IF NOT EXISTS idx_lib_resource_version_resource_id ON lib_resource_version (resource_id);
-COMMENT ON TABLE lib_resource_version IS '库资源版本表';
-COMMENT ON COLUMN lib_resource_version.file_size IS '文件大小（字节）';
-COMMENT ON COLUMN lib_resource_version.file_hash IS '文件哈希值（MD5）';
 
 -- 模板与库资源关联表
 CREATE TABLE IF NOT EXISTS tpl_template_library (
@@ -917,7 +886,9 @@ CREATE TABLE IF NOT EXISTS tpl_template_library (
     template_id BIGINT NOT NULL,
     library_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT NULL,
-    CONSTRAINT uk_tpl_template_library UNIQUE (template_id, library_id)
+    CONSTRAINT uk_tpl_template_library UNIQUE (template_id, library_id),
+    CONSTRAINT fk_tpl_template_library_template FOREIGN KEY (template_id) REFERENCES tpl_template(id),
+    CONSTRAINT fk_tpl_template_library_library FOREIGN KEY (library_id) REFERENCES lib_resource(id)
 );
 CREATE INDEX IF NOT EXISTS idx_tpl_template_library_template_id ON tpl_template_library (template_id);
 COMMENT ON TABLE tpl_template_library IS '模板与库资源关联表';
@@ -1255,16 +1226,15 @@ INSERT INTO sys_permission (id, permission_name, permission_code, resource_type,
 (81, '功能开关切换', 'system:feature:toggle', 'system', 'update', NULL, 36, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 -- 库资源模块
 (82, '库资源管理', 'library:manage', 'library', 'manage', NULL, 0, 0, 40, 'Collection', '/library', NULL, 1, 1, NOW(), NOW(), 1, 1),
-(83, '库资源列表', 'library:list', 'library', 'list', NULL, 82, 1, 1, 'List', 'list', 'library/list/index', 1, 1, NOW(), NOW(), 1, 1),
+(83, '库资源列表', 'library:list', 'library', 'list', NULL, 82, 1, 1, 'List', 'list', 'library/list/index.vue', 1, 1, NOW(), NOW(), 1, 1),
 (84, '新增库资源', 'library:create', 'library', 'create', NULL, 83, 2, 1, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (85, '编辑库资源', 'library:update', 'library', 'update', NULL, 83, 2, 2, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
 (86, '删除库资源', 'library:delete', 'library', 'delete', NULL, 83, 2, 3, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
-(87, '查询库资源', 'library:read', 'library', 'read', NULL, 83, 2, 4, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1),
-(88, '版本管理', 'library:version:manage', 'library', 'manage', NULL, 83, 2, 5, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1)
+(87, '查询库资源', 'library:read', 'library', 'read', NULL, 83, 2, 4, NULL, NULL, NULL, 1, 1, NOW(), NOW(), 1, 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- 更新序列
-SELECT setval('sys_permission_id_seq', 88) WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'sys_permission_id_seq');
+SELECT setval('sys_permission_id_seq', 87) WHERE EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'sys_permission_id_seq');
 
 -- 初始化角色权限映射
 INSERT INTO sys_role_permission (role_id, permission_id, created_at) VALUES
@@ -1459,4 +1429,35 @@ INSERT INTO sys_dict_data (dict_code, item_label, item_value, sort_order, status
 ('template_fee_type', '一次性付费', 'onetime', 2, 1, 'primary', 0),
 ('template_fee_type', '订阅制', 'subscription', 3, 1, 'warning', 0)
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 测试用管理员账号（按角色分配）
+-- 用途：验证不同角色的前端权限显示是否正确
+-- 密码统一为 admin123（BCrypt 加密）
+-- ============================================================
+INSERT INTO sys_user (id, username, password, real_name, email, phone, status, created_at, updated_at)
+VALUES
+  (101, 'user_mgr',    '$2b$12$3iUnfkqO7aNwxbd///FNUOiWsdKd33d74KiUSL5dYjcu3yWSfsNz2', '用户管理员',   'user_mgr@test.com',    '13900000101', 1, NOW(), NOW()),
+  (102, 'model_mgr',   '$2b$12$3iUnfkqO7aNwxbd///FNUOiWsdKd33d74KiUSL5dYjcu3yWSfsNz2', '模型管理员',   'model_mgr@test.com',   '13900000102', 1, NOW(), NOW()),
+  (103, 'msg_mgr',     '$2b$12$3iUnfkqO7aNwxbd///FNUOiWsdKd33d74KiUSL5dYjcu3yWSfsNz2', '消息管理员',   'msg_mgr@test.com',     '13900000103', 1, NOW(), NOW()),
+  (104, 'tpl_mgr',     '$2b$12$3iUnfkqO7aNwxbd///FNUOiWsdKd33d74KiUSL5dYjcu3yWSfsNz2', '模板管理员',   'tpl_mgr@test.com',     '13900000104', 1, NOW(), NOW()),
+  (105, 'finance_mgr', '$2b$12$3iUnfkqO7aNwxbd///FNUOiWsdKd33d74KiUSL5dYjcu3yWSfsNz2', '财务管理员',   'finance_mgr@test.com', '13900000105', 1, NOW(), NOW()),
+  (106, 'normal_user', '$2b$12$3iUnfkqO7aNwxbd///FNUOiWsdKd33d74KiUSL5dYjcu3yWSfsNz2', '普通用户',     'normal_user@test.com', '13900000106', 1, NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET
+  username = EXCLUDED.username,
+  password = EXCLUDED.password,
+  real_name = EXCLUDED.real_name,
+  status = EXCLUDED.status,
+  updated_at = NOW();
+
+-- 分配角色
+INSERT INTO sys_user_role (user_id, role_id)
+VALUES
+  (101, 2),  -- user_mgr    → ROLE_USER_MANAGER
+  (102, 3),  -- model_mgr   → ROLE_MODEL_MANAGER
+  (103, 4),  -- msg_mgr     → ROLE_NOTIFICATION_MANAGER
+  (104, 5),  -- tpl_mgr     → ROLE_TEMPLATE_MANAGER
+  (105, 6),  -- finance_mgr → ROLE_FINANCE_MANAGER
+  (106, 7)   -- normal_user → ROLE_USER
+ON CONFLICT (user_id, role_id) DO NOTHING;
 
