@@ -67,6 +67,7 @@ public class SysOperationLog {
     /**
      * 操作详情JSON，包含变更前后的数据快照。
      */
+    @com.baomidou.mybatisplus.annotation.TableField(typeHandler = com.aeisp.common.typehandler.JsonbTypeHandler.class)
     private String operationDetail;
 
     /**
