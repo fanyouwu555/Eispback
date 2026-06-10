@@ -1,5 +1,6 @@
 import request from '@/utils/request'
 
+// ===== 库资源管理 =====
 export function listLibraries(params) {
   return request.get('/library-resources', { params })
 }
@@ -9,29 +10,11 @@ export function listOnlineLibraries() {
 }
 
 export function createLibrary(data) {
-  return request.post('/library-resources', data, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000
-  })
+  return request.post('/library-resources', data)
 }
 
 export function updateLibrary(id, data) {
   return request.put(`/library-resources/${id}`, data)
-}
-
-export function uploadLibraryVersion(id, data) {
-  return request.post(`/library-resources/${id}/versions`, data, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000
-  })
-}
-
-export function rollbackLibraryVersion(id, versionId) {
-  return request.post(`/library-resources/${id}/rollback/${versionId}`)
-}
-
-export function toggleLibraryStatus(id, status) {
-  return request.post(`/library-resources/${id}/status?status=${status}`)
 }
 
 export function deleteLibrary(id) {
@@ -42,10 +25,7 @@ export function getLibraryDetail(id) {
   return request.get(`/library-resources/${id}`)
 }
 
-export function getLibraryFiles(id, versionNo) {
-  return request.get(`/library-resources/${id}/files`, { params: { versionNo } })
-}
-
+// ===== 模板关联库资源 =====
 export function setTemplateLibraries(id, data) {
   return request.post(`/templates/${id}/libraries`, data)
 }

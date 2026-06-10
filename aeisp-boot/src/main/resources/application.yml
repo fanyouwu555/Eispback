@@ -55,9 +55,6 @@ jwt:
 template:
   upload-path: ./uploads/templates/
 
-library:
-  upload-path: D:/Users/admin/Desktop/EISP/Resource/Library/
-
 resource-server:
   type: nfs    # nfs or oss
   base-address: http://192.168.50.215:4050   # 全局资源服务器基础地址（IP:端口）
