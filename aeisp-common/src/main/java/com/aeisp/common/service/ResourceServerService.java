@@ -84,6 +84,14 @@ public interface ResourceServerService {
     String getUploadPath();
 
     /**
+     * 根据相对路径读取文件内容。
+     *
+     * @param relativePath 相对路径
+     * @return 文件字节数组，文件不存在时返回 null
+     */
+    byte[] readFile(String relativePath);
+
+    /**
      * 判断资源服务器上文件是否存在。
      *
      * @param relativePath 相对路径

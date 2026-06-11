@@ -34,6 +34,7 @@ class TemplateStorageServiceImplTest {
             @Override public String getUploadPath() { return mockUploadPath; }
             @Override public boolean fileExists(String relativePath) { return false; }
             @Override public void deleteDirectory(String relativePath) { }
+            @Override public byte[] readFile(String relativePath) { return null; }
         };
         storageService = new TemplateStorageServiceImpl(mockResourceServerService);
     }

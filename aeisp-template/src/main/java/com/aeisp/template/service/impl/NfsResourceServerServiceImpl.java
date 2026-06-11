@@ -217,6 +217,30 @@ public class NfsResourceServerServiceImpl implements ResourceServerService {
     }
 
     @Override
+    public byte[] readFile(String relativePath) {
+        if (!isPathSafe(relativePath)) {
+            log.warn("非法文件路径: {}", relativePath);
+            throw new SecurityException("非法文件路径");
+        }
+        String normalizedPath = normalizePath(relativePath);
+        String absolutePath = FileUtil.normalize(uploadPath + "/" + normalizedPath);
+        if (!isWithinBaseDir(absolutePath)) {
+            log.warn("路径超出允许范围: {}", absolutePath);
+            throw new SecurityException("非法文件路径");
+        }
+        File file = new File(absolutePath);
+        if (!file.exists() || !file.isFile()) {
+            return null;
+        }
+        try {
+            return Files.readAllBytes(file.toPath());
+        } catch (IOException e) {
+            log.error("读取文件失败: {}", absolutePath, e);
+            throw new RuntimeException("读取文件失败", e);
+        }
+    }
+
+    @Override
     public boolean fileExists(String relativePath) {
         if (!isPathSafe(relativePath)) {
             log.warn("非法文件路径: {}", relativePath);
