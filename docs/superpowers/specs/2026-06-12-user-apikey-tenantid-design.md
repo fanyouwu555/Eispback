@@ -19,7 +19,7 @@
 | 是否校验唯一性 | 否 |
 | 租户 ID 格式 | `^[a-zA-Z0-9_-]+$`，最大长度 64 |
 | APIKEY 格式 | `^[a-zA-Z0-9_-]+$`，最大长度 128 |
-| 编辑时是否必填 | 否；留空表示保留原值，不覆盖 |
+| 编辑时是否必填 | 是；但仅在值发生变化时弹出确认框，清空不允许保存 |
 | 是否加入 Excel 导入导出 | 否（方案 A，最小化改动） |
 | 是否在用户列表展示 | 否，仅在详情/创建/编辑弹窗展示 |
 
@@ -72,19 +72,21 @@ private String tenantId;
 private String apiKey;
 ```
 
-`UserUpdateRequest.java` 增加同名字段，但**不加 `@NotBlank`**：
+`UserUpdateRequest.java` 增加同名字段，同样加 `@NotBlank` 校验：
 
 ```java
+@NotBlank(message = "租户ID不能为空")
 @Size(max = 64, message = "租户ID长度不能超过64位")
 @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "租户ID只能包含字母、数字、下划线、横线")
 private String tenantId;
 
+@NotBlank(message = "APIKEY不能为空")
 @Size(max = 128, message = "APIKEY长度不能超过128位")
 @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "APIKEY只能包含字母、数字、下划线、横线")
 private String apiKey;
 ```
 
-> 编辑时如果前端传空字符串或 `null`，Service 层忽略该字段，保留原值。
+> 编辑时这两个字段同样不能为空；前端通过确认框控制是否真正提交修改。
 
 ### 4.3 VO
 
@@ -107,13 +109,11 @@ user.setTenantId(request.getTenantId());
 `UsrUserServiceImpl.updateUser`：
 
 ```java
-if (StringUtils.hasText(request.getApiKey())) {
-    user.setApiKey(request.getApiKey());
-}
-if (StringUtils.hasText(request.getTenantId())) {
-    user.setTenantId(request.getTenantId());
-}
+user.setApiKey(request.getApiKey());
+user.setTenantId(request.getTenantId());
 ```
+
+> 由于前端确认框保证只有用户明确要修改时才会提交，后端直接按请求值更新即可。
 
 `convertToVO`：
 
@@ -163,7 +163,15 @@ tenantId: createForm.tenantId
 
 ### 5.2 编辑弹窗
 
-在邮箱/状态之间增加两个输入框，并绑定到 `form.apiKey`、`form.tenantId`。`handleUpdate` 从 `row` 中读取这两个字段。`submitUpdate` 的 `baseData` 中携带它们。
+在邮箱/状态之间增加两个输入框，并绑定到 `form.apiKey`、`form.tenantId`。`handleUpdate` 从 `row` 中读取这两个字段，同时记录原始值 `form.originalApiKey`、`form.originalTenantId`。
+
+`submitUpdate` 流程：
+
+1. 先校验 `form.apiKey` 和 `form.tenantId` 是否为空，若为空则 `ElMessage.warning('APIKEY/租户ID 不能为空')` 并返回。
+2. 检测是否任一字段的值与原始值不同：
+   - 若有不同，弹出 `ElMessageBox.confirm` 确认框，提示“APIKEY/租户ID 已修改，确认保存？”
+   - 用户点击取消则直接返回，不调用接口
+3. 确认后，在 `baseData` 中携带 `apiKey` 和 `tenantId` 调用 `updateUser`。
 
 ### 5.3 用户详情
 
@@ -193,7 +201,8 @@ tenantId: createForm.tenantId
 
 3. **更新测试**
    - 更新 `apiKey`、`tenantId` 后数据库值变更
-   - 更新时传空字符串，原值保持不变
+   - 更新时传空字符串，后端校验失败返回 400
+   - 未修改这两个字段时，不触发确认框（前端行为，Playwright 或手动验证）
 
 ## 7. 不在本次范围内的内容
 
@@ -205,5 +214,5 @@ tenantId: createForm.tenantId
 ## 8. 风险与注意事项
 
 1. 数据库迁移需要在已部署环境执行 ALTER 语句；新环境通过更新后的 `init-postgresql-complete.sql` 自动包含。
-2. 前端编辑弹窗留空时，由于 Service 层忽略空字符串，因此不会清空已有值；若业务上后续需要支持清空，需要单独提供“清除”按钮或显式传空标记。
+2. 前端编辑弹窗中，APIKEY/租户 ID 留空时前端直接拦截并提示不能为空；修改时会弹确认框防止误操作。
 3. 该字段目前为明文存储，若后续涉及敏感密钥，建议评估加密方案。
