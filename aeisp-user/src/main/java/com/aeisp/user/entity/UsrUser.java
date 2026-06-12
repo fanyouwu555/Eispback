@@ -126,4 +126,14 @@ public class UsrUser extends BaseEntity {
      * 是否比赛用户：0-否，1-是。
      */
     private Integer isCompetition;
+
+    /**
+     * API 访问密钥。
+     */
+    private String apiKey;
+
+    /**
+     * 租户 ID。
+     */
+    private String tenantId;
 }

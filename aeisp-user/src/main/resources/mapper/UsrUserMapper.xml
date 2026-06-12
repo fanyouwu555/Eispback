@@ -21,6 +21,8 @@
         <result column="register_device_info" property="registerDeviceInfo"/>
         <result column="register_time" property="registerTime"/>
         <result column="invitation_code_used" property="invitationCodeUsed"/>
+        <result column="api_key" property="apiKey"/>
+        <result column="tenant_id" property="tenantId"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
         <result column="created_by" property="createdBy"/>
@@ -32,6 +34,7 @@
         id, username, password, phone, email, nickname, avatar_url, status, status_reason,
         locked_until, need_change_password, failed_login_attempts, last_login_time, last_login_ip,
         register_ip, register_device_info, register_time, invitation_code_used,
+        api_key, tenant_id,
         created_at, updated_at, created_by, updated_by, deleted
     </sql>
 
@@ -64,6 +67,7 @@
         (username, password, phone, email, nickname, avatar_url, status, status_reason,
          locked_until, need_change_password, failed_login_attempts, last_login_time, last_login_ip,
          register_ip, register_device_info, register_time, invitation_code_used,
+         api_key, tenant_id,
          created_at, updated_at, created_by, updated_by, deleted)
         VALUES
         <foreach collection="list" item="item" separator=",">
@@ -71,6 +75,7 @@
              #{item.status}, #{item.statusReason}, #{item.lockedUntil}, #{item.needChangePassword},
              #{item.failedLoginAttempts}, #{item.lastLoginTime}, #{item.lastLoginIp},
              #{item.registerIp}, #{item.registerDeviceInfo}, #{item.registerTime}, #{item.invitationCodeUsed},
+             #{item.apiKey}, #{item.tenantId},
              #{item.createdAt}, #{item.updatedAt}, #{item.createdBy}, #{item.updatedBy}, #{item.deleted})
         </foreach>
     </insert>

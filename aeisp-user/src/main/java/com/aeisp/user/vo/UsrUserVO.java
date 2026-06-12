@@ -118,6 +118,16 @@ public class UsrUserVO {
     private Integer isCompetition;
 
     /**
+     * API 访问密钥。
+     */
+    private String apiKey;
+
+    /**
+     * 租户 ID。
+     */
+    private String tenantId;
+
+    /**
      * 角色编码列表。
      */
     private List<String> roleCodes;
