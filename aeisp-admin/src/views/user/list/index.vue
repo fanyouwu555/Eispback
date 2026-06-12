@@ -571,8 +571,9 @@ function handleUpdate(row) {
   open.value = true
 }
 async function submitUpdate() {
-  if (!form.apiKey || !form.tenantId) {
-    ElMessage.warning('APIKEY 和 租户ID 不能为空')
+  // 仅当原始值非空且用户清空时才拦截，遗留用户可能为 null
+  if ((form.originalApiKey && !form.apiKey) || (form.originalTenantId && !form.tenantId)) {
+    ElMessage.warning('APIKEY 和 租户ID 不能清空')
     return
   }
 

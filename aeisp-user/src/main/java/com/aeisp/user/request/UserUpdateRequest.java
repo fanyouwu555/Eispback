@@ -47,14 +47,14 @@ public class UserUpdateRequest {
      * API 访问密钥。
      */
     @Size(max = 128, message = "APIKEY长度不能超过128位")
-    @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "APIKEY只能包含字母、数字、下划线、横线")
+    @Pattern(regexp = "^(|[a-zA-Z0-9_-]+)$", message = "APIKEY只能包含字母、数字、下划线、横线")
     private String apiKey;
 
     /**
      * 租户 ID。
      */
     @Size(max = 64, message = "租户ID长度不能超过64位")
-    @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "租户ID只能包含字母、数字、下划线、横线")
+    @Pattern(regexp = "^(|[a-zA-Z0-9_-]+)$", message = "租户ID只能包含字母、数字、下划线、横线")
     private String tenantId;
 
     /**
