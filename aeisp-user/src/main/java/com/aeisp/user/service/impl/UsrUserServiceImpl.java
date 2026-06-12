@@ -141,6 +141,8 @@ public class UsrUserServiceImpl implements UsrUserService {
         user.setRegisterTime(LocalDateTime.now());
         user.setIsCompetition(request.getIsCompetition() != null ? request.getIsCompetition() : 0);
         user.setDeleted(CommonConstants.DELETED_NO);
+        user.setApiKey(request.getApiKey());
+        user.setTenantId(request.getTenantId());
 
         int rows = usrUserMapper.insert(user);
         if (rows <= 0) {
@@ -189,6 +191,8 @@ public class UsrUserServiceImpl implements UsrUserService {
             user.setAbnormalLogin(0);
             user.setRegisterTime(now);
             user.setIsCompetition(req.getIsCompetition() != null ? req.getIsCompetition() : 0);
+            user.setApiKey(req.getApiKey());
+            user.setTenantId(req.getTenantId());
             user.setDeleted(CommonConstants.DELETED_NO);
             return user;
         }).toList();
@@ -234,6 +238,12 @@ public class UsrUserServiceImpl implements UsrUserService {
         user.setEmail(request.getEmail());
         user.setNickname(request.getNickname());
         user.setAvatarUrl(request.getAvatarUrl());
+        if (StringUtils.hasText(request.getApiKey())) {
+            user.setApiKey(request.getApiKey());
+        }
+        if (StringUtils.hasText(request.getTenantId())) {
+            user.setTenantId(request.getTenantId());
+        }
         // 不修改密码
         int rows = usrUserMapper.updateById(user);
 
@@ -935,6 +945,8 @@ public class UsrUserServiceImpl implements UsrUserService {
         vo.setRegisterTime(user.getRegisterTime());
         vo.setInvitationCodeUsed(user.getInvitationCodeUsed());
         vo.setIsCompetition(user.getIsCompetition());
+        vo.setApiKey(user.getApiKey());
+        vo.setTenantId(user.getTenantId());
         vo.setRoleCodes(roleCodes);
         vo.setRemainingMinutes(duration != null ? duration.getRemainingMinutes() : 0);
         vo.setBalanceCents(balance != null ? balance.getBalanceCents() : 0);
