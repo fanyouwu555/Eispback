@@ -324,6 +324,8 @@
             <el-descriptions-item label="异地登录">{{ detailUser?.abnormalLogin === 1 ? '是' : '否' }}</el-descriptions-item>
             <el-descriptions-item label="注册IP">{{ detailUser?.registerIp || '-' }}</el-descriptions-item>
             <el-descriptions-item label="比赛用户">{{ detailUser?.isCompetition === 1 ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="租户ID">{{ detailUser?.tenantId || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="APIKEY">{{ detailUser?.apiKey || '-' }}</el-descriptions-item>
             <el-descriptions-item label="角色">{{ detailUser?.roleCodes?.join(', ') || '-' }}</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
