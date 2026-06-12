@@ -358,6 +358,8 @@ CREATE TABLE IF NOT EXISTS usr_user (
     login_count INT NOT NULL DEFAULT 0,
     abnormal_login SMALLINT NOT NULL DEFAULT 0,
     is_competition SMALLINT NOT NULL DEFAULT 0,
+    api_key VARCHAR(128) DEFAULT NULL,
+    tenant_id VARCHAR(64) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
@@ -387,6 +389,8 @@ COMMENT ON COLUMN usr_user.register_device_info IS '注册设备信息JSON，包
 COMMENT ON COLUMN usr_user.invitation_code_used IS '注册时使用的邀请码';
 COMMENT ON COLUMN usr_user.login_count IS '累计登录次数';
 COMMENT ON COLUMN usr_user.abnormal_login IS '是否异地登录：0-否，1-是';
+COMMENT ON COLUMN usr_user.api_key IS 'API 访问密钥';
+COMMENT ON COLUMN usr_user.tenant_id IS '租户 ID';
 
 -- 用户登录日志表
 CREATE TABLE IF NOT EXISTS usr_login_log (
