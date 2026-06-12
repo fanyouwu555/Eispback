@@ -973,4 +973,73 @@ class UsrUserServiceImplTest {
         verify(usrUserMapper).insert(argThat((UsrUser u) ->
                 u.getNeedChangePassword() != null && u.getNeedChangePassword() == 1));
     }
+
+    @Test
+    void testCreateByAdminSavesApiKeyAndTenantId() {
+        when(usrUserMapper.selectByUsername("apiuser")).thenReturn(null);
+        when(usrUserMapper.selectByPhone("13900139004")).thenReturn(null);
+        when(usrUserMapper.selectByEmail("api@example.com")).thenReturn(null);
+        when(usrUserMapper.insert(any(UsrUser.class))).thenAnswer(inv -> {
+            UsrUser u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(passwordEncoder.encode("password123")).thenReturn("encoded_password");
+
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername("apiuser");
+        request.setPhone("13900139004");
+        request.setEmail("api@example.com");
+        request.setPassword("password123");
+        request.setApiKey("sk-v1-tenant_r-1781257647568-glOIks8MJKvY");
+        request.setTenantId("tenant_req_cc6d9abf7d074b2dae1f7151456219a4");
+
+        String password = usrUserService.createByAdmin(request);
+        assertEquals("password123", password);
+        verify(usrUserMapper).insert(argThat((UsrUser u) ->
+                "sk-v1-tenant_r-1781257647568-glOIks8MJKvY".equals(u.getApiKey())
+                        && "tenant_req_cc6d9abf7d074b2dae1f7151456219a4".equals(u.getTenantId())));
+    }
+
+    @Test
+    void testUpdateUserSavesApiKeyAndTenantId() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setPhone("13800138000");
+        existing.setEmail("old@example.com");
+        existing.setApiKey("old-api-key");
+        existing.setTenantId("old-tenant-id");
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+
+        UserUpdateRequest request = new UserUpdateRequest();
+        request.setId(1L);
+        request.setApiKey("sk-v1-new");
+        request.setTenantId("tenant_new");
+
+        assertTrue(usrUserService.updateUser(request));
+        verify(usrUserMapper).updateById(argThat((UsrUser u) ->
+                "sk-v1-new".equals(u.getApiKey()) && "tenant_new".equals(u.getTenantId())));
+    }
+
+    @Test
+    void testUpdateUserIgnoresBlankApiKeyAndTenantId() {
+        UsrUser existing = new UsrUser();
+        existing.setId(1L);
+        existing.setPhone("13800138000");
+        existing.setEmail("old@example.com");
+        existing.setApiKey("old-api-key");
+        existing.setTenantId("old-tenant-id");
+        when(usrUserMapper.selectById(1L)).thenReturn(existing);
+        when(usrUserMapper.updateById(any(UsrUser.class))).thenReturn(1);
+
+        UserUpdateRequest request = new UserUpdateRequest();
+        request.setId(1L);
+        request.setApiKey("");
+        request.setTenantId("");
+
+        assertTrue(usrUserService.updateUser(request));
+        verify(usrUserMapper).updateById(argThat((UsrUser u) ->
+                u.getApiKey() == null && u.getTenantId() == null));
+    }
 }
