@@ -115,6 +115,12 @@
         <el-form-item label="昵称"><el-input v-model="form.nickname" /></el-form-item>
         <el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item>
         <el-form-item label="邮箱"><el-input v-model="form.email" /></el-form-item>
+        <el-form-item label="租户ID">
+          <el-input v-model="form.tenantId" placeholder="请输入租户ID" maxlength="64" clearable />
+        </el-form-item>
+        <el-form-item label="APIKEY">
+          <el-input v-model="form.apiKey" placeholder="请输入APIKEY" maxlength="128" clearable />
+        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="form.status">
             <el-option
@@ -426,7 +432,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { WarningFilled, UploadFilled, Plus } from '@element-plus/icons-vue'
 import { listUsers, getUser, updateUser, updateUserStatus, resetUserPassword, adjustDuration, importUsers, createUser, listLoginLogs, listDurationLogs } from '@/api/user'
 import { getUserPermissions, updateUserPermissions, resetUserPermissions, getPermissionKeys } from '@/api/user/permission'
@@ -500,7 +506,8 @@ const queryParams = reactive({
 })
 const form = reactive({
   id: undefined, username: '', nickname: '', phone: '', email: '',
-  status: 1, originalStatus: 1, adminPassword: ''
+  status: 1, originalStatus: 1, adminPassword: '',
+  apiKey: '', tenantId: '', originalApiKey: '', originalTenantId: ''
 })
 const durationForm = reactive({ adjustType: 1, deltaMinutes: 0, reason: '', adminPassword: '' })
 
@@ -555,12 +562,42 @@ function handleUpdate(row) {
   Object.assign(form, {
     id: row.id, username: row.username, nickname: row.nickname,
     phone: row.phone, email: row.email, status: row.status,
-    originalStatus: row.status, adminPassword: ''
+    originalStatus: row.status, adminPassword: '',
+    apiKey: row.apiKey || '', tenantId: row.tenantId || '',
+    originalApiKey: row.apiKey || '', originalTenantId: row.tenantId || ''
   })
   open.value = true
 }
 async function submitUpdate() {
-  const baseData = { phone: form.phone, email: form.email, nickname: form.nickname }
+  if (!form.apiKey || !form.tenantId) {
+    ElMessage.warning('APIKEY 和 租户ID 不能为空')
+    return
+  }
+
+  const apiKeyChanged = form.apiKey !== form.originalApiKey
+  const tenantIdChanged = form.tenantId !== form.originalTenantId
+  if (apiKeyChanged || tenantIdChanged) {
+    const changedFields = []
+    if (apiKeyChanged) changedFields.push('APIKEY')
+    if (tenantIdChanged) changedFields.push('租户ID')
+    try {
+      await ElMessageBox.confirm(
+        `${changedFields.join('、')} 已修改，确认保存？`,
+        '确认修改',
+        { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch {
+      return
+    }
+  }
+
+  const baseData = {
+    phone: form.phone,
+    email: form.email,
+    nickname: form.nickname,
+    apiKey: form.apiKey,
+    tenantId: form.tenantId
+  }
   if (form.status !== form.originalStatus) {
     if (!form.adminPassword) {
       ElMessage.warning('状态已变更，请输入管理员密码')
