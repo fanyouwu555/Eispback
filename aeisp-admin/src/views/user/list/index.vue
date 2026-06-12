@@ -254,6 +254,12 @@
         <el-form-item label="初始化时长(分)">
           <el-input-number v-model="createForm.remainingMinutes" :min="0" />
         </el-form-item>
+        <el-form-item label="租户ID">
+          <el-input v-model="createForm.tenantId" placeholder="请输入租户ID" maxlength="64" clearable />
+        </el-form-item>
+        <el-form-item label="APIKEY">
+          <el-input v-model="createForm.apiKey" placeholder="请输入APIKEY" maxlength="128" clearable />
+        </el-form-item>
         <el-form-item label="比赛用户">
           <el-select v-model="createForm.isCompetition" style="width:100px">
             <el-option label="否" :value="0" />
@@ -479,7 +485,8 @@ const templateUsageLoading = ref(false)
 
 const createForm = reactive({
   username: '', password: '123456', phone: '', email: '', nickname: '',
-  roleIds: [], remainingMinutes: 0, isCompetition: 0
+  roleIds: [], remainingMinutes: 0, isCompetition: 0,
+  apiKey: '', tenantId: ''
 })
 const registerTimeRange = ref(null)
 
@@ -670,11 +677,16 @@ function handleCreate() {
   createForm.username = ''; createForm.password = '123456'; createForm.phone = ''
   createForm.email = ''; createForm.nickname = ''
   createForm.roleIds = []; createForm.remainingMinutes = 0; createForm.isCompetition = 0
+  createForm.apiKey = ''; createForm.tenantId = ''
   createOpen.value = true
 }
 async function submitCreate() {
   if (!createForm.username) {
     ElMessage.warning('用户名不能为空')
+    return
+  }
+  if (!createForm.apiKey || !createForm.tenantId) {
+    ElMessage.warning('APIKEY 和 租户ID 不能为空')
     return
   }
   try {
@@ -686,7 +698,9 @@ async function submitCreate() {
       nickname: createForm.nickname || undefined,
       roleIds: createForm.roleIds.length ? createForm.roleIds : undefined,
       remainingMinutes: createForm.remainingMinutes || undefined,
-      isCompetition: createForm.isCompetition
+      isCompetition: createForm.isCompetition,
+      apiKey: createForm.apiKey,
+      tenantId: createForm.tenantId
     })
     createOpen.value = false
     createResult.value = { username: createForm.username, password }
