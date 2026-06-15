@@ -42,4 +42,14 @@ public class UserInfoVO {
      * 权限编码列表。
      */
     private List<String> permissions;
+
+    /**
+     * API 访问密钥。
+     */
+    private String apiKey;
+
+    /**
+     * 租户 ID。
+     */
+    private String tenantId;
 }

@@ -117,6 +117,8 @@ public class AuthController {
                             .username(userDetails.getUsername())
                             .userType(userDetails.getUserType())
                             .roles(roles)
+                            .apiKey(userDetails.getApiKey())
+                            .tenantId(userDetails.getTenantId())
                             .build())
                     .build();
 
@@ -172,6 +174,8 @@ public class AuthController {
                             .username(userDetails.getUsername())
                             .userType(userDetails.getUserType())
                             .roles(userDetails.getRoles())
+                            .apiKey(userDetails.getApiKey())
+                            .tenantId(userDetails.getTenantId())
                             .build())
                     .build();
 
@@ -248,6 +252,8 @@ public class AuthController {
                     .userType(userDetails.getUserType())
                     .roles(userDetails.getRoles())
                     .permissions(userDetails.getPermissions())
+                    .apiKey(userDetails.getApiKey())
+                    .tenantId(userDetails.getTenantId())
                     .build();
             return Result.success(vo, "获取成功");
         } catch (Exception e) {

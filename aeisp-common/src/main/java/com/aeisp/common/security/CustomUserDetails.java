@@ -56,6 +56,16 @@ public class CustomUserDetails implements UserDetails {
     private final List<String> permissions;
 
     /**
+     * API 访问密钥。
+     */
+    private final String apiKey;
+
+    /**
+     * 租户 ID。
+     */
+    private final String tenantId;
+
+    /**
      * 构造方法。
      *
      * @param userId      用户 ID
@@ -69,6 +79,26 @@ public class CustomUserDetails implements UserDetails {
     public CustomUserDetails(Long userId, String username, String password,
                              String userType, boolean enabled,
                              List<String> roles, List<String> permissions) {
+        this(userId, username, password, userType, enabled, roles, permissions, null, null);
+    }
+
+    /**
+     * 构造方法（含 apiKey/tenantId）。
+     *
+     * @param userId      用户 ID
+     * @param username    用户名
+     * @param password    密码
+     * @param userType    用户类型
+     * @param enabled     是否启用
+     * @param roles       角色列表
+     * @param permissions 权限列表
+     * @param apiKey      API 访问密钥
+     * @param tenantId    租户 ID
+     */
+    public CustomUserDetails(Long userId, String username, String password,
+                             String userType, boolean enabled,
+                             List<String> roles, List<String> permissions,
+                             String apiKey, String tenantId) {
         this.userId = userId;
         this.username = username;
         this.password = password;
@@ -76,6 +106,8 @@ public class CustomUserDetails implements UserDetails {
         this.enabled = enabled;
         this.roles = roles != null ? roles : List.of();
         this.permissions = permissions != null ? permissions : List.of();
+        this.apiKey = apiKey;
+        this.tenantId = tenantId;
     }
 
     @Override

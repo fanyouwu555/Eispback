@@ -65,7 +65,9 @@ public class CustomUserDetailsService implements UserDetailsService {
                     "admin",
                     enabled,
                     roles,
-                    permissions
+                    permissions,
+                    null,
+                    null
             );
         }
 
@@ -88,7 +90,9 @@ public class CustomUserDetailsService implements UserDetailsService {
                     "user",
                     enabled,
                     roles,
-                    permissions
+                    permissions,
+                    usrUser.getApiKey(),
+                    usrUser.getTenantId()
             );
         }
 
@@ -122,7 +126,9 @@ public class CustomUserDetailsService implements UserDetailsService {
                     "admin",
                     enabled,
                     roles,
-                    permissions
+                    permissions,
+                    null,
+                    null
             );
         }
 
@@ -144,7 +150,9 @@ public class CustomUserDetailsService implements UserDetailsService {
                     "user",
                     enabled,
                     roles,
-                    permissions
+                    permissions,
+                    usrUser.getApiKey(),
+                    usrUser.getTenantId()
             );
         }
 
