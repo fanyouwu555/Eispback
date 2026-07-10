@@ -70,23 +70,34 @@ spring:
     port: 6379
 ```
 
-### 4. 编译运行
+### 4. 启动基础设施
 
 ```bash
-# 编译全部模块
-mvn clean compile
-
-# 打包
-mvn clean package
-
-# 运行
-mvn spring-boot:run -pl aeisp-boot
-
-# 或直接运行 JAR
-java -jar aeisp-boot/target/aeisp-boot-1.0.0-SNAPSHOT.jar
+# PostgreSQL 5432 + Redis 6379
+docker compose up -d
 ```
 
-### 5. 访问接口文档
+### 5. 编译运行后端
+
+```bash
+# 安装全部模块到本地仓库（必须先 install，否则跨模块依赖会失败）
+mvn clean install -DskipTests
+
+# 运行后端服务
+mvn spring-boot:run -pl aeisp-boot
+```
+
+### 6. 启动前端
+
+```bash
+cd aeisp-admin
+npm install
+npm run dev
+```
+
+前端开发服务器运行在 `http://localhost:5173/`，并通过 Vite 代理把 `/api` 转发到后端 `http://localhost:8080/`。
+
+### 7. 访问接口文档
 
 启动后访问：
 
